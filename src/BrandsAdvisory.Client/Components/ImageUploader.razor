@@ -1,0 +1,150 @@
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div class="d-flex flex-column gap-2">
+
+    @if (!string.IsNullOrEmpty(_currentImageUrl))
+    {
+        <div class="position-relative" style="max-width: 300px;">
+            <img src="@_currentImageUrl"
+                 class="img-fluid rounded"
+                 style="max-height: 200px; object-fit: cover;"
+                 alt="@Label" />
+            <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1"
+                    @onclick="ClearImage"
+                    title="Remove image">
+                ✕
+            </button>
+        </div>
+    }
+
+    <div class="d-flex align-items-center gap-3">
+        <InputFile OnChange="@OnFileSelected"
+                   accept="image/*"
+                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                   style="max-width: 300px;" />
+        @if (_uploading)
+        {
+            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                <span class="visually-hidden">Uploading…</span>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <p class="text-danger small mb-0">@_errorMessage</p>
+    }
+
+    @if (!string.IsNullOrEmpty(_currentImageUrl) && ShowUrl)
+    {
+        <p class="text-secondary small mb-0 text-truncate" style="max-width: 300px;">
+            @_currentImageUrl
+        </p>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public string? ImageUrl { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ImageUrlChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnImageUploaded { get; set; }
+
+    [Parameter]
+    public int MaxWidth { get; set; } = 1200;
+
+    [Parameter]
+    public int MaxHeight { get; set; } = 800;
+
+    [Parameter]
+    public string Label { get; set; } = "Image";
+
+    [Parameter]
+    public bool ShowUrl { get; set; } = false;
+
+    private string? _currentImageUrl;
+    private bool _uploading;
+    private string _errorMessage = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _currentImageUrl = ImageUrl;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            _uploading = true;
+            _errorMessage = string.Empty;
+            StateHasChanged();
+
+            var file = e.File;
+
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                _errorMessage = "Please select an image file.";
+                return;
+            }
+
+            // Resize image client-side before upload
+            var resized = await file.RequestImageFileAsync("image/jpeg", MaxWidth, MaxHeight);
+
+            // Get SAS token from server
+            var sasResponse = await Http.GetFromJsonAsync<SasResponse>("/api/images/sas");
+
+            if (sasResponse is null)
+            {
+                _errorMessage = "Could not get upload token.";
+                return;
+            }
+
+            // Upload directly to Azure Blob Storage via SAS URI
+            var blobClientOptions = new BlobClientOptions();
+            blobClientOptions.Retry.MaxRetries = 0;
+            var blobClient = new BlobClient(new Uri(sasResponse.Sas), blobClientOptions);
+
+            using var stream = resized.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+
+            await blobClient.UploadAsync(stream, new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = "image/jpeg"
+                }
+            });
+
+            _currentImageUrl = sasResponse.PublicLink;
+
+            // Notify parent via two-way binding and callback
+            await ImageUrlChanged.InvokeAsync(_currentImageUrl);
+            await OnImageUploaded.InvokeAsync(_currentImageUrl);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearImage()
+    {
+        _currentImageUrl = string.Empty;
+        await ImageUrlChanged.InvokeAsync(string.Empty);
+        await OnImageUploaded.InvokeAsync(string.Empty);
+    }
+
+    private record SasResponse(string Sas, string PublicLink, string BlobName);
+}

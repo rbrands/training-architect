@@ -1,0 +1,262 @@
+@using BrandsAdvisory.Client.Models
+@page "/admin/projects/{id}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: true))
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IOwnerService OwnerService
+@inject IProjectRepository ProjectRepo
+@inject NavigationManager Nav
+@inject ClientConfig Config
+@inject IJSRuntime JSRuntime
+
+<PageTitle>@(_isNew ? "New Project" : "Edit Project") · @_siteTitle</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">@(_isNew ? "New Project" : "Edit Project")</h2>
+    <div class="d-flex gap-2">
+        @if (!_isNew)
+        {
+            <button class="btn btn-outline-danger btn-sm" @onclick="DeleteAsync" disabled="@_deleting"
+                    title="Delete project">
+                🗑
+            </button>
+        }
+        <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
+        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+            @(_saving ? "Saving…" : "Save")
+        </button>
+    </div>
+</div>
+
+@if (!_ready)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card-dark p-4 d-flex flex-column gap-3">
+
+        <div class="row g-3">
+            <div class="col-12 col-md-4">
+                <label class="form-label text-secondary small">Title</label>
+                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Title" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label text-secondary small">Customer</label>
+                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Customer" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label text-secondary small">Period</label>
+                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Period" />
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label text-secondary small">Project Start</label>
+                <input class="form-control bg-dark text-white border-secondary" type="date"
+                       @bind="_form.ProjectStart" @bind:format="yyyy-MM-dd" />
+                <div class="form-text text-secondary small">Used for sorting only</div>
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Tags (comma-separated)</label>
+            <input class="form-control bg-dark text-white border-secondary" @bind="_form.Tags" />
+            <div class="form-text text-secondary small">First tag is shown as category pill on the public page</div>
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Description</label>
+            <SfRichTextEditor Value="@_form.Description"
+                              ValueChanged="@OnDescriptionChanged"
+                              Height="300px">
+                <RichTextEditorToolbarSettings Items="@_toolbarItems" />
+                <RichTextEditorImageSettings SaveUrl="/api/images/upload"
+                                             Path="@Config.ImageContainerUrl" />
+                <RichTextEditorEvents OnImageUploadSuccess="@OnImageUploadSuccess" />
+            </SfRichTextEditor>
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Outcomes (one per line)</label>
+            <textarea class="form-control bg-dark text-white border-secondary" rows="5"
+                      @bind="_form.Outcomes"
+                      placeholder="Reduced costs by 40%&#10;Improved performance&#10;..." />
+            <div class="form-text text-secondary small">Each line becomes a bullet point on the public page</div>
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    [CascadingParameter(Name = "SiteTitle")]
+    private string _siteTitle { get; set; } = "Brands Advisory";
+
+    private ProjectForm _form = new();
+    private string _projectId = string.Empty;
+    private bool _isNew;
+    private bool _ready;
+    private bool _saving;
+    private bool _deleting;
+
+    private readonly List<ToolbarItemModel> _toolbarItems =
+    [
+        new() { Command = ToolbarCommand.Bold },
+        new() { Command = ToolbarCommand.Italic },
+        new() { Command = ToolbarCommand.Underline },
+        new() { Command = ToolbarCommand.Separator },
+        new() { Command = ToolbarCommand.OrderedList },
+        new() { Command = ToolbarCommand.UnorderedList },
+        new() { Command = ToolbarCommand.CreateLink },
+        new() { Command = ToolbarCommand.Image },
+        new() { Command = ToolbarCommand.Separator },
+        new() { Command = ToolbarCommand.SourceCode },
+        new() { Command = ToolbarCommand.FullScreen }
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RendererInfo.IsInteractive) return;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!OwnerService.IsOwner(authState.User))
+        {
+            Nav.NavigateTo("/projects");
+            return;
+        }
+
+        _isNew = string.Equals(Id, "new", StringComparison.OrdinalIgnoreCase);
+
+        if (_isNew)
+        {
+            _projectId = Guid.NewGuid().ToString();
+        }
+        else
+        {
+            var existing = await ProjectRepo.GetByIdAsync(Id);
+            if (existing is null)
+            {
+                Nav.NavigateTo("/projects");
+                return;
+            }
+
+            _projectId = existing.Id;
+            _form = new ProjectForm
+            {
+                Title = existing.Title,
+                Customer = existing.Customer,
+                Period = existing.Period,
+                Tags = string.Join(", ", existing.Tags),
+                Description = existing.Description,
+                Outcomes = string.Join("\n", existing.Outcomes),
+                ProjectStart = existing.ProjectStart
+            };
+        }
+
+        _ready = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+
+        var project = new Project
+        {
+            Id = _projectId,
+            Title = _form.Title,
+            Customer = _form.Customer,
+            Period = _form.Period,
+            Description = _form.Description,
+            ProjectStart = _form.ProjectStart,
+            Tags = _form.Tags
+                .Split(',')
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList(),
+            Outcomes = _form.Outcomes
+                .Split('\n')
+                .Select(o => o.Trim())
+                .Where(o => !string.IsNullOrEmpty(o))
+                .ToList()
+        };
+
+        await ProjectRepo.UpsertAsync(project);
+        Nav.NavigateTo("/projects");
+    }
+
+    // OnImageUploadSuccess fires BEFORE ValueChanged updates _form.Description.
+    // Store the pending fix here; OnDescriptionChanged applies it when ValueChanged fires.
+    private string? _pendingWrongSrc;
+    private string? _pendingBlobUrl;
+
+    private void OnImageUploadSuccess(ImageSuccessEventArgs args)
+    {
+        var blobUrl = ExtractBlobUrl(args);
+        if (string.IsNullOrEmpty(blobUrl)) return;
+        _pendingWrongSrc = Config.ImageContainerUrl.TrimEnd('/') + "/" + args.File?.Name;
+        _pendingBlobUrl = blobUrl;
+    }
+
+    private async Task OnDescriptionChanged(string value)
+    {
+        string? wrongSrc = null;
+        string? correctSrc = null;
+
+        if (_pendingWrongSrc is not null && _pendingBlobUrl is not null
+            && value.Contains(_pendingWrongSrc))
+        {
+            wrongSrc = _pendingWrongSrc;
+            correctSrc = _pendingBlobUrl;
+            value = value.Replace(wrongSrc, correctSrc);
+            _pendingWrongSrc = null;
+            _pendingBlobUrl = null;
+        }
+
+        _form.Description = value;
+
+        // Also patch the editor DOM so the image displays immediately.
+        if (wrongSrc is not null && correctSrc is not null)
+            await JSRuntime.InvokeVoidAsync("sfFixImageSrc", wrongSrc, correctSrc);
+    }
+
+    private static string? ExtractBlobUrl(ImageSuccessEventArgs args)
+    {
+        // Syncfusion's ResponseEventArgs exposes response headers but not the body.
+        // The endpoint sets X-Blob-Url so we can retrieve the correct GUID blob URL here.
+        if (string.IsNullOrEmpty(args.Response?.Headers)) return null;
+        foreach (var line in args.Response.Headers.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.StartsWith("x-blob-url:", StringComparison.OrdinalIgnoreCase))
+                return line["x-blob-url:".Length..].Trim();
+        }
+        return null;
+    }
+
+    private void Cancel() => Nav.NavigateTo("/projects");
+
+    private async Task DeleteAsync()
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Delete '{_form.Title}'? This cannot be undone."))
+            return;
+
+        _deleting = true;
+        await ProjectRepo.DeleteAsync(_projectId);
+        Nav.NavigateTo("/projects");
+    }
+
+    private sealed class ProjectForm
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Customer { get; set; } = string.Empty;
+        public string Period { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Outcomes { get; set; } = string.Empty;
+        public DateTime? ProjectStart { get; set; }
+    }
+}

@@ -1,0 +1,76 @@
+# Required GitHub Secrets:
+# AZURE_CLIENT_ID            - App ID of sp-brands-advisory-cms-github
+# TENANT_ID            - Entra ID Tenant ID
+# AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
+# AZURE_WEBAPP_NAME          - Azure Web App name
+# Note: OIDC Federated Credentials - no client secret needed
+#
+# Authentication: OIDC Federated Credentials (no secrets)
+# Setup: Add federated credential in Entra ID for this repo/branch
+# See: https://docs.github.com/en/actions/concepts/security/openid-connect
+#
+# Trigger: push to main when files in src/ change
+# Manual trigger: workflow_dispatch
+
+name: Deploy Application
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: 'src/BrandsAdvisory/BrandsAdvisory.csproj'
+  PUBLISH_PATH: './publish'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.PROJECT_PATH }}
+        --configuration Release
+        --no-restore
+
+    - name: Publish
+      run: dotnet publish ${{ env.PROJECT_PATH }}
+        --configuration Release
+        --no-build
+        --output ${{ env.PUBLISH_PATH }}
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+        package: ${{ env.PUBLISH_PATH }}
+        # No publish-profile needed - OIDC login above handles auth
+
+    - name: Azure Logout
+      run: az logout
+      if: always()

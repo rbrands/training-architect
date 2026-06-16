@@ -1,0 +1,213 @@
+@page "/admin/about"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: true))
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IOwnerService OwnerService
+@inject IAboutRepository AboutRepo
+@inject NavigationManager Nav
+
+<PageTitle>Edit About · @(_about?.HeaderTitle ?? "Brands Advisory")</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Edit About</h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
+        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+            @(_saving ? "Saving…" : "Save")
+        </button>
+    </div>
+</div>
+
+@if (_about is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card-dark p-4 d-flex flex-column gap-3 mb-4">
+
+        <div>
+            <label class="form-label text-secondary small">Title</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.Title" />
+        </div>
+        <div>
+            <label class="form-label text-secondary small">Header Title</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.HeaderTitle" />
+        </div>
+        <div>
+            <label class="form-label text-secondary small">Header Subtitle</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.HeaderSubtitle" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Avatar Image</label>
+            <ImageUploader
+                @bind-ImageUrl="_about.AvatarUrl"
+                MaxWidth="200"
+                MaxHeight="200"
+                Label="Avatar"
+                ShowUrl="false" />
+            <div class="form-text text-secondary small">Recommended: square, min 200×200px</div>
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Subtitle</label>
+            <textarea class="form-control bg-dark text-white border-secondary"
+                      rows="3"
+                      @bind="_about.Subtitle" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Location</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.Location" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Profile URL</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   type="url"
+                   @bind="_about.ProfileUrl" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Contact Hint</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.ContactHint" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Footer Copyright</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.FooterCopyright"
+                   placeholder="Brands Advisory" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Footer Link</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   type="url"
+                   @bind="_about.FooterLink"
+                   placeholder="https://example.com" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Footer Link Title</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   @bind="_about.FooterLinkTitle"
+                   placeholder="example.com" />
+        </div>
+
+    </div>
+
+    <h5 class="fw-bold mb-3">Tags</h5>
+
+    <div class="card-dark p-3 mb-3">
+        <label class="form-label text-secondary small">Comma-separated — e.g. Cloud Adoption (Azure), Solution Architecture</label>
+        <input class="form-control bg-dark text-white border-secondary"
+               @bind="_tagsInput" />
+    </div>
+
+    <h5 class="fw-bold mb-3">Links</h5>
+
+    <div class="card-dark p-3 mb-3">
+        @foreach (var (link, index) in _about.Links.Select((l, i) => (l, i)))
+        {
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-auto" style="width: 160px;">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                            value="@link.Icon"
+                            @onchange="e => link.Icon = e.Value?.ToString() ?? string.Empty">
+                        <option value="">— none —</option>
+                        <option value="bi-envelope">✉ Email</option>
+                        <option value="bi-linkedin">in LinkedIn</option>
+                        <option value="bi-github">⌥ GitHub</option>
+                        <option value="bi-file-pdf">📄 PDF</option>
+                        <option value="bi-globe">🌐 Website</option>
+                        <option value="bi-twitter-x">𝕏 Twitter/X</option>
+                        <option value="bi-youtube">▶ YouTube</option>
+                        <option value="bi-instagram">📷 Instagram</option>
+                        <option value="bi-telephone">📞 Phone</option>
+                        <option value="bi-whatsapp">💬 WhatsApp</option>
+                        <option value="bi-activity">📊 Intervals ICU</option>
+                        <option value="bi-calendar">📅 Calendar</option>
+                        <option value="bi-file-earmark-text">📋 CV/Resume</option>
+                        <option value="bi-stack-overflow">SO Stack Overflow</option>
+                        <option value="bi-microsoft">⬡ Microsoft</option>
+                        <option value="bi-building">🏢 Company</option>
+                        <option value="bi-link-45deg">🔗 Link</option>
+                    </select>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    @if (!string.IsNullOrEmpty(link.Icon))
+                    {
+                        <i class="@link.Icon fs-5 text-secondary"></i>
+                    }
+                </div>
+                <div class="col-3">
+                    <input class="form-control form-control-sm bg-dark text-white border-secondary"
+                           placeholder="Label"
+                           value="@link.Label"
+                           @oninput="e => link.Label = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col">
+                    <input class="form-control form-control-sm bg-dark text-white border-secondary"
+                           placeholder="https://…"
+                           value="@link.Url"
+                           @oninput="e => link.Url = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveLink(index)">✕</button>
+                </div>
+            </div>
+        }
+
+        <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="AddLink">+ Add link</button>
+    </div>
+}
+
+@code {
+    private AboutContent? _about;
+    private bool _saving;
+    private string _tagsInput = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RendererInfo.IsInteractive) return;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!OwnerService.IsOwner(authState.User))
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        _about = await AboutRepo.GetOrCreateAsync();
+        _tagsInput = string.Join(", ", _about.Tags);
+    }
+
+    private void AddLink() => _about!.Links.Add(new ProfileLink());
+
+    private void RemoveLink(int index) => _about!.Links.RemoveAt(index);
+
+    private async Task SaveAsync()
+    {
+        if (_about is null) return;
+        _about.Tags = _tagsInput
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        _saving = true;
+        await AboutRepo.UpsertAsync(_about);
+        _saving = false;
+        Nav.NavigateTo("/");
+    }
+
+    private void Cancel() => Nav.NavigateTo("/");
+}

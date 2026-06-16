@@ -1,0 +1,23 @@
+{
+  "name": "brands-advisory-cms (.NET 10)",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.blazorwasm-companion",
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-azuretools.vscode-azureappservice",
+        "ms-azuretools.vscode-cosmosdb"
+      ]
+    }
+  },
+  "forwardPorts": [5000, 5001, 7000],
+  "postCreateCommand": "dotnet restore"
+}

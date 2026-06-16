@@ -1,0 +1,79 @@
+# Required GitHub Secrets:
+# AZURE_CLIENT_ID            - App ID of sp-brands-advisory-cms-github
+# AZURE_TENANT_ID            - Entra ID Tenant ID
+# AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
+# Note: OIDC Federated Credentials - no client secret needed
+#
+# Authentication: OIDC Federated Credentials (no secrets)
+# Setup: Add federated credential in Entra ID for this repo/branch
+# See: https://docs.github.com/en/actions/concepts/security/openid-connect
+# AZURE_RESOURCE_GROUP       - rg-brands-advisory
+# APP_NAME                   - brands-advisory
+# PLAN_NAME                  - plan-brands-advisory
+# COSMOS_ACCOUNT_NAME        - cosmos-brands-advisory
+# COSMOS_DATABASE_ID         - brands-advisory
+# COSMOS_CONTAINER_NAME      - cms
+# KEY_VAULT_NAME             - kv-brands-advisory
+# CERT_NAME                  - brands-advisory-cms
+# TENANT_ID                  - Entra ID Tenant ID
+# CLIENT_ID                  - brands-advisory-cms App Registration Client ID
+# STORAGE_ACCOUNT_NAME       - Azure Storage Account name
+# SITE_URL                   - Public site URL, e.g. https://brands-advisory.com
+# Note: SYNCFUSION_LICENSE_KEY is stored in Key Vault, not passed as Bicep parameter
+#
+# Trigger: push to main when files in infra/ change
+# Manual trigger: workflow_dispatch
+
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/deploy-infrastructure.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Deploy Bicep template
+      uses: azure/arm-deploy@v2
+      with:
+        resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        template: infra/main.bicep
+        parameters: >
+          appName=${{ secrets.APP_NAME }}
+          planName=${{ secrets.PLAN_NAME }}
+          cosmosAccountName=${{ secrets.COSMOS_ACCOUNT_NAME }}
+          cosmosDatabaseId=${{ secrets.COSMOS_DATABASE_ID }}
+          cosmosContainerName=${{ secrets.COSMOS_CONTAINER_NAME }}
+          keyVaultName=${{ secrets.KEY_VAULT_NAME }}
+          keyVaultCertificateName=${{ secrets.CERT_NAME }}
+          tenantId=${{ secrets.TENANT_ID }}
+          clientId=${{ secrets.CLIENT_ID }}
+          storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
+          appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
+          logAnalyticsName=${{ secrets.LOG_ANALYTICS_NAME }}
+          siteUrl=${{ secrets.SITE_URL }}
+        failOnStdErr: false
+        deploymentMode: Incremental
+
+    - name: Azure Logout
+      run: az logout
+      if: always()

@@ -1,0 +1,129 @@
+@page "/articles/{slug}"
+@inject IArticleRepository ArticleRepo
+@inject IConfiguration Config
+
+@if (_article is null && !_loaded)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else if (_article is null)
+{
+    <PageTitle>Article not found</PageTitle>
+    <div class="text-center py-5">
+        <p class="text-secondary">Article not found.</p>
+        <a href="/articles" class="btn btn-outline-secondary btn-sm">← Back to Articles</a>
+    </div>
+}
+else
+{
+    <PageTitle>@_article.Title · @_siteTitle</PageTitle>
+    <HeadContent>
+        <meta name="description" content="@_article.Summary" />
+        <meta property="og:title"
+              content="@_article.Title · @_siteTitle" />
+        <meta property="og:description" content="@_article.Summary" />
+        <meta property="og:url"
+              content="@(Config["SiteUrl"])/articles/@_article.Slug" />
+        <meta property="og:type" content="article" />
+        @if (_article.PublishedDate.HasValue)
+        {
+            <meta property="article:published_time"
+                  content="@_article.PublishedDate.Value.ToString("yyyy-MM-ddTHH:mm:ssZ")" />
+        }
+        @if (_article.Tags.Any())
+        {
+            @foreach (var tag in _article.Tags)
+            {
+                <meta property="article:tag" content="@tag" />
+            }
+        }
+        @if (!string.IsNullOrEmpty(_article.TitleImageUrl))
+        {
+            <meta property="og:image" content="@_article.TitleImageUrl" />
+        }
+        else
+        {
+            <meta property="og:image" content="@(Config["SiteUrl"])/images/brands-advisory-og.png" />
+        }
+        <link rel="canonical"
+              href="@(Config["SiteUrl"])/articles/@_article.Slug" />
+    </HeadContent>
+
+    <article class="card-dark p-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h1 class="fw-bold mb-1">@_article.Title</h1>
+                @if (_article.PublishedDate.HasValue)
+                {
+                    <div class="text-secondary small">
+                        @_article.PublishedDate.Value.ToString("MMMM d, yyyy")
+                    </div>
+                }
+            </div>
+            @if (IsOwner)
+            {
+                <a href="/admin/articles/@_article.Id"
+                   class="btn btn-sm btn-outline-secondary flex-shrink-0">
+                    ✏️ Edit
+                </a>
+            }
+        </div>
+
+        @if (_article.Tags.Count > 0)
+        {
+            <div class="d-flex flex-wrap gap-1 mb-4">
+                @foreach (var tag in _article.Tags)
+                {
+                    <span class="tag-pill" style="font-size:0.75rem; padding:2px 8px;">@tag</span>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_article.TitleImageUrl))
+        {
+            <div class="mb-4">
+                <img src="@_article.TitleImageUrl"
+                     class="img-fluid rounded"
+                     style="width: 100%; max-height: 400px; object-fit: cover;"
+                     alt="@_article.Title" />
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_article.Summary))
+        {
+            <p class="lead text-secondary mb-4">@_article.Summary</p>
+        }
+
+        <div class="article-content text-secondary">
+            @((MarkupString)_article.Content)
+        </div>
+    </article>
+
+    <div class="mt-4">
+        <a href="/articles" class="text-secondary small text-decoration-none">← Back to Articles</a>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [CascadingParameter(Name = "IsOwner")]
+    public bool IsOwner { get; set; }
+
+    [CascadingParameter(Name = "SiteTitle")]
+    private string _siteTitle { get; set; } = "Header Title";
+
+    private Article? _article;
+    private bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _article = await ArticleRepo.GetBySlugAsync(Slug);
+        _loaded = true;
+    }
+}

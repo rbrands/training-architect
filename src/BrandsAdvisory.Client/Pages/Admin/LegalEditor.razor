@@ -1,0 +1,85 @@
+@page "/admin/legal"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: true))
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IOwnerService OwnerService
+@inject IAboutRepository AboutRepo
+@inject NavigationManager Nav
+
+<PageTitle>Edit Legal Notice · @(_about?.HeaderTitle ?? "Brands Advisory")</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Edit Legal Notice</h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
+        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+            @(_saving ? "Saving…" : "Save")
+        </button>
+    </div>
+</div>
+
+@if (_about is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card-dark p-4 d-flex flex-column gap-3 mb-4">
+
+        <div>
+            <label class="form-label text-secondary small">Service Provider Name</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   placeholder="e.g. Jane Doe"
+                   @bind="_about.LegalServiceProviderName" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Service Provider Location</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   placeholder="e.g. Berlin, Germany"
+                   @bind="_about.LegalServiceProviderLocation" />
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Contact</label>
+            <input class="form-control bg-dark text-white border-secondary"
+                   placeholder="e.g. mail@example.com"
+                   @bind="_about.LegalContact" />
+        </div>
+
+    </div>
+}
+
+@code {
+    private AboutContent? _about;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RendererInfo.IsInteractive) return;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!OwnerService.IsOwner(authState.User))
+        {
+            Nav.NavigateTo("/legal");
+            return;
+        }
+
+        _about = await AboutRepo.GetOrCreateAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_about is null) return;
+        _saving = true;
+        await AboutRepo.UpsertAsync(_about);
+        _saving = false;
+        Nav.NavigateTo("/legal");
+    }
+
+    private void Cancel() => Nav.NavigateTo("/legal");
+}

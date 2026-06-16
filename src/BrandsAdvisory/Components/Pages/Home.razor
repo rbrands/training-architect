@@ -1,0 +1,137 @@
+﻿@page "/"
+@attribute [StreamRendering]
+@inject IAboutRepository AboutRepo
+@inject NavigationManager Nav
+@inject IConfiguration Config
+
+<PageTitle>@_siteTitle · @_siteSubTitle</PageTitle>
+<HeadContent>
+    <meta name="description"
+          content="@(_about?.Subtitle ?? "Freelance IT Consultant specializing in Azure, Solution Architecture and GenAI.")" />
+    <meta property="og:title"
+          content="@_siteTitle · @_siteSubTitle" />
+    <meta property="og:description"
+          content="@(_about?.Subtitle ?? "Subtitle")" />
+    <meta property="og:url" content="@(Config["SiteUrl"])/" />
+    <meta property="og:image" content="@(Config["SiteUrl"])/images/brands-advisory-og.png" />
+    <link rel="canonical" href="@(Config["SiteUrl"])/" />
+</HeadContent>
+
+@if (_about is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card-dark p-4 position-relative">
+
+        @if (IsOwner)
+        {
+            <a href="/admin/about"
+               class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-3"
+               title="Edit">
+                ✏️
+            </a>
+        }
+
+        <h1 class="fw-bold mb-2">@_about.Title</h1>
+        <p class="text-secondary mb-3">@_about.Subtitle</p>
+
+        <!-- Skill tags -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            @foreach (var tag in Tags)
+            {
+                <span class="tag-pill">@tag</span>
+            }
+        </div>
+
+        <hr class="border-secondary" />
+
+        <!-- Location + Profile URL -->
+        <div class="row gy-2 mb-3">
+            @if (!string.IsNullOrEmpty(_about.Location))
+            {
+                <div class="col-12 col-sm-6">
+                    <div class="text-secondary small text-uppercase fw-semibold mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Location</div>
+                    <div class="d-flex align-items-center gap-2 text-secondary small">
+                        <span>📍</span>
+                        <span>@_about.Location</span>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_about.ProfileUrl))
+            {
+                <div class="col-12 col-sm-6">
+                    <div class="text-secondary small text-uppercase fw-semibold mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Profile</div>
+                    <div class="d-flex align-items-center gap-2 small">
+                        <span>🌐</span>
+                        <a href="@_about.ProfileUrl" target="_blank" rel="noopener noreferrer"
+                           class="text-secondary text-decoration-none">
+                            @_about.ProfileUrl
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Profile links -->
+        @if (_about.Links.Count > 0)
+        {
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (var link in _about.Links)
+                {
+                    <a href="@link.Url" target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
+                        @if (!string.IsNullOrEmpty(link.Icon))
+                        {
+                            <i class="@link.Icon" style="font-size: 0.9rem;"></i>
+                        }
+                        <span>@link.Label</span>
+                    </a>
+                }
+            </div>
+        }
+
+        <!-- Contact hint -->
+        @if (!string.IsNullOrEmpty(_about.ContactHint))
+        {
+            <p class="text-secondary small fst-italic mb-0">@_about.ContactHint</p>
+        }
+
+    </div>
+}
+
+@code {
+    [CascadingParameter(Name = "IsOwner")]
+    public bool IsOwner { get; set; }
+
+    [CascadingParameter(Name = "SiteTitle")]
+    private string _siteTitle { get; set; } = "Header Title";
+
+    [CascadingParameter(Name = "SiteSubTitle")]
+    private string _siteSubTitle { get; set; } = "";
+
+    private AboutContent? _about;
+
+    private static readonly string[] _defaultTags =
+    [
+        "Cloud Adoption (Azure)",
+        "Solution Architecture",
+        "GenAI & Copilot"
+    ];
+
+    private IEnumerable<string> Tags =>
+        _about?.Tags is { Count: > 0 } tags
+            ? tags.SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            : _defaultTags;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _about = await AboutRepo.GetOrCreateAsync();
+    }
+}
+

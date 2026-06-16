@@ -1,0 +1,512 @@
+# Blazor Portfolio CMS
+### A production-ready blueprint for the modern Microsoft stack
+
+This project demonstrates how to build and deploy a production-ready .NET web application end-to-end on the Microsoft stack:
+
+- **GitHub Copilot** — AI-assisted development throughout
+- **Blazor Web App** — Static SSR for SEO-optimized public pages, InteractiveWebAssembly for the admin interface
+- **Azure-native** — Cosmos DB, Key Vault, Managed Identity, zero secrets stored anywhere
+  - Key Vault for sensitive configuration — secrets loaded at startup via `AddAzureKeyVault()`, only in production
+  - Application Insights for request tracking, dependency monitoring, and exception logging
+- **Infrastructure as Code** — Bicep templates for all Azure resources
+- **CI/CD with GitHub Actions** — automated deployment for both app and infrastructure using OIDC Federated Credentials (no client secrets)
+
+The application itself is a freelancer portfolio site as "mini cms" — publicly readable with owner-only content editing via Microsoft Entra ID. No separate admin user database required.
+
+> This repository is intentionally kept as a clean, well-documented blueprint. Fork it and adapt it to your own use case.
+
+You can use this repo as template to start with a functional web site with basic editing features. Adapt the menu, edit the data and you are ready to go.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | [.NET 10 / Blazor Web App](https://dotnet.microsoft.com/en-us/apps/aspnet/web-apps/blazor) |
+| Hosting | [Azure Web App (App Service)](https://learn.microsoft.com/en-us/azure/app-service/) |
+| Database | [Azure Cosmos DB NoSQL](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/) |
+| Authentication | [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/) via [Microsoft.Identity.Web](https://github.com/AzureAD/microsoft-identity-web) |
+| UI Components | [Syncfusion Blazor](https://www.syncfusion.com/blazor-components) (Community License) |
+| CI/CD | [GitHub Actions](https://docs.github.com/en/actions) |
+| Observability | Azure Application Insights + Log Analytics |
+
+### Dependency Diagram
+
+```mermaid
+graph TD
+    subgraph Solution["brands-advisory-cms Solution (.NET 10)"]
+        BA["BrandsAdvisory\n(Blazor SSR Host)"]
+        BAC["BrandsAdvisory.Client\n(Blazor WASM)"]
+        CORE["BrandsAdvisory.Core\n(Class Library)"]
+        INFRA["BrandsAdvisory.Infrastructure\n(Class Library)"]
+    end
+
+    BA --> BAC
+    BA --> CORE
+    BA --> INFRA
+    BAC --> CORE
+    INFRA --> CORE
+
+   
+   
+ 
+   
+```
+
+---
+
+## Architecture Decisions
+
+### Render Modes
+
+- **Static SSR** is the default render mode for all public pages (`/`, `/projects`, `/articles`, `/articles/{slug}`). This ensures fast initial load times and full SEO indexability without JavaScript requirements. All public pages include full SEO meta tags: title, description, Open Graph (`og:*`), article tags, and canonical URLs. Article detail pages use the article's own title and summary for dynamic meta tags.
+- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `BrandsAdvisory.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
+
+### Owner-Only Editing
+
+There is no separate admin user database. The site owner is identified by the **`SiteAdmin` App Role** assigned in the Entra ID Enterprise Application. The role is checked on every request server-side via `IOwnerService` — UI visibility alone is never relied upon.
+
+```
+User logs in via Entra ID
+       ↓
+App Role claims included in token
+       ↓
+IOwnerService.IsOwner() checks user.IsInRole("SiteAdmin")
+       ↓
+IsOwner cascaded as bool to all Blazor components
+```
+
+To grant access: **Entra ID → Enterprise Applications → your app → Users and groups → Add user/group → assign role `SiteAdmin`**.
+
+### Observability
+
+Application Insights is configured with a Log Analytics workspace backend.
+Telemetry is collected automatically for:
+- All HTTP requests (Static SSR and API endpoints)
+- Dependency calls (Cosmos DB, Key Vault, Azure Storage)
+- Exceptions and failed requests
+- Performance metrics
+
+The connection string is stored in App Service configuration
+(`APPLICATIONINSIGHTS_CONNECTION_STRING`) — not a secret,
+safe to store as an App Setting.
+
+Locally, Application Insights telemetry is disabled by default
+unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set in user-secrets.
+
+### Data Model
+
+All content is stored in a single Cosmos DB container (`content`) with a `type` field as logical partition:
+
+| type | Description |
+|---|---|
+| `about` | Single document, id = `about` |
+| `article` | One document per article, partition key = `article` |
+| `project` | One document per project, partition key = `project` |
+
+---
+
+## Project Structure
+
+```
+brands-advisory-cms.slnx
+infra/
+├── main.bicep                      # Entry point — orchestrates all modules
+├── main.bicepparam                 # Production parameter values
+├── main.local.bicepparam           # Local parameter values (gitignored)
+└── modules/
+    ├── app-service.bicep           # App Service Plan + Linux Web App (.NET 10)
+    ├── appinsights.bicep           # Application Insights + Log Analytics workspace
+    ├── cosmos.bicep                # Cosmos DB account, database, container
+    ├── cosmos-rbac.bicep           # Cosmos DB Built-in Data Contributor → Web App identity
+    ├── custom-domain.bicep         # Apex + www hostname bindings
+    ├── custom-domain-ssl.bicep     # Free managed SSL certificate for www subdomain
+    ├── keyvault.bicep              # Key Vault
+    ├── keyvault-rbac.bicep         # KV Certificate User + Secrets User → Web App identity
+    ├── storage.bicep               # Storage Account + article-images blob container
+    └── storage-rbac.bicep          # Storage Blob Data Contributor → Web App identity
+src/
+├── BrandsAdvisory/             # Blazor Web App host (SSR + API)
+│   ├── Components/
+│   │   ├── Layout/             # NavMenu, MainLayout
+│   │   └── Pages/              # Public pages (Static SSR)
+│   ├── Endpoints/              # Minimal API endpoints for admin data
+│   │   ├── AboutEndpoints.cs
+│   │   ├── ArticleEndpoints.cs
+│   │   └── ProjectEndpoints.cs
+│   ├── Models/
+│   │   └── UserInfo.cs         # DTO for /api/user (auth state for WASM)
+│   └── Program.cs
+├── BrandsAdvisory.Client/      # Blazor WebAssembly client (admin pages)
+│   ├── Pages/Admin/            # Admin edit pages (InteractiveWebAssembly)
+│   │   ├── AboutEditor.razor
+│   │   ├── ArticleEditor.razor
+│   │   └── Projects.razor
+│   ├── Services/
+│   │   ├── ApiAuthenticationStateProvider.cs  # Calls /api/user
+│   │   ├── HttpAboutRepository.cs
+│   │   ├── HttpArticleRepository.cs
+│   │   └── HttpProjectRepository.cs
+│   └── Program.cs
+├── BrandsAdvisory.Core/        # Domain layer (no infrastructure dependencies)
+│   ├── Interfaces/
+│   │   ├── IRepository.cs          # Generic base repository interface
+│   │   ├── IArticleRepository.cs
+│   │   ├── IProjectRepository.cs
+│   │   ├── IAboutRepository.cs
+│   │   └── IOwnerService.cs
+│   ├── Models/
+│   │   ├── CosmosDocument.cs       # Base class for all Cosmos DB documents
+│   │   ├── Article.cs
+│   │   ├── Project.cs
+│   │   ├── AboutContent.cs
+│   │   └── ProfileLink.cs
+│   └── Services/
+│       └── OwnerService.cs
+└── BrandsAdvisory.Infrastructure/  # Data access layer (Cosmos DB)
+    └── Repositories/
+        ├── CosmosRepository.cs     # Generic base repository (Cosmos DB SDK)
+        ├── ArticleRepository.cs
+        ├── ProjectRepository.cs
+        └── AboutRepository.cs
+```
+
+Public pages use Static SSR and depend only on `Core` interfaces, served from Cosmos DB via `Infrastructure`. Admin pages run as WebAssembly in `BrandsAdvisory.Client` and call the host server's minimal API endpoints — all protected by the `SiteAdmin` role.
+
+---
+
+## Initial Setup (once per project)
+
+Before GitHub Actions can deploy infrastructure and code, a one-time manual setup is required to bootstrap the deployment identity and permissions.
+
+### 1. Create Resource Group
+```bash
+az group create \
+  --name <resource-group-name> \
+  --location <location>
+```
+
+### 2. Create Deployment Service Principal
+
+Use `Create-ServicePrincipalForDeployment.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+```powershell
+.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name>
+```
+This script also assigns **Contributor** and **User Access Administrator** roles on the resource group.
+
+### 3. Add OIDC Federated Credential
+
+Use `Add-FederatedCredentialForGitHub.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+```powershell
+.\Add-FederatedCredentialForGitHub.ps1 -ConfigName <project-name>
+```
+
+After this step no client secret is stored anywhere. OIDC handles authentication via GitHub's identity provider.
+
+### 4. Create App Registration with Certificate
+
+Use `Create-AppRegistrationWithCertificate.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+```powershell
+.\Create-AppRegistrationWithCertificate.ps1 -ConfigName <project-name>
+```
+
+This creates the Entra ID App Registration for user authentication and generates a self-signed certificate.
+
+### 5. Configure and Run Setup Script
+```powershell
+# Copy and fill in all values
+cp config.example.ps1 config.ps1
+
+# Set dotnet user-secrets, GitHub Secrets, and generate
+# main.local.bicepparam in one step
+.\setup.ps1 -All
+```
+
+### 6. Push to main — CI/CD takes over
+```bash
+git push origin main
+```
+
+deploy-infrastructure.yml creates:
+- Key Vault
+- Cosmos DB account, database, container
+- Storage Account with article-images container
+- App Service Plan + Web App
+- All RBAC role assignments (Managed Identity)
+
+deploy-app.yml builds and deploys the application.
+
+### 7. Upload Certificate to Key Vault (one-time manual step)
+
+After the first infrastructure deployment, upload the certificate:
+Azure Portal → <key-vault-name> → Certificates → Generate/Import → Import
+→ Upload the .pem file generated by Create-AppRegistrationWithCertificate.ps1
+→ Certificate name must match CERT_NAME in config.ps1
+
+This is the only step that cannot be automated — storing the private key in CI/CD would defeat the purpose of using Key Vault.
+
+### 7a. Set Key Vault Secrets
+
+Assign the **Key Vault Secrets Officer** role to your account using `Set-KeyVaultRoleAssignment.ps1` from cloud-admin-toolkit, then run:
+
+```powershell
+.\setup.ps1 -KeyVault
+```
+
+Secrets stored in Key Vault:
+
+| Secret name | Maps to config key |
+|---|---|
+| `Syncfusion--LicenseKey` | `Syncfusion:LicenseKey` |
+
+> **Note:** Key Vault secret names use `--` as a separator, which Azure App Configuration maps to `:` in .NET configuration.
+
+### 8. Trigger final deployment
+
+After uploading the certificate, trigger a new deployment:
+```bash
+git commit --allow-empty -m "chore: trigger deployment after certificate upload"
+git push origin main
+```
+
+The application is now fully deployed and operational.
+
+---
+
+> **What is manual vs automated:**
+>
+> | Step | How |
+> |---|---|
+> | Resource Group | Manual — az group create |
+> | Service Principal + OIDC | cloud-admin-toolkit scripts |
+> | App Registration + Certificate | cloud-admin-toolkit scripts |
+> | All Azure resources (KV, Cosmos, Storage, App Service) | Bicep via GitHub Actions |
+> | Certificate upload to Key Vault | Manual — one-time after first deployment |
+> | Application deployment | GitHub Actions |
+> | Configuration | setup.ps1 + config.ps1 |
+
+## CI/CD
+
+Two GitHub Actions workflows handle automated deployment:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `deploy-app.yml` | Push to `main` when `src/**` changes | Builds and deploys the Blazor app to Azure Web App |
+| `deploy-infrastructure.yml` | Push to `main` when `infra/**` changes | Deploys Bicep templates to Azure |
+
+Both workflows use **OIDC Federated Credentials** for authentication — no client secrets are stored in GitHub.
+
+### Authentication Setup (OIDC)
+
+1. Create a Service Principal using `Create-ServicePrincipalForDeployment.ps1` (see step 2 in [Initial Setup](#initial-setup-once-per-project))
+2. Add a Federated Credential to the Service Principal:
+   - **Issuer:** `https://token.actions.githubusercontent.com`
+   - **Subject:** `repo:{org}/{repo}:ref:refs/heads/main`
+   - **Audiences:** `api://AzureADTokenExchange`
+
+See: https://docs.github.com/en/actions/concepts/security/openid-connect
+
+> **How OIDC authentication works in the workflows:**
+> The `AZURE_CLIENT_ID` secret identifies *which* Service Principal to authenticate as.
+> The Federated Credential on that Service Principal then tells Azure *which* GitHub repo and branch it trusts.
+> OIDC replaces the **client secret** — instead of a password, GitHub issues a short-lived signed token that Azure verifies against the Federated Credential. No secret is ever stored.
+
+Scripts for creating the service principal and configuring the federated credential are available in [rbrands/cloud-admin-toolkit](https://github.com/rbrands/cloud-admin-toolkit).
+
+### Required GitHub Secrets
+
+All secrets are set automatically by `setup.ps1 -GitHub` (see [Initial Setup](#initial-setup-once-per-project), step 6). No manual configuration in the GitHub UI is needed.
+
+The following secrets are set:
+
+| Secret | Description |
+|---|---|
+| `AZURE_CLIENT_ID` | App ID of the deployment service principal |
+| `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID |
+| `AZURE_RESOURCE_GROUP` | Resource group name |
+| `AZURE_WEBAPP_NAME` | Azure Web App name |
+| `APP_NAME` | Azure Web App name |
+| `PLAN_NAME` | App Service Plan name |
+| `COSMOS_ACCOUNT_NAME` | Cosmos DB account name |
+| `COSMOS_DATABASE_ID` | Database name |
+| `COSMOS_CONTAINER_NAME` | Container name |
+| `KEY_VAULT_NAME` | Key Vault name |
+| `CERT_NAME` | Certificate name in Key Vault |
+| `CLIENT_ID` | App Registration Client ID |
+| `TENANT_ID` | Entra ID Tenant ID |
+| `STORAGE_ACCOUNT_NAME` | Azure Storage Account name |
+| `APP_INSIGHTS_NAME` | Application Insights resource name |
+| `LOG_ANALYTICS_NAME` | Log Analytics workspace name |
+| `SITE_URL` | Public site URL, e.g. `https://brands-advisory.com` |
+
+> **Note:** `SYNCFUSION_LICENSE_KEY` is **not** a GitHub Secret. It is stored in Azure Key Vault and loaded at startup via `AddAzureKeyVault()`. Set it with `setup.ps1 -KeyVault`.
+
+### Deploying Infrastructure (Bicep)
+
+Infrastructure is defined in `infra/main.bicep`.
+
+**1. Generate the local parameter file** (if not already done via `setup.ps1 -Bicep`):
+
+```powershell
+.\setup.ps1 -Bicep
+# Generates infra/main.local.bicepparam from config.ps1
+```
+
+**2. Deploy to Azure:**
+
+```bash
+az deployment group create \
+  --resource-group <your-resource-group> \
+  --template-file infra/main.bicep \
+  --parameters infra/main.local.bicepparam
+```
+
+This deploys:
+- Azure Cosmos DB account, database, and container
+- Azure App Service Plan + Web App (.NET 10, Linux)
+- All App Service configuration (Entra ID, Cosmos DB endpoint, Key Vault URL)
+- Key Vault RBAC — **Key Vault Certificate User** and **Key Vault Secrets User** roles for the Web App Managed Identity
+  - Certificate User: reads the authentication certificate
+  - Secrets User: reads secrets via `AddAzureKeyVault()` at startup (e.g. `Syncfusion:LicenseKey`)
+- Cosmos DB RBAC — **Built-in Data Contributor** role for the Web App Managed Identity
+
+> **Note:** The Key Vault is created automatically by the Bicep template. After the first deployment, upload the authentication certificate to Key Vault manually: **Azure Portal → kv-{name} → Certificates → Generate/Import**. The Key Vault URI is an output of the Bicep deployment and does not need to be configured separately.
+
+### Legal Page
+
+Before going live, fill in the placeholder values in [`src/BrandsAdvisory/Components/Pages/Legal.razor`](src/BrandsAdvisory/Components/Pages/Legal.razor):
+
+- `__STREET_ADDRESS__` — Street and house number
+- `__ZIP_CITY__` — Postal code and city
+- `__CONTACT_EMAIL__` — Public contact email address
+
+---
+
+### Custom Domain (optional)
+
+Custom domain support is built into the Bicep templates. When `customDomain` is non-empty, `main.bicep` deploys `modules/custom-domain.bicep`, which:
+
+- Adds an apex hostname binding (ownership verification via A + TXT records)
+- Adds a `www` hostname binding with a **free App Service managed certificate** (CNAME-based SSL)
+
+The `www` subdomain gets full HTTPS. For the apex domain, redirect `brands-advisory.com` → `https://www.brands-advisory.com` at your DNS registrar (most registrars support this natively). This is the recommended pattern and avoids the complexity of apex domain certificates.
+
+#### Step 1 — Configure DNS at your registrar
+
+| Record type | Name | Value |
+|---|---|---|
+| `CNAME` | `www` | `<appName>.azurewebsites.net` |
+| `TXT` | `asuid.www` | *(domain verification ID — see below)* |
+| `A` | `@` (apex) | *(outbound IP of the App Service)* |
+| `TXT` | `asuid` | *(domain verification ID — see below)* |
+
+**Get the domain verification ID:**
+```
+Azure Portal → App Service → Custom domains → Custom domain verification ID
+```
+
+**Get the outbound IP address:**
+```
+Azure Portal → App Service → Properties → Outbound IP addresses (first entry)
+```
+
+> **DNS propagation:** Allow 5–30 minutes after adding records before deploying. The Bicep deployment will fail if Azure cannot resolve the domain.
+
+#### Step 2 — Set `SiteUrl` to your custom domain in config.ps1
+
+```powershell
+SiteUrl = "https://www.brands-advisory.com"  # or https://brands-advisory.com
+```
+
+`main.bicep` derives the apex domain from `SiteUrl` automatically: non-`azurewebsites.net` URLs trigger the custom domain deployment.
+
+#### Step 3 — Re-run setup to update secrets and bicepparam
+
+```powershell
+.\setup.ps1 -Bicep
+```
+
+#### Step 4 — Push to trigger deployment
+
+```bash
+git commit --allow-empty -m "chore: deploy custom domain"
+git push origin main
+```
+
+`deploy-infrastructure.yml` passes `customDomain=${{ secrets.CUSTOM_DOMAIN }}` to Bicep. The deployment:
+1. Adds hostname bindings for apex and www
+2. Issues a free managed certificate for `www.{customDomain}` (CNAME validation)
+3. Enables SNI SSL on the www binding via a nested deployment
+
+#### After deployment
+
+Add `https://www.{customDomain}/signin-oidc` to the **Redirect URIs** in your Entra ID App Registration:
+```
+Azure Portal → App registrations → your app → Authentication → Add URI
+```
+
+#### Required GitHub Secret
+
+No additional secret required — `SiteUrl` is already the single source of truth. The apex domain is derived from it automatically in Bicep.
+
+---
+
+## Local Development
+
+### Prerequisites
+
+**1. Trust the local HTTPS developer certificate** (once per machine):
+
+```bash
+dotnet dev-certs https --trust
+```
+
+Without this, the OIDC callback over HTTPS will fail with "Correlation failed" in the browser.
+
+**2. Add the local redirect URI to the Entra ID App Registration:**
+
+In the Azure Portal → **App registrations** → your app → **Authentication** → add:
+
+```
+https://localhost:7000/signin-oidc
+```
+
+**3. Log in with the Azure CLI** (once per session, needed for Key Vault certificate loading and Cosmos DB access via `DefaultAzureCredential`):
+
+```bash
+az login
+```
+
+**4. Set local secrets** (once, see [Setup](#setup) above):
+
+```powershell
+Copy-Item config.example.ps1 config.ps1
+# Edit config.ps1 and replace all __PLACEHOLDER__ values
+.\setup.ps1 -Secrets
+```
+
+> **Note:** Key Vault is only used in production. Locally, all secrets are set via `dotnet user-secrets` — no Azure Key Vault connection is required during development.
+
+### Running the app
+
+Always use the `https` profile — the OIDC flow requires HTTPS for cookies to work correctly:
+
+```bash
+dotnet run --project src/BrandsAdvisory --launch-profile https
+```
+
+The app starts at `https://localhost:7000`.
+
+> **Note:** Running with `--launch-profile http` (plain HTTP) will cause "Correlation failed" on the login callback because secure cookies cannot be set over HTTP.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE)
+---
+
+Maintained by  
+**Robert Brands**  
+Freelance IT Consultant | Solution Architect | Cloud Adoption & GenAI
