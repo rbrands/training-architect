@@ -56,6 +56,63 @@ graph TD
 
 ---
 
+## Training Architect — UI Shell
+
+The repository includes a scaffolded front-end for an AI-powered cycling coaching feature
+("Training Architect"). All orchestration, agent calls, auth flows, and MCP integration are
+**intentionally left as stubs** with `// TODO:` markers pointing to the integration contract.
+
+### Pages
+
+| Route | Render mode | Description |
+|---|---|---|
+| `/coach` | `InteractiveWebAssembly` | Coaching chat (message list + input); backed by `IChatService` |
+| `/training-plan` | Static SSR + embedded WASM | Structured weekly plan viewer; athlete confirms via `PlanConfirmation` |
+| `/dashboard` | `InteractiveWebAssembly` | CTL / ATL / TSB KPI cards and 28-day progression chart |
+
+### Render-mode Strategy
+
+```
+Static SSR (default)
+  └─ /training-plan  ← StreamRendering; IAuthContext resolved server-side
+        └─ <PlanConfirmation rendermode="InteractiveWebAssembly" />
+              Athlete can Accept / Adjust / Reject without a full page reload.
+              Decision bubbles up via EventCallback → TODO: forward to agent.
+
+InteractiveWebAssembly (minimal surface)
+  ├─ /coach        ← IChatService scoped per WASM session
+  └─ /dashboard    ← IIntervalsDataProvider returns sample fitness data
+```
+
+The WASM surface is kept minimal: only the two pages that require client-side reactivity
+(`/coach` and `/dashboard`) run as full WASM circuits. The training-plan confirmation
+component is an island of interactivity inside an otherwise SSR page.
+
+### Orchestration Plug-in Points
+
+Replace each stub in `BrandsAdvisory.Core/Services/` with the real implementation and
+re-register it in `BrandsAdvisory/Program.cs` (server) and
+`BrandsAdvisory.Client/Program.cs` (WASM).
+
+| Interface | Stub | Integration point |
+|---|---|---|
+| `IChatService` | `StubChatService` | Call the .NET orchestration pipeline (e.g. `Microsoft.Extensions.AI` / Semantic Kernel agent graph) |
+| `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
+| `IIntervalsDataProvider` | `StubIntervalsDataProvider` | Call the intervals.icu REST API with the athlete's stored API key (retrieved server-side from Key Vault) |
+
+### New Core Models
+
+| Model | Purpose |
+|---|---|
+| `ChatMessage` | Single message in the conversation (`User` / `Assistant` roles) |
+| `TrainingPlan` | Weekly plan with ordered `PlannedWorkout` entries |
+| `PlannedWorkout` | Day, title, type, duration, TSS, IF, zone, coaching description |
+| `AthleteProfile` | Athlete ID, display name, `AthleteTier` (resolved server-side) |
+| `AthleteSnapshot` | Current CTL / ATL / TSB and `FitnessPoint` history from intervals.icu |
+| `PlanDecision` | Athlete's verdict on a proposed plan (`Accepted` / `AdjustmentRequested` / `Rejected`) |
+
+---
+
 ## Architecture Decisions
 
 ### Render Modes

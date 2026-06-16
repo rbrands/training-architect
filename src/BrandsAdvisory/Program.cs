@@ -173,6 +173,16 @@ builder.Services.AddSingleton<IAboutRepository, AboutRepository>();
 
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 
+// Training Architect stubs — replace with real implementations once the
+// orchestration layer is connected.
+// IAuthContext: resolved server-side; tier must never come from client input.
+// TODO: Replace StubAuthContext with an OIDC + entitlement-store backed implementation.
+builder.Services.AddScoped<IAuthContext, StubAuthContext>();
+// TODO: Replace StubChatService with the AI orchestration pipeline.
+builder.Services.AddScoped<IChatService, StubChatService>();
+// TODO: Replace StubIntervalsDataProvider with the real intervals.icu API client.
+builder.Services.AddScoped<IIntervalsDataProvider, StubIntervalsDataProvider>();
+
 // ClientConfig must be available in server-side DI for Blazor WASM prerender.
 // The WASM client fetches this at startup via /api/config; during SSR prerender
 // the server resolves the same values directly from IConfiguration.

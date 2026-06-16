@@ -1,0 +1,84 @@
+@page "/coach"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject IChatService ChatService
+
+<PageTitle>AI Coach · Training Architect</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="fw-bold mb-0">🚴 AI Coaching Chat</h1>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="Clear" title="Clear conversation">
+        🗑 Clear
+    </button>
+</div>
+<p class="text-secondary small mb-3">
+    Ask your AI coach about training load, race prep, recovery, or request a new plan.
+</p>
+
+<!-- Message list -->
+<div class="ta-chat-history mb-3" id="ta-chat-scroll">
+    @if (!ChatService.Messages.Any())
+    {
+        <p class="text-secondary small fst-italic text-center py-4">
+            Start the conversation — your coach is ready.
+        </p>
+    }
+    else
+    {
+        @foreach (var msg in ChatService.Messages)
+        {
+            <div class="ta-message @(msg.Role == MessageRole.User ? "ta-message-user" : "ta-message-assistant")">
+                <div class="ta-message-bubble">@msg.Content</div>
+                <div class="ta-message-meta text-secondary" style="font-size:0.7rem;">
+                    @(msg.Role == MessageRole.User ? "You" : "Coach") ·
+                    @msg.Timestamp.LocalDateTime.ToString("HH:mm")
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Input area -->
+<div class="d-flex gap-2">
+    <textarea class="form-control form-control-sm bg-dark text-white border-secondary flex-grow-1"
+              rows="2"
+              placeholder="Message your coach…"
+              @bind="_input"
+              @onkeydown="HandleKeyDown"
+              disabled="@_sending" />
+    <button class="btn btn-outline-light btn-sm align-self-end"
+            @onclick="SendAsync"
+            disabled="@(_sending || string.IsNullOrWhiteSpace(_input))">
+        @(_sending ? "…" : "Send →")
+    </button>
+</div>
+
+@code {
+    private string _input = string.Empty;
+    private bool _sending;
+
+    private async Task SendAsync()
+    {
+        var text = _input.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        _input = string.Empty;
+        _sending = true;
+        try
+        {
+            // TODO: IChatService.SendAsync calls the AI orchestration pipeline.
+            await ChatService.SendAsync(text);
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SendAsync();
+    }
+
+    private void Clear() => ChatService.ClearConversation();
+}
