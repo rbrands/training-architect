@@ -298,4 +298,13 @@ app.MapPost("/logout", async (HttpContext context) =>
         new AuthenticationProperties { RedirectUri = "/" });
 });
 
+// Lightweight health endpoint used by CI/CD slot validation and swap workflows.
+app.MapGet("/health", () =>
+    Results.Ok(new
+    {
+        status = "Healthy",
+        timestampUtc = DateTime.UtcNow
+    }))
+    .AllowAnonymous();
+
 app.Run();

@@ -51,6 +51,76 @@ param siteUrl string
 @description('Tags to apply to the Web App resource.')
 param tags object = {}
 
+@description('Name of the development slot.')
+param devSlotName string = 'dev'
+
+@description('Name of the staging slot.')
+param stagingSlotName string = 'staging'
+
+var devSlotSiteUrl = 'https://${appName}-${devSlotName}.azurewebsites.net'
+var stagingSlotSiteUrl = 'https://${appName}-${stagingSlotName}.azurewebsites.net'
+
+// Shared application settings for all slots.
+var baseAppSettings = [
+  // ----- Entra ID / Microsoft.Identity.Web -----
+  {
+    name: 'AzureAd__TenantId'
+    value: tenantId
+  }
+  {
+    name: 'AzureAd__ClientId'
+    value: clientId
+  }
+  {
+    name: 'AzureAd__ClientCertificates__0__SourceType'
+    value: 'KeyVault'
+  }
+  {
+    name: 'AzureAd__ClientCertificates__0__KeyVaultUrl'
+    value: keyVaultUrl
+  }
+  {
+    name: 'AzureAd__ClientCertificates__0__KeyVaultCertificateName'
+    value: keyVaultCertificateName
+  }
+  // ----- Cosmos DB -----
+  {
+    name: 'CosmosDb__EndpointUri'
+    value: cosmosEndpoint
+  }
+  {
+    name: 'CosmosDb__DatabaseId'
+    value: cosmosDatabaseId
+  }
+  {
+    name: 'CosmosDb__ContainerName'
+    value: cosmosContainerName
+  }
+  // ----- Storage -----
+  {
+    name: 'Storage__BlobEndpoint'
+    value: storageBlobEndpoint
+  }
+  // ----- Key Vault URL (for IConfiguration Key Vault source) -----
+  {
+    name: 'KeyVault__Url'
+    value: keyVaultUrl
+  }
+  // ----- Application Insights -----
+  {
+    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+  {
+    name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
+    value: '~3'
+  }
+  {
+    name: 'XDT_MicrosoftApplicationInsights_Mode'
+    value: 'Recommended'
+  }
+]
+
 // ---------------------------------------------------------------------------
 // Web App
 // ---------------------------------------------------------------------------
@@ -76,8 +146,8 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: dotnetVersion
       appCommandLine: 'dotnet TrainingArchitect.dll'
-      // alwaysOn requires at least a Standard plan; disabled for B1
-      alwaysOn: false
+      // Keep production warm to avoid cold starts after idle periods.
+      alwaysOn: true
       // HTTP/2 enables multiplexing and header compression
       // for faster loading of Blazor's JS/CSS assets.
       http20Enabled: true
@@ -86,67 +156,88 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'ASPNETCORE_ENVIRONMENT'
           value: 'Production'
         }
-        // ----- Entra ID / Microsoft.Identity.Web -----
-        {
-          name: 'AzureAd__TenantId'
-          value: tenantId
-        }
-        {
-          name: 'AzureAd__ClientId'
-          value: clientId
-        }
-        {
-          name: 'AzureAd__ClientCertificates__0__SourceType'
-          value: 'KeyVault'
-        }
-        {
-          name: 'AzureAd__ClientCertificates__0__KeyVaultUrl'
-          value: keyVaultUrl
-        }
-        {
-          name: 'AzureAd__ClientCertificates__0__KeyVaultCertificateName'
-          value: keyVaultCertificateName
-        }
-        // ----- Cosmos DB -----
-        {
-          name: 'CosmosDb__EndpointUri'
-          value: cosmosEndpoint
-        }
-        {
-          name: 'CosmosDb__DatabaseId'
-          value: cosmosDatabaseId
-        }
-        {
-          name: 'CosmosDb__ContainerName'
-          value: cosmosContainerName
-        }
-        // ----- Storage -----
-        {
-          name: 'Storage__BlobEndpoint'
-          value: storageBlobEndpoint
-        }
-        // ----- Key Vault URL (for IConfiguration Key Vault source) -----
-        {
-          name: 'KeyVault__Url'
-          value: keyVaultUrl
-        }
-        // ----- Application Insights -----
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsightsConnectionString
-        }
-        {
-          name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
-          value: '~3'
-        }
-        {
-          name: 'XDT_MicrosoftApplicationInsights_Mode'
-          value: 'Recommended'
-        }
-        // ----- Site URL (canonical + Open Graph meta tags) -----
+        ...baseAppSettings
         {
           name: 'SiteUrl'
           value: siteUrl
+        }
+      ]
+    }
+  }
+}
+
+// Settings listed here stay with the slot during swap operations.
+resource slotSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+  name: 'slotConfigNames'
+  parent: webApp
+  properties: {
+    appSettingNames: [
+      'ASPNETCORE_ENVIRONMENT'
+      'SiteUrl'
+    ]
+  }
+}
+
+resource devSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
+  name: devSlotName
+  parent: webApp
+  location: location
+  kind: 'app,linux'
+  tags: union(tags, {
+    environment: 'dev'
+  })
+  properties: {
+    serverFarmId: planId
+    httpsOnly: true
+    clientAffinityEnabled: false
+    siteConfig: {
+      linuxFxVersion: dotnetVersion
+      appCommandLine: 'dotnet TrainingArchitect.dll'
+      // Dev slot: disable Always On to reduce non-production runtime cost.
+      alwaysOn: false
+      http20Enabled: true
+      appSettings: [
+        {
+          name: 'ASPNETCORE_ENVIRONMENT'
+          value: 'Development'
+        }
+        ...baseAppSettings
+        {
+          name: 'SiteUrl'
+          value: devSlotSiteUrl
+        }
+      ]
+    }
+  }
+}
+
+resource stagingSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
+  name: stagingSlotName
+  parent: webApp
+  location: location
+  kind: 'app,linux'
+  tags: union(tags, {
+    environment: 'staging'
+  })
+  properties: {
+    serverFarmId: planId
+    httpsOnly: true
+    clientAffinityEnabled: false
+    siteConfig: {
+      linuxFxVersion: dotnetVersion
+      appCommandLine: 'dotnet TrainingArchitect.dll'
+      // Staging slot: disable Always On to reduce non-production runtime cost.
+      alwaysOn: false
+      http20Enabled: true
+      appSettings: [
+        {
+          name: 'ASPNETCORE_ENVIRONMENT'
+          value: 'Staging'
+        }
+        ...baseAppSettings
+        {
+          name: 'SiteUrl'
+          value: stagingSlotSiteUrl
         }
       ]
     }
@@ -165,3 +256,9 @@ output principalId string = webApp.identity.principalId
 
 @description('Resource ID of the App Service Plan. Passed through for the custom-domain certificate module.')
 output appServicePlanId string = planId
+
+@description('Name of the development deployment slot.')
+output devSlotName string = devSlot.name
+
+@description('Name of the staging deployment slot.')
+output stagingSlotName string = stagingSlot.name

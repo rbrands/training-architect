@@ -1,0 +1,123 @@
+name: "Swap Staging -> Production"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# Never cancel a running swap mid-operation
+concurrency:
+  group: swap-production
+  cancel-in-progress: false
+
+jobs:
+  swap:
+    name: "Swap staging -> production"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set deployment context
+        id: ctx
+        shell: bash
+        run: |
+          APP_NAME="${{ secrets.APP_NAME }}"
+          RESOURCE_GROUP="${{ secrets.APP_RESOURCE_GROUP }}"
+
+          if [ -z "$APP_NAME" ]; then
+            echo "::error::Missing secret: APP_NAME (or AZURE_WEBAPP_NAME)."
+            exit 1
+          fi
+
+          if [ -z "$RESOURCE_GROUP" ]; then
+            echo "::error::Missing secret: AZURE_RESOURCE_GROUP (or APP_RESOURCE_GROUP)."
+            exit 1
+          fi
+
+          echo "app_name=$APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "resource_group=$RESOURCE_GROUP" >> "$GITHUB_OUTPUT"
+
+      - name: Health check on staging (pre-swap)
+        shell: bash
+        run: |
+          APP="${{ steps.ctx.outputs.app_name }}"
+
+          check_url() {
+            local url="$1"
+            local attempts="$2"
+            local wait_s="$3"
+            echo "Checking staging endpoint: $url"
+
+            for i in $(seq 1 "$attempts"); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "Staging check passed (attempt $i)"
+                return 0
+              fi
+              if [ "$i" = "$attempts" ]; then
+                echo "Attempt $i: HTTP $STATUS"
+                return 1
+              fi
+              echo "Attempt $i: HTTP $STATUS - waiting ${wait_s}s..."
+              sleep "$wait_s"
+            done
+          }
+
+          check_url "https://${APP}-staging.azurewebsites.net/health" 6 10 || \
+          check_url "https://${APP}-staging.azurewebsites.net/api/config" 4 8 || \
+          check_url "https://${APP}-staging.azurewebsites.net/" 4 8 || {
+            echo "::error::Staging health check failed. Aborting swap."
+            exit 1
+          }
+
+      - name: Swap staging -> production
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az webapp deployment slot swap \
+              --resource-group "${{ steps.ctx.outputs.resource_group }}" \
+              --name "${{ steps.ctx.outputs.app_name }}" \
+              --slot staging \
+              --target-slot production
+
+      - name: Health check on production (post-swap)
+        shell: bash
+        run: |
+          APP="${{ steps.ctx.outputs.app_name }}"
+
+          check_url() {
+            local url="$1"
+            local attempts="$2"
+            local wait_s="$3"
+            echo "Checking production endpoint: $url"
+
+            for i in $(seq 1 "$attempts"); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "Production check passed (attempt $i)"
+                return 0
+              fi
+              if [ "$i" = "$attempts" ]; then
+                echo "Attempt $i: HTTP $STATUS"
+                return 1
+              fi
+              echo "Attempt $i: HTTP $STATUS - waiting ${wait_s}s..."
+              sleep "$wait_s"
+            done
+          }
+
+          check_url "https://${APP}.azurewebsites.net/health" 10 15 || \
+          check_url "https://${APP}.azurewebsites.net/api/config" 6 10 || \
+          check_url "https://${APP}.azurewebsites.net/" 6 10 || {
+            echo "::error::Production health check failed after swap. Consider swapping back manually."
+            exit 1
+          }

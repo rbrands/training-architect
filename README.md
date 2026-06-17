@@ -117,11 +117,19 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 ### Render Modes
 
 - **Static SSR** is the default render mode for all public pages (`/`, `/projects`, `/articles`, `/articles/{slug}`). This ensures fast initial load times and full SEO indexability without JavaScript requirements. All public pages include full SEO meta tags: title, description, Open Graph (`og:*`), article tags, and canonical URLs. Article detail pages use the article's own title and summary for dynamic meta tags.
-- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `TrainingArchitect.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
+- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`, `/admin/legal`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `TrainingArchitect.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
 
 ### Owner-Only Editing
 
 There is no separate admin user database. The site owner is identified by the **`SiteAdmin` App Role** assigned in the Entra ID Enterprise Application. The role is checked on every request server-side via `IOwnerService` — UI visibility alone is never relied upon.
+
+Define the app role once in **Entra ID → App registrations → your app → App roles → Create app role** with these values:
+
+- Display name: `Site Administrator`
+- Allowed member types: `Users/Groups`
+- Value: `SiteAdmin`
+- Description: `Users in this group have admin rights.`
+- Do you want to enable this app role?: `Yes`
 
 ```
 User logs in via Entra ID
@@ -133,7 +141,18 @@ IOwnerService.IsOwner() checks user.IsInRole("SiteAdmin")
 IsOwner cascaded as bool to all Blazor components
 ```
 
-To grant access: **Entra ID → Enterprise Applications → your app → Users and groups → Add user/group → assign role `SiteAdmin`**.
+To grant access: **Entra ID → Enterprise Applications → your app → Users and groups → Add user/group → assign role `Site Administrator`**.
+
+Important: the application authorization check uses the role **value** (`SiteAdmin`) in the token claim, not the display name.
+
+### Legal Content Management
+
+The legal page (`/legal`) is no longer populated from configuration values.
+Legal content is now managed as online content and edited in the admin UI at `/admin/legal`.
+
+- Source of truth: persisted content in Cosmos DB (about document)
+- Editing: protected admin workflow (`SiteAdmin` role required)
+- Not used for legal content: `config.ps1`, `appsettings*.json`, or Key Vault settings
 
 ### Observability
 
@@ -286,6 +305,18 @@ After the script completes, copy the **Application (client) ID** from the output
 ClientId = "<application-client-id>"
 ```
 
+Configure Redirect URIs in Entra ID:
+
+- Azure Portal: Entra ID → App registrations → your app → Authentication → Add a platform → Web
+- Add each environment URI that can receive sign-in callbacks:
+  - `https://localhost:7000/signin-oidc`
+  - `https://training-architect-dev.azurewebsites.net/signin-oidc`
+  - `https://training-architect-staging.azurewebsites.net/signin-oidc`
+  - `https://training-architect.azurewebsites.net/signin-oidc`
+  - `https://training-architect.com/signin-oidc` (optional, custom domain)
+
+Only keep URIs for environments you actually use. Unused redirect URIs should be removed.
+
 ### 5. Configure and Run Setup Script
 ```powershell
 # Copy and fill in all values
@@ -296,19 +327,27 @@ cp config.example.ps1 config.ps1
 .\setup.ps1 -All
 ```
 
-### 6. Push to main — CI/CD takes over
+### 6. CI/CD flow (after first push)
+
 ```bash
 git push origin main
 ```
 
 deploy-infrastructure.yml creates:
+
 - Key Vault
 - Cosmos DB account, database, container
 - Storage Account with article-images container
 - App Service Plan + Web App
 - All RBAC role assignments (Managed Identity)
 
-deploy-app.yml builds and deploys the application.
+Application deployment flow:
+
+- Pull request to `main` deploys app changes to slot `dev`.
+- Push to `main` deploys app changes to slot `staging`.
+- Production is promoted only via manual workflow `swap-staging-to-production.yml` (swap `staging` -> `production`).
+
+This makes `staging` the only release source for `production`.
 
 ### 7. Upload Certificate to Key Vault (one-time manual step)
 
@@ -365,10 +404,39 @@ Two GitHub Actions workflows handle automated deployment:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `deploy-app.yml` | Push to `main` when `src/**` changes | Builds and deploys the Blazor app to Azure Web App |
+| `deploy-app.yml` | PR to `main` or push to `main` when `src/**` changes | Builds the Blazor app and deploys by slot (`dev` for PRs, `staging` for `main` pushes) |
+| `swap-staging-to-production.yml` | Manual (`workflow_dispatch`) | Runs pre-checks on `staging`, swaps `staging` to `production`, then runs post-checks on `production` |
 | `deploy-infrastructure.yml` | Push to `main` when `infra/**` changes | Deploys Bicep templates to Azure |
 
 Both workflows use **OIDC Federated Credentials** for authentication — no client secrets are stored in GitHub.
+
+### Deployment Slots
+
+The App Service is provisioned with two deployment slots:
+- `dev`
+- `staging`
+
+Slot URLs:
+- Dev: `https://<APP_NAME>-dev.azurewebsites.net`
+- Staging: `https://<APP_NAME>-staging.azurewebsites.net`
+- Production: `https://<APP_NAME>.azurewebsites.net` (or your custom domain)
+
+Deployment and promotion flow (recommended):
+
+```bash
+# PR to main -> deploy to dev slot
+# Push to main -> deploy to staging slot
+
+# Promote staging -> production (manual approval point)
+az webapp deployment slot swap \
+  --resource-group <APP_RESOURCE_GROUP> \
+  --name <APP_NAME> \
+  --slot staging \
+  --target-slot production
+```
+
+There is no `dev -> staging` swap in the standard flow.
+`staging` is refreshed by direct deployment from `main`, and only `staging -> production` is swapped.
 
 ### Authentication Setup (OIDC)
 
