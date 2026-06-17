@@ -46,7 +46,7 @@ if (-not (Test-Path $configPath)) {
 # ---------------------------------------------------------------------------
 if ($Secrets -or $All) {
     Write-Host "Setting dotnet user-secrets..." -ForegroundColor Yellow
-    $project = "src/BrandsAdvisory/BrandsAdvisory.csproj"
+    $project = "src/TrainingArchitect/TrainingArchitect.csproj"
 
     dotnet user-secrets set "AzureAd:TenantId"                                        $config.TenantId             -p $project
     dotnet user-secrets set "AzureAd:ClientId"                                        $config.ClientId             -p $project
@@ -69,11 +69,11 @@ if ($Secrets -or $All) {
 if ($GitHub -or $All) {
     Write-Host "Setting GitHub Secrets..." -ForegroundColor Yellow
 
-    gh secret set AZURE_CLIENT_ID        --body $config.AzureClientId
-    gh secret set AZURE_SUBSCRIPTION_ID  --body $config.SubscriptionId
-    gh secret set AZURE_RESOURCE_GROUP   --body $config.ResourceGroup
-    gh secret set AZURE_WEBAPP_NAME      --body $config.AppName
-    gh secret set APP_NAME               --body $config.AppName
+    gh secret set AZURE_CLIENT_ID          --body $config.AzureClientId
+    gh secret set AZURE_SUBSCRIPTION_ID   --body $config.SubscriptionId
+    gh secret set CENTRAL_RESOURCE_GROUP  --body $config.CentralResourceGroupName
+    gh secret set APP_RESOURCE_GROUP      --body $config.AppResourceGroupName
+    gh secret set APP_NAME                --body $config.AppName
     gh secret set PLAN_NAME              --body $config.PlanName
     gh secret set COSMOS_ACCOUNT_NAME    --body $config.CosmosAccountName
     gh secret set COSMOS_DATABASE_ID     --body $config.CosmosDatabaseId
@@ -84,7 +84,6 @@ if ($GitHub -or $All) {
     gh secret set TENANT_ID              --body $config.TenantId
     gh secret set STORAGE_ACCOUNT_NAME   --body $config.StorageAccountName
     gh secret set APP_INSIGHTS_NAME      --body $config.AppInsightsName
-    gh secret set LOG_ANALYTICS_NAME     --body $config.LogAnalyticsName
     gh secret set SITE_URL               --body $config.SiteUrl
 
     Write-Host "GitHub Secrets set." -ForegroundColor Green
@@ -102,6 +101,8 @@ if ($Bicep -or $All) {
 // ---------------------------------------------------------------------------
 using './main.bicep'
 
+param centralResourceGroupName = '$($config.CentralResourceGroupName)'
+param appResourceGroupName     = '$($config.AppResourceGroupName)'
 param appName               = '$($config.AppName)'
 param planName              = '$($config.PlanName)'
 param cosmosAccountName     = '$($config.CosmosAccountName)'
@@ -113,7 +114,6 @@ param tenantId              = '$($config.TenantId)'
 param clientId              = '$($config.ClientId)'
 param storageAccountName    = '$($config.StorageAccountName)'
 param appInsightsName       = '$($config.AppInsightsName)'
-param logAnalyticsName      = '$($config.LogAnalyticsName)'
 param siteUrl               = '$($config.SiteUrl)'
 "@
 

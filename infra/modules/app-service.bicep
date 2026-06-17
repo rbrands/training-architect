@@ -1,18 +1,19 @@
-// ---------------------------------------------------------------------------
-// App Service Plan + Web App (Linux, .NET 10)
-// The Web App uses a System-Assigned Managed Identity so that it can
-// access Key Vault for the authentication certificate without storing
+﻿// ---------------------------------------------------------------------------
+// Web App (Linux, .NET 10)
+// The App Service Plan lives in the shared resource group and is passed in
+// via planId. The Web App uses a System-Assigned Managed Identity so that
+// it can access Key Vault for the authentication certificate without storing
 // any credentials in app settings.
 // ---------------------------------------------------------------------------
 
-@description('Azure region for all resources.')
+@description('Azure region for the Web App.')
 param location string
 
 @description('Name of the App Service web app.')
 param appName string
 
-@description('Name of the App Service Plan.')
-param planName string
+@description('Resource ID of the App Service Plan (may live in a different resource group).')
+param planId string
 
 @description('Linux framework version string for .NET.')
 param dotnetVersion string = 'DOTNETCORE|10.0'
@@ -44,25 +45,11 @@ param storageBlobEndpoint string
 @description('Application Insights connection string.')
 param appInsightsConnectionString string
 
-@description('Public site URL, e.g. https://brands-advisory.com. Used for canonical and Open Graph meta tags.')
+@description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
-// ---------------------------------------------------------------------------
-// App Service Plan
-// ---------------------------------------------------------------------------
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: planName
-  location: location
-  // Basic B1 - upgrade to S1 or higher for deployment slots
-  sku: {
-    name: 'B1'
-    tier: 'Basic'
-  }
-  kind: 'linux'
-  properties: {
-    reserved: true // required for Linux plans
-  }
-}
+@description('Tags to apply to the Web App resource.')
+param tags object = {}
 
 // ---------------------------------------------------------------------------
 // Web App
@@ -71,11 +58,12 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: appName
   location: location
   kind: 'app,linux'
+  tags: tags
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
-    serverFarmId: appServicePlan.id
+    serverFarmId: planId
     httpsOnly: true
     // ARR Affinity disabled: sticky sessions are only needed
     // for SignalR (Interactive Server mode).
@@ -87,7 +75,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     clientAffinityEnabled: false
     siteConfig: {
       linuxFxVersion: dotnetVersion
-      appCommandLine: 'dotnet BrandsAdvisory.dll'
+      appCommandLine: 'dotnet TrainingArchitect.dll'
       // alwaysOn requires at least a Standard plan; disabled for B1
       alwaysOn: false
       // HTTP/2 enables multiplexing and header compression
@@ -175,5 +163,5 @@ output webAppName string = webApp.name
 @description('Principal ID of the Web App System-Assigned Managed Identity. Used for role assignments.')
 output principalId string = webApp.identity.principalId
 
-@description('Resource ID of the App Service Plan. Required by the custom-domain module for managed certificates.')
-output appServicePlanId string = appServicePlan.id
+@description('Resource ID of the App Service Plan. Passed through for the custom-domain certificate module.')
+output appServicePlanId string = planId

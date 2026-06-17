@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TrainingArchitect.Client/TrainingArchitect.Client.csproj" />
+    <Project Path="src/TrainingArchitect.Core/TrainingArchitect.Core.csproj" />
+    <Project Path="src/TrainingArchitect.Infrastructure/TrainingArchitect.Infrastructure.csproj" />
+    <Project Path="src/TrainingArchitect/TrainingArchitect.csproj" />
+  </Folder>
+</Solution>

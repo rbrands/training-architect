@@ -1,0 +1,99 @@
+﻿@using TrainingArchitect.Core.Models
+
+@* SVG line chart for CTL, ATL and TSB progression over the provided history. *@
+
+@if (History is null || History.Count == 0)
+{
+    <p class="text-secondary small">No fitness data available.</p>
+}
+else
+{
+    <div class="ta-chart-container">
+        <!-- Legend -->
+        <div class="d-flex gap-3 mb-2 small">
+            <span><span class="ta-legend-dot" style="background:#4dabf7;"></span> CTL (fitness)</span>
+            <span><span class="ta-legend-dot" style="background:#f783ac;"></span> ATL (fatigue)</span>
+            <span><span class="ta-legend-dot" style="background:#69db7c;"></span> TSB (form)</span>
+        </div>
+
+        <svg viewBox="0 0 @SvgWidth @SvgHeight"
+             preserveAspectRatio="none"
+             style="width:100%; height:@(SvgHeight)px; display:block;"
+             aria-label="CTL/ATL/TSB progression chart">
+
+            <!-- Axes -->
+            <line x1="@PadLeft" y1="0" x2="@PadLeft" y2="@(SvgHeight - PadBottom)"
+                  stroke="#444" stroke-width="1" />
+            <line x1="@PadLeft" y1="@(SvgHeight - PadBottom)" x2="@SvgWidth" y2="@(SvgHeight - PadBottom)"
+                  stroke="#444" stroke-width="1" />
+
+            <!-- Zero reference line for TSB -->
+            @if (_zeroY >= 0 && _zeroY <= SvgHeight)
+            {
+                <line x1="@PadLeft" y1="@_zeroY" x2="@SvgWidth" y2="@_zeroY"
+                      stroke="#555" stroke-width="1" stroke-dasharray="4 3" />
+                @((MarkupString)$"<text x=\"{PadLeft - 3}\" y=\"{_zeroY + 4}\" fill=\"#888\" font-size=\"9\" text-anchor=\"end\">0</text>")
+            }
+
+            <!-- CTL line -->
+            <polyline points="@_ctlPoints" fill="none" stroke="#4dabf7" stroke-width="2" />
+            <!-- ATL line -->
+            <polyline points="@_atlPoints" fill="none" stroke="#f783ac" stroke-width="2" />
+            <!-- TSB line -->
+            <polyline points="@_tsbPoints" fill="none" stroke="#69db7c" stroke-width="1.5"
+                      stroke-dasharray="5 3" />
+        </svg>
+
+        <!-- X-axis date labels (first, middle, last) -->
+        <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#888;">
+            <span>@History.First().Date.ToString("d MMM")</span>
+            <span>@History[History.Count / 2].Date.ToString("d MMM")</span>
+            <span>@History.Last().Date.ToString("d MMM")</span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public List<FitnessPoint>? History { get; set; }
+
+    private const int SvgWidth = 600;
+    private const int SvgHeight = 160;
+    private const int PadLeft = 30;
+    private const int PadBottom = 20;
+
+    private string _ctlPoints = string.Empty;
+    private string _atlPoints = string.Empty;
+    private string _tsbPoints = string.Empty;
+    private double _zeroY = -1;
+
+    protected override void OnParametersSet()
+    {
+        if (History is null || History.Count == 0) return;
+
+        double minVal = History.Min(p => Math.Min(p.Ctl, Math.Min(p.Atl, p.Tsb)));
+        double maxVal = History.Max(p => Math.Max(p.Ctl, Math.Max(p.Atl, p.Tsb)));
+
+        // Ensure a visible zero reference even if all values are positive/negative
+        minVal = Math.Min(minVal, 0) - 5;
+        maxVal = maxVal + 5;
+
+        double range = maxVal - minVal;
+        int plotWidth = SvgWidth - PadLeft;
+        int plotHeight = SvgHeight - PadBottom;
+
+        // Guard against division by zero for a single-point history.
+        double xDivisor = History.Count > 1 ? History.Count - 1 : 1;
+
+        double XPos(int index) =>
+            PadLeft + (double)index / xDivisor * plotWidth;
+
+        double YPos(double value) =>
+            plotHeight - (value - minVal) / range * plotHeight;
+
+        _ctlPoints = string.Join(" ", History.Select((p, i) => $"{XPos(i):F1},{YPos(p.Ctl):F1}"));
+        _atlPoints = string.Join(" ", History.Select((p, i) => $"{XPos(i):F1},{YPos(p.Atl):F1}"));
+        _tsbPoints = string.Join(" ", History.Select((p, i) => $"{XPos(i):F1},{YPos(p.Tsb):F1}"));
+        _zeroY = YPos(0);
+    }
+}

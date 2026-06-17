@@ -7,13 +7,20 @@
 
 using './main.bicep'
 
+// Resource Groups
+param centralResourceGroupName = '__CENTRAL_RESOURCE_GROUP__'  // shared: Plan, Cosmos, KV, Storage, AppInsights
+param appResourceGroupName = '__APP_RESOURCE_GROUP__'          // this app: Web App, custom domain
+
 // App Service
 param appName = '__APP_NAME__'
 param planName = '__PLAN_NAME__'
 
 // Cosmos DB
+// Use a generic shared DB name to share RU/s across multiple app containers,
+// for example: shared-content-db
 param cosmosAccountName = '__COSMOS_ACCOUNT_NAME__'
 param cosmosDatabaseId = '__DATABASE_ID__'
+// Use app-scoped container names, for example: training-architect
 param cosmosContainerName = '__CONTAINER_NAME__'
 
 // Key Vault
@@ -29,9 +36,8 @@ param storageAccountName = '__STORAGE_ACCOUNT_NAME__'
 
 // Application Insights
 param appInsightsName = '__APP_INSIGHTS_NAME__'
-param logAnalyticsName = '__LOG_ANALYTICS_NAME__'
 
 // Site
-// Set to your custom domain (e.g. https://brands-advisory.com) or the azurewebsites.net default URL.
+// Set to your custom domain (e.g. https://www.example.com) or the azurewebsites.net default URL.
 // If this is a custom domain, the Bicep template automatically deploys hostname bindings + managed SSL.
 param siteUrl = '__SITE_URL__'

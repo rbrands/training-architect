@@ -1,6 +1,6 @@
-# Infrastructure — Brands Advisory CMS
+﻿# Infrastructure — Training Architect
 
-Bicep templates for deploying the Brands Advisory CMS to Azure.
+Bicep templates for deploying Training Architect to Azure.
 
 ---
 
@@ -8,13 +8,13 @@ Bicep templates for deploying the Brands Advisory CMS to Azure.
 
 | Resource | Description |
 |---|---|
-| App Service Plan | Linux, B1 SKU |
+| App Service Plan | Existing shared plan (read-only in this deployment) |
 | Web App | Linux, .NET 10, System-Assigned Managed Identity |
-| Cosmos DB Account | NoSQL API, Free Tier, Session consistency |
-| Cosmos DB Database | Configured via `cosmosDatabaseId` parameter |
-| Cosmos DB Container | 400 RU/s, partition key `/type` |
-| Azure Key Vault | RBAC authorization enabled, soft-delete on |
-| Role Assignment | Key Vault Certificate User for the Web App Managed Identity |
+| Cosmos DB Account | Existing shared account (read-only in this deployment) |
+| Cosmos DB Database | Existing shared database (managed by central infrastructure, not created here) |
+| Cosmos DB Container | Created via `cosmosContainerName` in the existing shared database; inherits shared DB RU/s |
+| Azure Key Vault | Existing shared vault (read-only in this deployment) |
+| Role Assignments | RBAC for Web App Managed Identity on central resources |
 
 ---
 
@@ -23,9 +23,10 @@ Bicep templates for deploying the Brands Advisory CMS to Azure.
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) installed
 - [Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) installed (or use `az bicep install`)
 - Logged in: `az login`
-- Target resource group already exists:
+- Central and app resource groups already exist:
   ```bash
-  az group create --name rg-brands-advisory --location germanywestcentral
+   az group create --name rg-brands-advisory-central --location germanywestcentral
+   az group create --name rg-training-architect --location germanywestcentral
   ```
 ---
 
@@ -35,12 +36,12 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 
 | Placeholder | Description |
 |---|---|
-| `__APP_NAME__` | Web App name (must be globally unique, e.g. `brands-advisory`) |
-| `__PLAN_NAME__` | App Service Plan name (e.g. `plan-brands-advisory`) |
+| `__APP_NAME__` | Web App name (must be globally unique, e.g. `training-architect`) |
+| `__PLAN_NAME__` | App Service Plan name (e.g. `plan-training-architect`) |
 | `__COSMOS_ACCOUNT_NAME__` | Cosmos DB account name (globally unique) |
-| `__DATABASE_ID__` | Cosmos DB database name (e.g. `brands-advisory`) |
-| `__CONTAINER_NAME__` | Cosmos DB container name (e.g. `content`) |
-| `__KEY_VAULT_NAME__` | Key Vault name (must be globally unique, e.g. `kv-brands-advisory`) |
+| `__DATABASE_ID__` | Cosmos DB database name (e.g. `shared-content-db`) |
+| `__CONTAINER_NAME__` | Cosmos DB container name (e.g. `training-architect`) |
+| `__KEY_VAULT_NAME__` | Key Vault name (must be globally unique, e.g. `kv-training-architect`) |
 | `__CERT_NAME__` | Certificate name as stored in Key Vault |
 | `__TENANT_ID__` | Entra ID Directory (tenant) ID |
 | `__CLIENT_ID__` | App Registration Application (client) ID |
@@ -51,18 +52,18 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 ## Deploy
 
 ```bash
-az deployment group create \
-  --resource-group rg-brands-advisory \
-  --template-file infra/main.bicep \
+az deployment sub create \
+   --location germanywestcentral \
+  --template-file infra/main.local.bicep \
   --parameters infra/main.bicepparam
 ```
 
 To preview changes without deploying (what-if):
 
 ```bash
-az deployment group what-if \
-  --resource-group rg-brands-advisory \
-  --template-file infra/main.bicep \
+az deployment sub what-if \
+   --location germanywestcentral \
+  --template-file infra/main.local.bicep \
   --parameters infra/main.bicepparam
 ```
 
@@ -81,8 +82,8 @@ az deployment group what-if \
 3. **Deploy the application**  
    Publish the .NET app to the Web App using GitHub Actions or:
    ```bash
-   dotnet publish src/BrandsAdvisory -c Release -o ./publish
-   az webapp deploy --resource-group rg-brands-advisory --name __APP_NAME__ --src-path ./publish
+   dotnet publish src/TrainingArchitect -c Release -o ./publish
+   az webapp deploy --resource-group rg-training-architect --name __APP_NAME__ --src-path ./publish
    ```
 
 4. **Custom domain** (optional)  
@@ -92,13 +93,20 @@ az deployment group what-if \
 
 ## Notes
 
-### Cosmos DB Free Tier
-Only **one Free Tier account is allowed per Azure subscription**.  
-If your subscription already has a Free Tier Cosmos DB account, open `modules/cosmos.bicep` and change:
-```bicep
-enableFreeTier: false
-```
+### Cosmos DB Throughput and Free Tier
+Only **one Free Tier Cosmos DB account is allowed per subscription** and includes up to **1000 RU/s** and **25 GB** free in that account.
 
-### Key Vault not managed by these templates
-The Key Vault is intentionally excluded to avoid accidental deletion of certificates.  
-Create or manage it independently via the Azure Portal or a separate deployment.
+This deployment does **not** create the Cosmos account; it expects an existing shared account.
+It only ensures database and container resources inside that account.
+
+Throughput is **not** configured in this project and is owned by the central infrastructure project.
+
+### Cosmos DB naming convention
+Recommended pattern:
+
+- Use one generic shared DB name (for example `shared-content-db`) for shared RU/s.
+- Use one container per app/workload (for example `training-architect`, `app2-content`).
+- Keep partition key design workload-specific per container.
+
+### Shared central resources are not created here
+App Service Plan, Cosmos account, Key Vault, Storage Account, and Application Insights are treated as existing shared resources and are not created by this template.

@@ -1,21 +1,20 @@
-# Blazor Portfolio CMS
-### A production-ready blueprint for the modern Microsoft stack
+﻿# Training Architect
 
-This project demonstrates how to build and deploy a production-ready .NET web application end-to-end on the Microsoft stack:
+*AI-powered cycling coach backed by intervals.icu*
 
-- **GitHub Copilot** — AI-assisted development throughout
-- **Blazor Web App** — Static SSR for SEO-optimized public pages, InteractiveWebAssembly for the admin interface
+Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and provides athletes with a personalised virtual coaching experience. A conversational AI coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
+
+**Key capabilities:**
+
+- **Virtual coach** — chat-based interface powered by an AI orchestration pipeline (Microsoft.Extensions.AI / Semantic Kernel)
+- **intervals.icu integration** — reads athlete fitness data and workout library via the intervals.icu REST API
+- **Structured plan proposals** — weekly training plans with day-by-day workouts including zone, TSS, IF, and coaching notes
+- **Athlete confirmation flow** — Accept / Adjust / Reject without a full page reload; decision forwarded to the coaching agent
 - **Azure-native** — Cosmos DB, Key Vault, Managed Identity, zero secrets stored anywhere
   - Key Vault for sensitive configuration — secrets loaded at startup via `AddAzureKeyVault()`, only in production
   - Application Insights for request tracking, dependency monitoring, and exception logging
 - **Infrastructure as Code** — Bicep templates for all Azure resources
-- **CI/CD with GitHub Actions** — automated deployment for both app and infrastructure using OIDC Federated Credentials (no client secrets)
-
-The application itself is a freelancer portfolio site as "mini cms" — publicly readable with owner-only content editing via Microsoft Entra ID. No separate admin user database required.
-
-> This repository is intentionally kept as a clean, well-documented blueprint. Fork it and adapt it to your own use case.
-
-You can use this repo as template to start with a functional web site with basic editing features. Adapt the menu, edit the data and you are ready to go.
+- **CI/CD with GitHub Actions** — automated deployment using OIDC Federated Credentials (no client secrets)
 
 ---
 
@@ -35,11 +34,11 @@ You can use this repo as template to start with a functional web site with basic
 
 ```mermaid
 graph TD
-    subgraph Solution["brands-advisory-cms Solution (.NET 10)"]
-        BA["BrandsAdvisory\n(Blazor SSR Host)"]
-        BAC["BrandsAdvisory.Client\n(Blazor WASM)"]
-        CORE["BrandsAdvisory.Core\n(Class Library)"]
-        INFRA["BrandsAdvisory.Infrastructure\n(Class Library)"]
+    subgraph Solution["training-architect Solution (.NET 10)"]
+        BA["TrainingArchitect\n(Blazor SSR Host)"]
+        BAC["TrainingArchitect.Client\n(Blazor WASM)"]
+        CORE["TrainingArchitect.Core\n(Class Library)"]
+        INFRA["TrainingArchitect.Infrastructure\n(Class Library)"]
     end
 
     BA --> BAC
@@ -90,9 +89,9 @@ component is an island of interactivity inside an otherwise SSR page.
 
 ### Orchestration Plug-in Points
 
-Replace each stub in `BrandsAdvisory.Core/Services/` with the real implementation and
-re-register it in `BrandsAdvisory/Program.cs` (server) and
-`BrandsAdvisory.Client/Program.cs` (WASM).
+Replace each stub in `TrainingArchitect.Core/Services/` with the real implementation and
+re-register it in `TrainingArchitect/Program.cs` (server) and
+`TrainingArchitect.Client/Program.cs` (WASM).
 
 | Interface | Stub | Integration point |
 |---|---|---|
@@ -118,7 +117,7 @@ re-register it in `BrandsAdvisory/Program.cs` (server) and
 ### Render Modes
 
 - **Static SSR** is the default render mode for all public pages (`/`, `/projects`, `/articles`, `/articles/{slug}`). This ensures fast initial load times and full SEO indexability without JavaScript requirements. All public pages include full SEO meta tags: title, description, Open Graph (`og:*`), article tags, and canonical URLs. Article detail pages use the article's own title and summary for dynamic meta tags.
-- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `BrandsAdvisory.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
+- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `TrainingArchitect.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
 
 ### Owner-Only Editing
 
@@ -167,7 +166,7 @@ All content is stored in a single Cosmos DB container (`content`) with a `type` 
 ## Project Structure
 
 ```
-brands-advisory-cms.slnx
+training-architect.slnx
 infra/
 ├── main.bicep                      # Entry point — orchestrates all modules
 ├── main.bicepparam                 # Production parameter values
@@ -184,7 +183,7 @@ infra/
     ├── storage.bicep               # Storage Account + article-images blob container
     └── storage-rbac.bicep          # Storage Blob Data Contributor → Web App identity
 src/
-├── BrandsAdvisory/             # Blazor Web App host (SSR + API)
+├── TrainingArchitect/             # Blazor Web App host (SSR + API)
 │   ├── Components/
 │   │   ├── Layout/             # NavMenu, MainLayout
 │   │   └── Pages/              # Public pages (Static SSR)
@@ -195,7 +194,7 @@ src/
 │   ├── Models/
 │   │   └── UserInfo.cs         # DTO for /api/user (auth state for WASM)
 │   └── Program.cs
-├── BrandsAdvisory.Client/      # Blazor WebAssembly client (admin pages)
+├── TrainingArchitect.Client/      # Blazor WebAssembly client (admin pages)
 │   ├── Pages/Admin/            # Admin edit pages (InteractiveWebAssembly)
 │   │   ├── AboutEditor.razor
 │   │   ├── ArticleEditor.razor
@@ -206,7 +205,7 @@ src/
 │   │   ├── HttpArticleRepository.cs
 │   │   └── HttpProjectRepository.cs
 │   └── Program.cs
-├── BrandsAdvisory.Core/        # Domain layer (no infrastructure dependencies)
+├── TrainingArchitect.Core/        # Domain layer (no infrastructure dependencies)
 │   ├── Interfaces/
 │   │   ├── IRepository.cs          # Generic base repository interface
 │   │   ├── IArticleRepository.cs
@@ -221,7 +220,7 @@ src/
 │   │   └── ProfileLink.cs
 │   └── Services/
 │       └── OwnerService.cs
-└── BrandsAdvisory.Infrastructure/  # Data access layer (Cosmos DB)
+└── TrainingArchitect.Infrastructure/  # Data access layer (Cosmos DB)
     └── Repositories/
         ├── CosmosRepository.cs     # Generic base repository (Cosmos DB SDK)
         ├── ArticleRepository.cs
@@ -229,7 +228,7 @@ src/
         └── AboutRepository.cs
 ```
 
-Public pages use Static SSR and depend only on `Core` interfaces, served from Cosmos DB via `Infrastructure`. Admin pages run as WebAssembly in `BrandsAdvisory.Client` and call the host server's minimal API endpoints — all protected by the `SiteAdmin` role.
+Public pages use Static SSR and depend only on `Core` interfaces, served from Cosmos DB via `Infrastructure`. Admin pages run as WebAssembly in `TrainingArchitect.Client` and call the host server's minimal API endpoints — all protected by the `SiteAdmin` role.
 
 ---
 
@@ -246,15 +245,27 @@ az group create \
 
 ### 2. Create Deployment Service Principal
 
-Use `Create-ServicePrincipalForDeployment.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+Use `Create-ServicePrincipalForDeployment.ps1` from [cloud-admin-toolkit](https://github.com/rbrands/cloud-admin-toolkit):
 ```powershell
 .\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name>
 ```
-This script also assigns **Contributor** and **User Access Administrator** roles on the resource group.
+This script also assigns **Contributor** and **User Access Administrator** roles on the target resource group.
+
+If your deployment spans both an app resource group and a shared central resource group (for example Cosmos DB in the central group), run the command twice with the resource-group parameter:
+
+```powershell
+# App resource group
+.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name> -ResourceGroupName <app-resource-group>
+
+# Central/shared resource group
+.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name> -ResourceGroupName <central-resource-group>
+```
+
+Without permissions on both groups, infrastructure deployment can fail when templates reference existing shared resources in the central group.
 
 ### 3. Add OIDC Federated Credential
 
-Use `Add-FederatedCredentialForGitHub.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+Use `Add-FederatedCredentialForGitHub.ps1` from [cloud-admin-toolkit](https://github.com/rbrands/cloud-admin-toolkit):
 ```powershell
 .\Add-FederatedCredentialForGitHub.ps1 -ConfigName <project-name>
 ```
@@ -263,12 +274,17 @@ After this step no client secret is stored anywhere. OIDC handles authentication
 
 ### 4. Create App Registration with Certificate
 
-Use `Create-AppRegistrationWithCertificate.ps1` from [cloud-admin-toolkit](https://github.com/brands-advisory/cloud-admin-toolkit):
+Use `Create-AppRegistrationWithCertificate.ps1` from [cloud-admin-toolkit](https://github.com/rbrands/cloud-admin-toolkit):
 ```powershell
 .\Create-AppRegistrationWithCertificate.ps1 -ConfigName <project-name>
 ```
 
 This creates the Entra ID App Registration for user authentication and generates a self-signed certificate.
+
+After the script completes, copy the **Application (client) ID** from the output and set it in `config.ps1`:
+```powershell
+ClientId = "<application-client-id>"
+```
 
 ### 5. Configure and Run Setup Script
 ```powershell
@@ -395,7 +411,7 @@ The following secrets are set:
 | `STORAGE_ACCOUNT_NAME` | Azure Storage Account name |
 | `APP_INSIGHTS_NAME` | Application Insights resource name |
 | `LOG_ANALYTICS_NAME` | Log Analytics workspace name |
-| `SITE_URL` | Public site URL, e.g. `https://brands-advisory.com` |
+| `SITE_URL` | Public site URL, e.g. `https://www.example.com` |
 
 > **Note:** `SYNCFUSION_LICENSE_KEY` is **not** a GitHub Secret. It is stored in Azure Key Vault and loaded at startup via `AddAzureKeyVault()`. Set it with `setup.ps1 -KeyVault`.
 
@@ -428,11 +444,13 @@ This deploys:
   - Secrets User: reads secrets via `AddAzureKeyVault()` at startup (e.g. `Syncfusion:LicenseKey`)
 - Cosmos DB RBAC — **Built-in Data Contributor** role for the Web App Managed Identity
 
+> **Note:** Local developer access is intentionally **not** assigned by Bicep. Assign your own Entra ID user only when needed via `az cosmosdb sql role assignment create` (see [Local Development](#local-development)).
+
 > **Note:** The Key Vault is created automatically by the Bicep template. After the first deployment, upload the authentication certificate to Key Vault manually: **Azure Portal → kv-{name} → Certificates → Generate/Import**. The Key Vault URI is an output of the Bicep deployment and does not need to be configured separately.
 
 ### Legal Page
 
-Before going live, fill in the placeholder values in [`src/BrandsAdvisory/Components/Pages/Legal.razor`](src/BrandsAdvisory/Components/Pages/Legal.razor):
+Before going live, fill in the placeholder values in [`src/TrainingArchitect/Components/Pages/Legal.razor`](src/TrainingArchitect/Components/Pages/Legal.razor):
 
 - `__STREET_ADDRESS__` — Street and house number
 - `__ZIP_CITY__` — Postal code and city
@@ -447,7 +465,7 @@ Custom domain support is built into the Bicep templates. When `customDomain` is 
 - Adds an apex hostname binding (ownership verification via A + TXT records)
 - Adds a `www` hostname binding with a **free App Service managed certificate** (CNAME-based SSL)
 
-The `www` subdomain gets full HTTPS. For the apex domain, redirect `brands-advisory.com` → `https://www.brands-advisory.com` at your DNS registrar (most registrars support this natively). This is the recommended pattern and avoids the complexity of apex domain certificates.
+The `www` subdomain gets full HTTPS. For the apex domain, redirect `example.com` → `https://www.example.com` at your DNS registrar (most registrars support this natively). This is the recommended pattern and avoids the complexity of apex domain certificates.
 
 #### Step 1 — Configure DNS at your registrar
 
@@ -473,7 +491,7 @@ Azure Portal → App Service → Properties → Outbound IP addresses (first ent
 #### Step 2 — Set `SiteUrl` to your custom domain in config.ps1
 
 ```powershell
-SiteUrl = "https://www.brands-advisory.com"  # or https://brands-advisory.com
+SiteUrl = "https://www.example.com"  # or https://example.com
 ```
 
 `main.bicep` derives the apex domain from `SiteUrl` automatically: non-`azurewebsites.net` URLs trigger the custom domain deployment.
@@ -535,7 +553,32 @@ https://localhost:7000/signin-oidc
 az login
 ```
 
-**4. Set local secrets** (once, see [Setup](#setup) above):
+**4. Assign your own user for local Cosmos DB data-plane access** (run when your user needs direct container access):
+
+```powershell
+# Load project config values
+# Ensure config.ps1 exists and all __PLACEHOLDER__ values are replaced first
+. .\config.ps1
+
+# Resolve your Entra object ID and set the target scope to one container
+$principalId = az ad signed-in-user show --query id -o tsv
+$scope = "/dbs/$($config.CosmosDatabaseId)/colls/$($config.CosmosContainerName)"
+
+# Optional but recommended when multiple subscriptions are available
+az account set --subscription $config.SubscriptionId
+
+# Cosmos DB Built-in Data Contributor (container-level)
+az cosmosdb sql role assignment create `
+  --account-name $config.CosmosAccountName `
+  --resource-group $config.CentralResourceGroupName `
+  --scope $scope `
+  --principal-id $principalId `
+  --role-definition-id "00000000-0000-0000-0000-000000000002"
+```
+
+This keeps local developer assignments explicit and prevents accidental overwrites across projects.
+
+**5. Set local secrets** (once, see [Setup](#setup) above):
 
 ```powershell
 Copy-Item config.example.ps1 config.ps1
@@ -550,8 +593,10 @@ Copy-Item config.example.ps1 config.ps1
 Always use the `https` profile — the OIDC flow requires HTTPS for cookies to work correctly:
 
 ```bash
-dotnet run --project src/BrandsAdvisory --launch-profile https
+dotnet run --project src/TrainingArchitect --launch-profile https
 ```
+
+The host project in `src/TrainingArchitect` is the only supported startup target. The client project is loaded by the host and should not be started directly.
 
 The app starts at `https://localhost:7000`.
 

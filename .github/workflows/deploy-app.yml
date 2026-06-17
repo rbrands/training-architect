@@ -1,5 +1,5 @@
-# Required GitHub Secrets:
-# AZURE_CLIENT_ID            - App ID of sp-brands-advisory-cms-github
+﻿# Required GitHub Secrets:
+# AZURE_CLIENT_ID            - App ID of the GitHub deployment service principal
 # TENANT_ID            - Entra ID Tenant ID
 # AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
 # AZURE_WEBAPP_NAME          - Azure Web App name
@@ -24,7 +24,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  PROJECT_PATH: 'src/BrandsAdvisory/BrandsAdvisory.csproj'
+  PROJECT_PATH: 'src/TrainingArchitect/TrainingArchitect.csproj'
   PUBLISH_PATH: './publish'
 
 jobs:
