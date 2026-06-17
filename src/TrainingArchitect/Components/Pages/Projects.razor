@@ -1,0 +1,118 @@
+@page "/projects"
+@attribute [StreamRendering]
+@inject IProjectRepository ProjectRepo
+@inject IConfiguration Config
+
+<PageTitle>Projects · @_siteTitle</PageTitle>
+<HeadContent>
+    <meta name="description"
+          content="Selected consulting projects in cloud adoption, solution architecture and GenAI enablement." />
+    <meta property="og:title" content="Projects · @_siteTitle" />
+    <meta property="og:description"
+          content="Selected consulting projects in cloud adoption, solution architecture and GenAI enablement." />
+    <meta property="og:url" content="@(Config["SiteUrl"])/projects" />
+    <meta property="og:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
+    <link rel="canonical" href="@(Config["SiteUrl"])/projects" />
+</HeadContent>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="fw-bold mb-0"><span class="me-2">💼</span>Projects</h1>
+    @if (IsOwner)
+    {
+        <a href="/admin/projects/new" class="btn btn-outline-light btn-sm">+ New Project</a>
+    }
+</div>
+
+@if (_projects is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+    </div>
+}
+else if (_projects.Count == 0)
+{
+    <p class="text-secondary text-center py-5">No projects yet.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var (project, index) in _projects.Select((p, i) => (p, i)))
+        {
+            <div class="col">
+                <div class="p-3 h-100 d-flex flex-column" style="background-color: #161b22; border: 1px solid #30363d; border-radius: 0.5rem;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        @if (project.Tags.Count > 0)
+                        {
+                            <span class="badge rounded-pill fw-normal px-3 py-1" style="@GetTagColor(index)">@project.Tags[0]</span>
+                        }
+                        else
+                        {
+                            <span></span>
+                        }
+                        @if (IsOwner)
+                        {
+                            <a href="/admin/projects/@project.Id" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.7rem;">✏️</a>
+                        }
+                    </div>
+                    <h5 class="fw-bold mb-1 text-white">@project.Title</h5>
+                    <div class="text-secondary small mb-3">@project.Customer · @project.Period</div>
+
+                    <div class="text-secondary small mb-3 flex-grow-1">
+                        @((MarkupString)project.Description)
+                    </div>
+
+                    @if (project.Tags.Count > 1)
+                    {
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            @foreach (var tag in project.Tags.Skip(1))
+                            {
+                                <span class="badge rounded-pill bg-secondary fw-normal text-white">@tag</span>
+                            }
+                        </div>
+                    }
+
+                    @if (project.Outcomes.Count > 0)
+                    {
+                        <p class="mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.08em; color: #8b949e;">OUTCOMES</p>
+                        <ul class="list-unstyled mb-0 d-flex flex-column gap-1">
+                            @foreach (var outcome in project.Outcomes)
+                            {
+                                <li class="d-flex gap-2 align-items-center small">
+                                    <span class="text-primary">●</span>
+                                    <span class="text-white-50">@outcome</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [CascadingParameter(Name = "IsOwner")]
+    public bool IsOwner { get; set; }
+
+    [CascadingParameter(Name = "SiteTitle")]
+    private string _siteTitle { get; set; } = "Brands Advisory";
+
+    private IReadOnlyList<Project>? _projects;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projects = await ProjectRepo.GetAllAsync();
+    }
+
+    private static string GetTagColor(int index) => (index % 5) switch
+    {
+        0 => "background-color: #1f6feb; color: white;",
+        1 => "background-color: #8957e5; color: white;",
+        2 => "background-color: #238636; color: white;",
+        3 => "background-color: #da3633; color: white;",
+        4 => "background-color: #bf8700; color: white;",
+        _ => "background-color: #30363d; color: white;"
+    };
+}

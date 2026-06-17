@@ -1,4 +1,4 @@
-# Copilot Instructions for brands-advisory-cms
+﻿# Copilot Instructions for training-architect
 
 ## Language
 - All code, comments, variable names, method names, 
@@ -56,8 +56,8 @@
 - A set-secrets.sh.example file in the repository root 
   documents which secrets are required
 - Run `dotnet user-secrets init` is already configured 
-  in the .csproj with UserSecretsId "brands-advisory-cms"
+  in the host .csproj under `src/TrainingArchitect/`
 - Set secrets with: 
   dotnet user-secrets set "Section:Key" "value"
-  from the src/BrandsAdvisory/ directory
+  from the src/TrainingArchitect/ directory
   

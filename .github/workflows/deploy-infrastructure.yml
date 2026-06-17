@@ -1,5 +1,5 @@
 # Required GitHub Secrets:
-# AZURE_CLIENT_ID            - App ID of sp-brands-advisory-cms-github
+# AZURE_CLIENT_ID            - App ID of the GitHub deployment service principal
 # AZURE_TENANT_ID            - Entra ID Tenant ID
 # AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
 # Note: OIDC Federated Credentials - no client secret needed
@@ -7,18 +7,22 @@
 # Authentication: OIDC Federated Credentials (no secrets)
 # Setup: Add federated credential in Entra ID for this repo/branch
 # See: https://docs.github.com/en/actions/concepts/security/openid-connect
-# AZURE_RESOURCE_GROUP       - rg-brands-advisory
-# APP_NAME                   - brands-advisory
-# PLAN_NAME                  - plan-brands-advisory
-# COSMOS_ACCOUNT_NAME        - cosmos-brands-advisory
-# COSMOS_DATABASE_ID         - brands-advisory
-# COSMOS_CONTAINER_NAME      - cms
-# KEY_VAULT_NAME             - kv-brands-advisory
-# CERT_NAME                  - brands-advisory-cms
+#
+# CENTRAL_RESOURCE_GROUP     - Shared resource group (Plan, Cosmos, KV, Storage, AppInsights)
+# APP_RESOURCE_GROUP         - App resource group (Web App, custom domain)
+# APP_NAME                   - training-architect
+# PLAN_NAME                  - plan-training-architect
+# COSMOS_ACCOUNT_NAME        - cosmos-training-architect
+# COSMOS_DATABASE_ID         - shared-content-db
+# COSMOS_CONTAINER_NAME      - training-architect
+# KEY_VAULT_NAME             - kv-training-architect
+# CERT_NAME                  - training-architect
 # TENANT_ID                  - Entra ID Tenant ID
-# CLIENT_ID                  - brands-advisory-cms App Registration Client ID
+# CLIENT_ID                  - training-architect App Registration Client ID
 # STORAGE_ACCOUNT_NAME       - Azure Storage Account name
-# SITE_URL                   - Public site URL, e.g. https://brands-advisory.com
+# APP_INSIGHTS_NAME          - Application Insights resource name
+# LOG_ANALYTICS_NAME         - Log Analytics workspace name
+# SITE_URL                   - Public site URL, e.g. https://www.example.com
 # Note: SYNCFUSION_LICENSE_KEY is stored in Key Vault, not passed as Bicep parameter
 #
 # Trigger: push to main when files in infra/ change
@@ -55,9 +59,13 @@ jobs:
     - name: Deploy Bicep template
       uses: azure/arm-deploy@v2
       with:
-        resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        scope: subscription
+        subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        region: germanywestcentral
         template: infra/main.bicep
         parameters: >
+          centralResourceGroupName=${{ secrets.CENTRAL_RESOURCE_GROUP }}
+          appResourceGroupName=${{ secrets.APP_RESOURCE_GROUP }}
           appName=${{ secrets.APP_NAME }}
           planName=${{ secrets.PLAN_NAME }}
           cosmosAccountName=${{ secrets.COSMOS_ACCOUNT_NAME }}
@@ -69,7 +77,6 @@ jobs:
           clientId=${{ secrets.CLIENT_ID }}
           storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
           appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
-          logAnalyticsName=${{ secrets.LOG_ANALYTICS_NAME }}
           siteUrl=${{ secrets.SITE_URL }}
         failOnStdErr: false
         deploymentMode: Incremental

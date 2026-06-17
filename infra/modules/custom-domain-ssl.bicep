@@ -12,7 +12,7 @@
 @description('Name of the App Service web app.')
 param appName string
 
-@description('The custom hostname to enable SSL for, e.g. www.brands-advisory.com.')
+@description('The custom hostname to enable SSL for, e.g. www.example.com.')
 param hostname string
 
 @description('Thumbprint of the managed certificate to bind.')

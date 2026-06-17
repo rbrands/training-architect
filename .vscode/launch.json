@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TrainingArchitect Host (https)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/TrainingArchitect/TrainingArchitect.csproj",
+      "launchProfile": "https"
+    }
+  ]
+}

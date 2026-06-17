@@ -3,14 +3,18 @@
 
 $config = @{
     # Azure
-    SubscriptionId       = "__SUBSCRIPTION_ID__"
-    ResourceGroup        = "__RESOURCE_GROUP__"
+    SubscriptionId            = "__SUBSCRIPTION_ID__"
+    CentralResourceGroupName  = "__CENTRAL_RESOURCE_GROUP__"  # shared: Plan, Cosmos, KV, Storage, AppInsights
+    AppResourceGroupName      = "__APP_RESOURCE_GROUP__"      # this app: Web App, custom domain
 
     # App Service
     AppName              = "__APP_NAME__"
     PlanName             = "__PLAN_NAME__"
 
     # Cosmos DB
+    # Recommended shared DB setup:
+    # - one generic DB name for shared throughput (for example: shared-content-db)
+    # - one container per app/workload (for example: training-architect, app2-content)
     CosmosAccountName    = "__COSMOS_ACCOUNT_NAME__"
     CosmosDatabaseId     = "__COSMOS_DATABASE_ID__"
     CosmosContainerName  = "__COSMOS_CONTAINER_NAME__"
@@ -44,7 +48,7 @@ $config = @{
     # automatically deploys the hostname binding and a free managed SSL certificate
     # for the www subdomain. DNS records must exist at the registrar first.
     # See README.md → Custom Domain for required DNS records.
-    SiteUrl              = "https://brands-advisory.azurewebsites.net"
+    SiteUrl              = "https://training-architect.azurewebsites.net"
 
     # GitHub Actions OIDC
     AzureClientId        = "__AZURE_CLIENT_ID__"

@@ -1,42 +1,72 @@
-# Required GitHub Secrets:
-# AZURE_CLIENT_ID            - App ID of sp-brands-advisory-cms-github
-# TENANT_ID            - Entra ID Tenant ID
+﻿# Required GitHub Secrets:
+# AZURE_CLIENT_ID            - App ID of the GitHub deployment service principal
+# TENANT_ID                  - Entra ID Tenant ID
 # AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
-# AZURE_WEBAPP_NAME          - Azure Web App name
+# APP_RESOURCE_GROUP         - App resource group
+# AZURE_RESOURCE_GROUP       - Legacy alias for the app resource group
+# APP_NAME                   - Azure Web App name
+# AZURE_WEBAPP_NAME          - Legacy alias for the web app name
 # Note: OIDC Federated Credentials - no client secret needed
-#
-# Authentication: OIDC Federated Credentials (no secrets)
-# Setup: Add federated credential in Entra ID for this repo/branch
-# See: https://docs.github.com/en/actions/concepts/security/openid-connect
-#
-# Trigger: push to main when files in src/ change
-# Manual trigger: workflow_dispatch
 
 name: Deploy Application
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/deploy-app.yml'
+  pull_request:
+    branches:
+      - main
     paths:
       - 'src/**'
       - '.github/workflows/deploy-app.yml'
   workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Target deployment slot'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - dev
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   DOTNET_VERSION: '10.0.x'
-  PROJECT_PATH: 'src/BrandsAdvisory/BrandsAdvisory.csproj'
+  PROJECT_PATH: 'src/TrainingArchitect/TrainingArchitect.csproj'
   PUBLISH_PATH: './publish'
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy to ${{ github.event_name == 'push' && 'staging' || 'dev' }} slot
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Set target slot
+      id: slot
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          echo "name=staging" >> "$GITHUB_OUTPUT"
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "name=${{ inputs.slot }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "name=dev" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Setup .NET ${{ env.DOTNET_VERSION }}
       uses: actions/setup-dotnet@v4
@@ -47,29 +77,83 @@ jobs:
       run: dotnet restore ${{ env.PROJECT_PATH }}
 
     - name: Build
-      run: dotnet build ${{ env.PROJECT_PATH }}
-        --configuration Release
-        --no-restore
+      run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish ${{ env.PROJECT_PATH }}
-        --configuration Release
-        --no-build
-        --output ${{ env.PUBLISH_PATH }}
+      run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PUBLISH_PATH }}
 
-    - name: Azure Login
+    - name: Azure Login (OIDC)
       uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Deploy to Azure Web App
+    - name: Check if App Service exists
+      id: check_app
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          APP_NAME="${{ secrets.APP_NAME }}"
+          if [ -z "$APP_NAME" ]; then
+            APP_NAME="${{ secrets.AZURE_WEBAPP_NAME }}"
+          fi
+
+          RESOURCE_GROUP="${{ secrets.APP_RESOURCE_GROUP }}"
+          if [ -z "$RESOURCE_GROUP" ]; then
+            RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          fi
+
+          if [ -z "$APP_NAME" ] || [ -z "$RESOURCE_GROUP" ]; then
+            echo "::error::Missing required secrets: APP_NAME/AZURE_WEBAPP_NAME or APP_RESOURCE_GROUP/AZURE_RESOURCE_GROUP."
+            exit 1
+          fi
+
+          if az webapp show \
+              --name "$APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --query name --output tsv 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+    - name: Skip notice (infrastructure not yet deployed)
+      if: steps.check_app.outputs.exists == 'false'
+      run: |
+        echo "::warning::App Service '${{ secrets.APP_NAME || secrets.AZURE_WEBAPP_NAME }}' not found in '${{ secrets.APP_RESOURCE_GROUP || secrets.AZURE_RESOURCE_GROUP }}'."
+        echo "::warning::Deploy infrastructure first via the 'Deploy Infrastructure' workflow."
+
+    - name: Deploy to slot
+      if: steps.check_app.outputs.exists == 'true'
       uses: azure/webapps-deploy@v3
       with:
-        app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+        app-name: ${{ secrets.APP_NAME }}
+        slot-name: ${{ steps.slot.outputs.name }}
         package: ${{ env.PUBLISH_PATH }}
-        # No publish-profile needed - OIDC login above handles auth
+
+    - name: Verify app endpoint
+      if: steps.check_app.outputs.exists == 'true'
+      shell: bash
+      run: |
+        SLOT="${{ steps.slot.outputs.name }}"
+        APP="${{ secrets.APP_NAME }}"
+        URL="https://${APP}-${SLOT}.azurewebsites.net/"
+        echo "Checking $URL ..."
+
+        for i in $(seq 1 10); do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "Endpoint check passed (attempt $i, HTTP $STATUS)"
+            exit 0
+          fi
+          echo "Attempt $i: HTTP $STATUS - waiting 15s..."
+          sleep 15
+        done
+
+        echo "Endpoint check failed after 10 attempts." >&2
+        exit 1
 
     - name: Azure Logout
       run: az logout

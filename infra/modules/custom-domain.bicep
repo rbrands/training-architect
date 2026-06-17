@@ -27,11 +27,14 @@ param location string
 @description('Name of the App Service web app.')
 param appName string
 
-@description('Apex custom domain, e.g. brands-advisory.com. The www subdomain is derived automatically.')
+@description('Apex custom domain, e.g. example.com. The www subdomain is derived automatically.')
 param customDomain string
 
 @description('Resource ID of the App Service Plan. Required for App Service managed certificates.')
 param appServicePlanId string
+
+@description('Tags to apply to the managed certificate resource.')
+param tags object = {}
 
 // Reference the existing web app
 resource webApp 'Microsoft.Web/sites@2023-12-01' existing = {
@@ -73,6 +76,7 @@ resource wwwHostNameBinding 'Microsoft.Web/sites/hostNameBindings@2023-12-01' = 
 resource wwwCertificate 'Microsoft.Web/certificates@2023-12-01' = {
   name: 'cert-www-${replace(customDomain, '.', '-')}'
   location: location
+  tags: tags
   properties: {
     serverFarmId: appServicePlanId
     canonicalName: 'www.${customDomain}'
