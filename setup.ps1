@@ -73,7 +73,9 @@ if ($GitHub -or $All) {
     gh secret set AZURE_SUBSCRIPTION_ID   --body $config.SubscriptionId
     gh secret set CENTRAL_RESOURCE_GROUP  --body $config.CentralResourceGroupName
     gh secret set APP_RESOURCE_GROUP      --body $config.AppResourceGroupName
+    gh secret set AZURE_RESOURCE_GROUP    --body $config.AppResourceGroupName
     gh secret set APP_NAME                --body $config.AppName
+    gh secret set AZURE_WEBAPP_NAME       --body $config.AppName
     gh secret set PLAN_NAME              --body $config.PlanName
     gh secret set COSMOS_ACCOUNT_NAME    --body $config.CosmosAccountName
     gh secret set COSMOS_DATABASE_ID     --body $config.CosmosDatabaseId

@@ -466,9 +466,10 @@ The following secrets are set:
 |---|---|
 | `AZURE_CLIENT_ID` | App ID of the deployment service principal |
 | `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID |
-| `AZURE_RESOURCE_GROUP` | Resource group name |
-| `AZURE_WEBAPP_NAME` | Azure Web App name |
+| `APP_RESOURCE_GROUP` | Resource group name for the App Service |
+| `AZURE_RESOURCE_GROUP` | Legacy alias for the App Service resource group |
 | `APP_NAME` | Azure Web App name |
+| `AZURE_WEBAPP_NAME` | Legacy alias for the Azure Web App name |
 | `PLAN_NAME` | App Service Plan name |
 | `COSMOS_ACCOUNT_NAME` | Cosmos DB account name |
 | `COSMOS_DATABASE_ID` | Database name |

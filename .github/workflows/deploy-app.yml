@@ -2,8 +2,10 @@
 # AZURE_CLIENT_ID            - App ID of the GitHub deployment service principal
 # TENANT_ID                  - Entra ID Tenant ID
 # AZURE_SUBSCRIPTION_ID      - Azure Subscription ID
-# AZURE_RESOURCE_GROUP       - App resource group
+# APP_RESOURCE_GROUP         - App resource group
+# AZURE_RESOURCE_GROUP       - Legacy alias for the app resource group
 # APP_NAME                   - Azure Web App name
+# AZURE_WEBAPP_NAME          - Legacy alias for the web app name
 # Note: OIDC Federated Credentials - no client secret needed
 
 name: Deploy Application
@@ -93,9 +95,24 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          APP_NAME="${{ secrets.APP_NAME }}"
+          if [ -z "$APP_NAME" ]; then
+            APP_NAME="${{ secrets.AZURE_WEBAPP_NAME }}"
+          fi
+
+          RESOURCE_GROUP="${{ secrets.APP_RESOURCE_GROUP }}"
+          if [ -z "$RESOURCE_GROUP" ]; then
+            RESOURCE_GROUP="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          fi
+
+          if [ -z "$APP_NAME" ] || [ -z "$RESOURCE_GROUP" ]; then
+            echo "::error::Missing required secrets: APP_NAME/AZURE_WEBAPP_NAME or APP_RESOURCE_GROUP/AZURE_RESOURCE_GROUP."
+            exit 1
+          fi
+
           if az webapp show \
-              --name "${{ secrets.APP_NAME }}" \
-              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name "$APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
               --query name --output tsv 2>/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -105,7 +122,7 @@ jobs:
     - name: Skip notice (infrastructure not yet deployed)
       if: steps.check_app.outputs.exists == 'false'
       run: |
-        echo "::warning::App Service '${{ secrets.APP_NAME }}' not found in '${{ secrets.AZURE_RESOURCE_GROUP }}'."
+        echo "::warning::App Service '${{ secrets.APP_NAME || secrets.AZURE_WEBAPP_NAME }}' not found in '${{ secrets.APP_RESOURCE_GROUP || secrets.AZURE_RESOURCE_GROUP }}'."
         echo "::warning::Deploy infrastructure first via the 'Deploy Infrastructure' workflow."
 
     - name: Deploy to slot
