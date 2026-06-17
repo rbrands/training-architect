@@ -3,6 +3,7 @@
 *AI-powered cycling coach backed by intervals.icu*
 
 Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and provides athletes with a personalised virtual coaching experience. A conversational AI coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
+TODO:Reference to intervals.icu
 
 **Key capabilities:**
 
@@ -310,9 +311,9 @@ Configure Redirect URIs in Entra ID:
 - Azure Portal: Entra ID → App registrations → your app → Authentication → Add a platform → Web
 - Add each environment URI that can receive sign-in callbacks:
   - `https://localhost:7000/signin-oidc`
-  - `https://training-architect-dev.azurewebsites.net/signin-oidc`
-  - `https://training-architect-staging.azurewebsites.net/signin-oidc`
-  - `https://training-architect.azurewebsites.net/signin-oidc`
+  - `https://app-training-architect-dev.azurewebsites.net/signin-oidc`
+  - `https://app-training-architect-staging.azurewebsites.net/signin-oidc`
+  - `https://app-training-architect.azurewebsites.net/signin-oidc`
   - `https://training-architect.com/signin-oidc` (optional, custom domain)
 
 Only keep URIs for environments you actually use. Unused redirect URIs should be removed.

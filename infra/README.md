@@ -84,10 +84,10 @@ az deployment sub what-if \
    In the Azure Portal: Entra ID → App registrations → your app → Authentication → Add a platform → Web.  
    Add each environment URI that can receive sign-in callbacks:
 
-   - `https://localhost:7000/signin-oidc`
-   - `https://training-architect-dev.azurewebsites.net/signin-oidc`
-   - `https://training-architect-staging.azurewebsites.net/signin-oidc`
-   - `https://training-architect.azurewebsites.net/signin-oidc`
+      - `https://app-training-architect-dev.azurewebsites.net/signin-oidc`
+      - `https://app-training-architect-staging.azurewebsites.net/signin-oidc`
+      - `https://app-training-architect.azurewebsites.net/signin-oidc`
+   - `https://app-training-architect.azurewebsites.net/signin-oidc`
    - `https://training-architect.com/signin-oidc` (optional, custom domain)
 
    Keep only the URIs for environments that are active.
