@@ -183,6 +183,9 @@ resource devSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
   parent: webApp
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   tags: union(tags, {
     environment: 'dev'
   })
@@ -216,6 +219,9 @@ resource stagingSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
   parent: webApp
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   tags: union(tags, {
     environment: 'staging'
   })
@@ -262,3 +268,9 @@ output devSlotName string = devSlot.name
 
 @description('Name of the staging deployment slot.')
 output stagingSlotName string = stagingSlot.name
+
+@description('Principal ID of the development deployment slot Managed Identity.')
+output devSlotPrincipalId string = devSlot.identity.principalId
+
+@description('Principal ID of the staging deployment slot Managed Identity.')
+output stagingSlotPrincipalId string = stagingSlot.identity.principalId

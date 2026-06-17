@@ -157,8 +157,81 @@ module appService 'modules/app-service.bicep' = {
   }
 }
 
+module keyVaultRbacDev 'modules/keyvault-rbac.bicep' = {
+  name: 'keyVaultRbacDev'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    keyVaultName: keyVaultName
+    principalId: appService.outputs.devSlotPrincipalId
+  }
+}
+
+module cosmosRbacDev 'modules/cosmos-rbac.bicep' = {
+  name: 'cosmosRbacDev'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    cosmosAccountName: cosmosAccountName
+    principalId: appService.outputs.devSlotPrincipalId
+  }
+}
+
+module storageRbacDev 'modules/storage-rbac.bicep' = {
+  name: 'storageRbacDev'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    storageAccountName: storageAccountName
+    principalId: appService.outputs.devSlotPrincipalId
+  }
+}
+
+module appInsightsRbacDev 'modules/appinsights-rbac.bicep' = {
+  name: 'appInsightsRbacDev'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    appInsightsName: appInsightsName
+    principalId: appService.outputs.devSlotPrincipalId
+  }
+}
+
+module keyVaultRbacStaging 'modules/keyvault-rbac.bicep' = {
+  name: 'keyVaultRbacStaging'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    keyVaultName: keyVaultName
+    principalId: appService.outputs.stagingSlotPrincipalId
+  }
+}
+
+module cosmosRbacStaging 'modules/cosmos-rbac.bicep' = {
+  name: 'cosmosRbacStaging'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    cosmosAccountName: cosmosAccountName
+    principalId: appService.outputs.stagingSlotPrincipalId
+  }
+}
+
+module storageRbacStaging 'modules/storage-rbac.bicep' = {
+  name: 'storageRbacStaging'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    storageAccountName: storageAccountName
+    principalId: appService.outputs.stagingSlotPrincipalId
+  }
+}
+
+module appInsightsRbacStaging 'modules/appinsights-rbac.bicep' = {
+  name: 'appInsightsRbacStaging'
+  scope: resourceGroup(centralResourceGroupName)
+  params: {
+    appInsightsName: appInsightsName
+    principalId: appService.outputs.stagingSlotPrincipalId
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Module: Key Vault RBAC  →  central RG (where the KV lives)
+// Production web app identity
 // ---------------------------------------------------------------------------
 module keyVaultRbac 'modules/keyvault-rbac.bicep' = {
   name: 'keyVaultRbac'
@@ -179,8 +252,6 @@ module cosmosRbac 'modules/cosmos-rbac.bicep' = {
   params: {
     cosmosAccountName: cosmosAccountName
     principalId: appService.outputs.principalId
-    cosmosDatabaseId: cosmosDatabaseId
-    cosmosContainerName: cosmosContainerName
   }
 }
 
