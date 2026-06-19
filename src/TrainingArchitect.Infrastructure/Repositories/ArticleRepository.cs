@@ -38,7 +38,7 @@ public class ArticleRepository(CosmosClient client, IConfiguration configuration
     public async Task<Article?> GetBySlugAsync(string slug)
     {
         var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.type = 'article' AND c.slug = @slug")
+            "SELECT * FROM c WHERE c.type = 'article' AND (c.slug = @slug OR c.id = @slug)")
             .WithParameter("@slug", slug);
         var options = new QueryRequestOptions { PartitionKey = new PartitionKey("article") };
 

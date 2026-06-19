@@ -191,37 +191,62 @@ else
 
     // OnImageUploadSuccess fires BEFORE ValueChanged updates _form.Description.
     // Store the pending fix here; OnDescriptionChanged applies it when ValueChanged fires.
-    private string? _pendingWrongSrc;
     private string? _pendingBlobUrl;
+    private IReadOnlyList<string>? _pendingWrongSrcCandidates;
 
     private void OnImageUploadSuccess(ImageSuccessEventArgs args)
     {
         var blobUrl = ExtractBlobUrl(args);
         if (string.IsNullOrEmpty(blobUrl)) return;
-        _pendingWrongSrc = Config.ImageContainerUrl.TrimEnd('/') + "/" + args.File?.Name;
+
         _pendingBlobUrl = blobUrl;
+        _pendingWrongSrcCandidates = GetWrongSrcCandidates(args.File?.Name).ToArray();
     }
 
     private async Task OnDescriptionChanged(string value)
     {
-        string? wrongSrc = null;
+        string? replacedSrc = null;
         string? correctSrc = null;
 
-        if (_pendingWrongSrc is not null && _pendingBlobUrl is not null
-            && value.Contains(_pendingWrongSrc))
+        if (_pendingBlobUrl is not null && _pendingWrongSrcCandidates is not null)
         {
-            wrongSrc = _pendingWrongSrc;
-            correctSrc = _pendingBlobUrl;
-            value = value.Replace(wrongSrc, correctSrc);
-            _pendingWrongSrc = null;
+            foreach (var wrongSrc in _pendingWrongSrcCandidates)
+            {
+                if (value.Contains(wrongSrc, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = value.Replace(wrongSrc, _pendingBlobUrl, StringComparison.OrdinalIgnoreCase);
+                    replacedSrc = wrongSrc;
+                    correctSrc = _pendingBlobUrl;
+                }
+            }
+
             _pendingBlobUrl = null;
+            _pendingWrongSrcCandidates = null;
         }
 
         _form.Description = value;
 
         // Also patch the editor DOM so the image displays immediately.
-        if (wrongSrc is not null && correctSrc is not null)
-            await JSRuntime.InvokeVoidAsync("sfFixImageSrc", wrongSrc, correctSrc);
+        if (!string.IsNullOrEmpty(replacedSrc) && !string.IsNullOrEmpty(correctSrc))
+            await JSRuntime.InvokeVoidAsync("sfFixImageSrc", replacedSrc, correctSrc);
+    }
+
+    private IEnumerable<string> GetWrongSrcCandidates(string? fileName)
+    {
+        var candidates = new List<string>();
+        var containerUrl = Config.ImageContainerUrl?.TrimEnd('/') ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            candidates.Add($"{containerUrl}/{fileName}");
+            candidates.Add($"/images/{fileName}");
+            candidates.Add($"images/{fileName}");
+            candidates.Add(fileName.TrimStart('/'));
+        }
+
+        return candidates
+            .Where(static candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string? ExtractBlobUrl(ImageSuccessEventArgs args)
