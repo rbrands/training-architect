@@ -13,6 +13,7 @@ public class AboutContent : CosmosDocument
     public string AvatarUrl { get; set; } = string.Empty;
     public string HeaderTitle { get; set; } = "Header Title";
     public string HeaderSubtitle { get; set; } = "Subtitle";
+    public string HeaderText { get; set; } = string.Empty;
     public string FooterCopyright { get; set; } = "Brands Advisory";
     public string FooterLinkTitle { get; set; } = string.Empty;
     public string FooterLink { get; set; } = string.Empty;

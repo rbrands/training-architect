@@ -3,11 +3,12 @@
 @inject IAboutRepository AboutRepo
 @inject NavigationManager Nav
 @inject IConfiguration Config
+@using Markdig
 
 <PageTitle>@_siteTitle · @_siteSubTitle</PageTitle>
 <HeadContent>
     <meta name="description"
-          content="@(_about?.Subtitle ?? "Freelance IT Consultant specializing in Azure, Solution Architecture and GenAI.")" />
+          content="@(_about?.Subtitle ?? "Training Architect.")" />
     <meta property="og:title"
           content="@_siteTitle · @_siteSubTitle" />
     <meta property="og:description"
@@ -48,6 +49,13 @@ else
                 <span class="tag-pill">@tag</span>
             }
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(_about.HeaderText))
+        {
+            <div class="article-content text-secondary mb-4">
+                @((MarkupString)Markdown.ToHtml(_about.HeaderText))
+            </div>
+        }
 
         <hr class="border-secondary" />
 
