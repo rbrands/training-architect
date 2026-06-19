@@ -15,7 +15,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Identity.Web;
 using Syncfusion.Blazor;
 using System.Security.Claims;
-using TrainingArchitect.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,7 +58,6 @@ if (!string.IsNullOrEmpty(syncfusionKey))
 if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
 {
     builder.Services.AddApplicationInsightsTelemetry();
-    builder.Services.AddApplicationInsightsTelemetryProcessor<BotProbe404TelemetryFilter>();
     builder.Services.Configure<Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration>(config =>
         config.SetAzureTokenCredential(new DefaultAzureCredential()));
 }
@@ -206,6 +204,40 @@ var app = builder.Build();
 // Must be first in the pipeline so all subsequent middleware
 // (including HTTPS redirect and authentication) sees the correct scheme.
 app.UseForwardedHeaders();
+
+// Internet-facing apps receive constant automated path probing
+// (e.g., /.env, /phpmyadmin, /wp-admin). Return 204 early to keep
+// telemetry noise and alert floods under control.
+var suppressedProbePathFragments = new[]
+{
+    "/.env",
+    "/wp-",
+    "/wordpress",
+    "/phpmyadmin",
+    "/cgi-bin",
+    "/server-status",
+    "/.git",
+    "/boaform",
+    "/actuator",
+    "/jenkins",
+    "/webhook-test/",
+    "/var/task/",
+    "/src/config/",
+    "/s3.key"
+};
+
+app.Use(async (context, next) =>
+{
+    var requestPath = context.Request.Path.Value ?? string.Empty;
+    if (suppressedProbePathFragments.Any(fragment =>
+        requestPath.Contains(fragment, StringComparison.OrdinalIgnoreCase)))
+    {
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
 
 // Normalize 127.0.0.1 → localhost so the OIDC correlation cookie
 // is set and sent back with the same host in both the login request
