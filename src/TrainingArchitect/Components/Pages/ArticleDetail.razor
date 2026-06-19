@@ -1,6 +1,7 @@
 @page "/articles/{slug}"
 @inject IArticleRepository ArticleRepo
 @inject IConfiguration Config
+@using Markdig
 
 @if (_article is null && !_loaded)
 {
@@ -99,7 +100,7 @@ else
         }
 
         <div class="article-content text-secondary">
-            @((MarkupString)_article.Content)
+            @((MarkupString)Markdown.ToHtml(_article.Content ?? string.Empty))
         </div>
     </article>
 

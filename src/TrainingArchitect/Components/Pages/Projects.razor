@@ -19,7 +19,7 @@
     <h1 class="fw-bold mb-0"><span class="me-2">💼</span>Projects</h1>
     @if (IsOwner)
     {
-        <a href="/admin/projects/new" class="btn btn-outline-light btn-sm">+ New Project</a>
+        <a href="/admin/projects/new" class="btn btn-outline-secondary btn-sm">+ New Project</a>
     }
 </div>
 
@@ -41,7 +41,7 @@ else
         @foreach (var (project, index) in _projects.Select((p, i) => (p, i)))
         {
             <div class="col">
-                <div class="p-3 h-100 d-flex flex-column" style="background-color: #161b22; border: 1px solid #30363d; border-radius: 0.5rem;">
+                <div class="p-3 h-100 d-flex flex-column" style="background-color: var(--ba-card-bg); border: 1px solid var(--ba-border); border-radius: 0.75rem;">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         @if (project.Tags.Count > 0)
                         {
@@ -56,7 +56,7 @@ else
                             <a href="/admin/projects/@project.Id" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.7rem;">✏️</a>
                         }
                     </div>
-                    <h5 class="fw-bold mb-1 text-white">@project.Title</h5>
+                    <h5 class="fw-bold mb-1 text-dark">@project.Title</h5>
                     <div class="text-secondary small mb-3">@project.Customer · @project.Period</div>
 
                     <div class="text-secondary small mb-3 flex-grow-1">
@@ -68,20 +68,20 @@ else
                         <div class="d-flex flex-wrap gap-1 mb-2">
                             @foreach (var tag in project.Tags.Skip(1))
                             {
-                                <span class="badge rounded-pill bg-secondary fw-normal text-white">@tag</span>
+                                <span class="badge rounded-pill fw-normal text-dark" style="background-color: #eadcc5;">@tag</span>
                             }
                         </div>
                     }
 
                     @if (project.Outcomes.Count > 0)
                     {
-                        <p class="mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.08em; color: #8b949e;">OUTCOMES</p>
+                        <p class="mb-1 fw-semibold text-uppercase text-secondary" style="font-size: 0.7rem; letter-spacing: 0.08em;">OUTCOMES</p>
                         <ul class="list-unstyled mb-0 d-flex flex-column gap-1">
                             @foreach (var outcome in project.Outcomes)
                             {
                                 <li class="d-flex gap-2 align-items-center small">
                                     <span class="text-primary">●</span>
-                                    <span class="text-white-50">@outcome</span>
+                                    <span class="text-secondary">@outcome</span>
                                 </li>
                             }
                         </ul>
@@ -108,11 +108,11 @@ else
 
     private static string GetTagColor(int index) => (index % 5) switch
     {
-        0 => "background-color: #1f6feb; color: white;",
-        1 => "background-color: #8957e5; color: white;",
-        2 => "background-color: #238636; color: white;",
-        3 => "background-color: #da3633; color: white;",
-        4 => "background-color: #bf8700; color: white;",
-        _ => "background-color: #30363d; color: white;"
+        0 => "background-color: #d9e7fb; color: #1f2328;",
+        1 => "background-color: #eadcf8; color: #1f2328;",
+        2 => "background-color: #ddefe0; color: #1f2328;",
+        3 => "background-color: #f8dfdf; color: #1f2328;",
+        4 => "background-color: #f5e7c8; color: #1f2328;",
+        _ => "background-color: #eadcc5; color: #1f2328;"
     };
 }

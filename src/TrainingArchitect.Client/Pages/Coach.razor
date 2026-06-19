@@ -39,13 +39,13 @@
 
 <!-- Input area -->
 <div class="d-flex gap-2">
-    <textarea class="form-control form-control-sm bg-dark text-white border-secondary flex-grow-1"
+    <textarea class="form-control form-control-sm flex-grow-1"
               rows="2"
               placeholder="Message your coach…"
               @bind="_input"
               @onkeydown="HandleKeyDown"
               disabled="@_sending" />
-    <button class="btn btn-outline-light btn-sm align-self-end"
+    <button class="btn btn-outline-secondary btn-sm align-self-end"
             @onclick="SendAsync"
             disabled="@(_sending || string.IsNullOrWhiteSpace(_input))">
         @(_sending ? "…" : "Send →")

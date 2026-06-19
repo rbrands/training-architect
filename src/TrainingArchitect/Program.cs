@@ -246,6 +246,12 @@ app.MapGet("/_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/{**rest}",
     () => Results.Content(string.Empty, "application/javascript"))
     .AllowAnonymous();
 
+app.MapGet("/logout", () =>
+    Results.SignOut(
+        new AuthenticationProperties { RedirectUri = "/" },
+        [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]))
+    .AllowAnonymous();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

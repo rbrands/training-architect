@@ -22,7 +22,7 @@
             </button>
         }
         <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
-        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsync" disabled="@_saving">
             @(_saving ? "Saving…" : "Save")
         </button>
     </div>
@@ -43,19 +43,19 @@ else
         <div class="row g-3">
             <div class="col-12 col-md-4">
                 <label class="form-label text-secondary small">Title</label>
-                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Title" />
+                <input class="form-control" @bind="_form.Title" />
             </div>
             <div class="col-12 col-md-3">
                 <label class="form-label text-secondary small">Customer</label>
-                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Customer" />
+                <input class="form-control" @bind="_form.Customer" />
             </div>
             <div class="col-12 col-md-3">
                 <label class="form-label text-secondary small">Period</label>
-                <input class="form-control bg-dark text-white border-secondary" @bind="_form.Period" />
+                <input class="form-control" @bind="_form.Period" />
             </div>
             <div class="col-12 col-md-2">
                 <label class="form-label text-secondary small">Project Start</label>
-                <input class="form-control bg-dark text-white border-secondary" type="date"
+                  <input class="form-control" type="date"
                        @bind="_form.ProjectStart" @bind:format="yyyy-MM-dd" />
                 <div class="form-text text-secondary small">Used for sorting only</div>
             </div>
@@ -63,7 +63,7 @@ else
 
         <div>
             <label class="form-label text-secondary small">Tags (comma-separated)</label>
-            <input class="form-control bg-dark text-white border-secondary" @bind="_form.Tags" />
+            <input class="form-control" @bind="_form.Tags" />
             <div class="form-text text-secondary small">First tag is shown as category pill on the public page</div>
         </div>
 
@@ -81,7 +81,7 @@ else
 
         <div>
             <label class="form-label text-secondary small">Outcomes (one per line)</label>
-            <textarea class="form-control bg-dark text-white border-secondary" rows="5"
+            <textarea class="form-control" rows="5"
                       @bind="_form.Outcomes"
                       placeholder="Reduced costs by 40%&#10;Improved performance&#10;..." />
             <div class="form-text text-secondary small">Each line becomes a bullet point on the public page</div>

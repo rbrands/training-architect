@@ -12,7 +12,7 @@
     <h2 class="fw-bold mb-0">Edit About</h2>
     <div class="d-flex gap-2">
         <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
-        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsync" disabled="@_saving">
             @(_saving ? "Saving…" : "Save")
         </button>
     </div>
@@ -32,17 +32,17 @@ else
 
         <div>
             <label class="form-label text-secondary small">Title</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.Title" />
         </div>
         <div>
             <label class="form-label text-secondary small">Header Title</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.HeaderTitle" />
         </div>
         <div>
             <label class="form-label text-secondary small">Header Subtitle</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.HeaderSubtitle" />
         </div>
 
@@ -59,40 +59,40 @@ else
 
         <div>
             <label class="form-label text-secondary small">Subtitle</label>
-            <textarea class="form-control bg-dark text-white border-secondary"
+            <textarea class="form-control"
                       rows="3"
                       @bind="_about.Subtitle" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Location</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.Location" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Profile URL</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    type="url"
                    @bind="_about.ProfileUrl" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Contact Hint</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.ContactHint" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Footer Copyright</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.FooterCopyright"
                    placeholder="Brands Advisory" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Footer Link</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    type="url"
                    @bind="_about.FooterLink"
                    placeholder="https://example.com" />
@@ -100,7 +100,7 @@ else
 
         <div>
             <label class="form-label text-secondary small">Footer Link Title</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_about.FooterLinkTitle"
                    placeholder="example.com" />
         </div>
@@ -111,7 +111,7 @@ else
 
     <div class="card-dark p-3 mb-3">
         <label class="form-label text-secondary small">Comma-separated — e.g. Cloud Adoption (Azure), Solution Architecture</label>
-        <input class="form-control bg-dark text-white border-secondary"
+        <input class="form-control"
                @bind="_tagsInput" />
     </div>
 
@@ -122,7 +122,7 @@ else
         {
             <div class="row g-2 align-items-center mb-2">
                 <div class="col-auto" style="width: 160px;">
-                    <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                        <select class="form-select form-select-sm"
                             value="@link.Icon"
                             @onchange="e => link.Icon = e.Value?.ToString() ?? string.Empty">
                         <option value="">— none —</option>
@@ -152,13 +152,13 @@ else
                     }
                 </div>
                 <div class="col-3">
-                    <input class="form-control form-control-sm bg-dark text-white border-secondary"
+                          <input class="form-control form-control-sm"
                            placeholder="Label"
                            value="@link.Label"
                            @oninput="e => link.Label = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="col">
-                    <input class="form-control form-control-sm bg-dark text-white border-secondary"
+                          <input class="form-control form-control-sm"
                            placeholder="https://…"
                            value="@link.Url"
                            @oninput="e => link.Url = e.Value?.ToString() ?? string.Empty" />

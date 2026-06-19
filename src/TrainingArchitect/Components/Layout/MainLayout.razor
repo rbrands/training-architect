@@ -1,6 +1,5 @@
 ﻿@inherits LayoutComponentBase
 @inject IOwnerService OwnerService
-@inject IHttpContextAccessor HttpContextAccessor
 @inject IAboutRepository AboutRepo
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
@@ -9,7 +8,7 @@
 <CascadingValue Value="@(_about?.HeaderSubtitle ?? "Header Subtitle")" Name="SiteSubTitle">
 <CascadingValue Value="_isOwner" Name="IsOwner">
 
-<nav class="navbar navbar-dark sticky-top" style="background-color: #0d1117;">
+<nav class="navbar navbar-light border-bottom sticky-top premium-nav">
     <div class="container" style="max-width: 900px;">
 
         <!-- Left: Avatar + Brand -->
@@ -20,8 +19,8 @@
                  style="object-fit: cover;"
                  alt="Brands Advisory avatar" />
             <div class="lh-sm">
-                <div class="fw-bold text-white" style="font-size: 0.875rem;">@(_about?.HeaderTitle ?? "Header Title")</div>
-                <div class="text-secondary" style="font-size: 0.7rem;">@(_about?.HeaderSubtitle ?? "Subtitle")</div>
+                <div class="text-dark brand-name">@(_about?.HeaderTitle ?? "Header Title")</div>
+                <div class="text-secondary brand-subtitle">@(_about?.HeaderSubtitle ?? "Subtitle")</div>
             </div>
         </a>
 
@@ -46,33 +45,18 @@
             <NavLink href="/coach"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
-                🚴 Coach
+                Coach
             </NavLink>
             <NavLink href="/training-plan"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
-                🗓 Plan
+                Plan
             </NavLink>
             <NavLink href="/dashboard"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
-                📊 Dashboard
+                Dashboard
             </NavLink>
-        </div>
-
-        <!-- Right: Login/Logout -->
-        <div class="d-flex align-items-center">
-            <AuthorizeView>
-                <Authorized>
-                    <form method="post" action="/logout">
-                        <AntiforgeryToken />
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
-                    </form>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="/login" class="btn btn-outline-secondary btn-sm">Login</a>
-                </NotAuthorized>
-            </AuthorizeView>
         </div>
 
     </div>
@@ -82,7 +66,7 @@
     @Body
 </main>
 
-<footer class="border-top border-secondary py-3 small" style="background-color: #0d1117;">
+<footer class="border-top py-3 small premium-footer">
     <div class="container d-flex justify-content-between align-items-center" style="max-width: 900px;">
         <span class="text-secondary">&copy; @DateTime.UtcNow.Year @(_about?.FooterCopyright ?? "Brands Advisory")</span>
         <span></span>

@@ -1,12 +1,14 @@
 :root {
-  --ba-bg: #0d1117;
-  --ba-card-bg: #161b22;
-  --ba-border: #30363d;
+    --ba-bg: #f7f1e6;
+    --ba-card-bg: #fffaf0;
+    --ba-border: #d8c7ac;
 }
 
 body {
   background-color: var(--ba-bg);
-  color: #e6edf3;
+                color: #1f2328;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
 }
 
 /* Override Bootstrap navbar-brand font-size for custom brand layout */
@@ -27,8 +29,8 @@ body {
 }
 
 .tag-pill {
-  background-color: #21262d;
-  color: #e6edf3;
+    background-color: #f0dfc5;
+    color: #1f2328;
   border: 1px solid var(--ba-border);
   border-radius: 20px;
   padding: 4px 12px;
@@ -68,6 +70,57 @@ article img {
     max-width: 100% !important;
     height: auto !important;
     border-radius: 8px;
+}
+
+/* Syncfusion rich text editor should follow the light editorial theme */
+.e-richtexteditor,
+.e-richtexteditor.e-control {
+    background-color: var(--ba-card-bg) !important;
+    color: #1f2328 !important;
+    border-color: var(--ba-border) !important;
+}
+
+.e-richtexteditor .e-toolbar-wrapper,
+.e-richtexteditor .e-toolbar-container,
+.e-richtexteditor .e-rte-toolbar,
+.e-richtexteditor .e-toolbar,
+.e-richtexteditor .e-toolbar .e-toolbar-items,
+.e-richtexteditor .e-toolbar .e-toolbar-item,
+.e-richtexteditor .e-rte-content,
+.e-richtexteditor .e-content {
+    background-color: var(--ba-card-bg) !important;
+    color: #1f2328 !important;
+}
+
+.e-richtexteditor .e-toolbar-wrapper,
+.e-richtexteditor .e-toolbar-container,
+.e-richtexteditor .e-rte-toolbar {
+    border-color: var(--ba-border) !important;
+}
+
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-tbar-btn,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-dropdown-btn,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-btn,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-tbar-btn-text,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-icons {
+    color: #1f2328 !important;
+}
+
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-tbar-btn,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-dropdown-btn,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-btn {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-tbar-btn:hover,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-dropdown-btn:hover,
+.e-richtexteditor .e-toolbar .e-toolbar-item .e-btn:hover {
+    background-color: #f0dfc5 !important;
+}
+
+.e-richtexteditor .e-content {
+    min-height: 320px;
 }
 
 /* ── Training Architect ──────────────────────────────────────── */
@@ -117,8 +170,8 @@ article img {
 }
 
 .ta-message-assistant .ta-message-bubble {
-    background-color: #21262d;
-    color: #e6edf3;
+    background-color: #fff1dc;
+    color: #1f2328;
     border: 1px solid var(--ba-border);
     border-bottom-left-radius: 4px;
 }
@@ -147,17 +200,17 @@ article img {
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.875rem;
-    color: #8b949e;
+    color: #5b5245;
     text-decoration: none;
     transition: background-color 0.15s, color 0.15s;
 }
 
 .nav-pill-inactive:hover {
-    color: #e6edf3;
-    background-color: #21262d;
+    color: #1f2328;
+    background-color: #ecd7b7;
 }
 
 .nav-pill-active {
-    background-color: #21262d;
-    color: #e6edf3;
+    background-color: #e1c39a;
+    color: #1f2328;
 }

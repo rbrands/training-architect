@@ -19,7 +19,7 @@
     <h1 class="fw-bold mb-0"><span class="me-2">📝</span>Articles</h1>
     @if (IsOwner)
     {
-        <a href="/admin/articles/new" class="btn btn-outline-light btn-sm">+ New Article</a>
+        <a href="/admin/articles/new" class="btn btn-outline-secondary btn-sm">+ New Article</a>
     }
 </div>
 
@@ -62,7 +62,7 @@ else
 
                     <div class="card-body d-flex flex-column">
 
-                        <h5 class="card-title fw-bold mb-1 text-white">@article.Title</h5>
+                        <h5 class="card-title fw-bold mb-1 text-dark">@article.Title</h5>
 
                         <p class="text-secondary small mb-2">
                             @article.PublishedDate?.ToString("MMMM d, yyyy")
@@ -73,7 +73,7 @@ else
                             <div class="d-flex flex-wrap gap-1 mb-3">
                                 @foreach (var tag in article.Tags)
                                 {
-                                    <span class="badge rounded-pill bg-secondary fw-normal text-white">@tag</span>
+                                    <span class="badge rounded-pill fw-normal text-dark" style="background-color: #eadcc5;">@tag</span>
                                 }
                             </div>
                         }

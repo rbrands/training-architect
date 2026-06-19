@@ -22,7 +22,7 @@
             </button>
         }
         <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">Cancel</button>
-        <button class="btn btn-outline-light btn-sm" @onclick="SaveAsync" disabled="@_saving">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsync" disabled="@_saving">
             @(_saving ? "Saving…" : "Save")
         </button>
     </div>
@@ -42,25 +42,25 @@ else
 
         <div>
             <label class="form-label text-secondary small">Title</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_article.Title" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Slug</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_article.Slug" />
         </div>
 
         <div>
             <label class="form-label text-secondary small">Summary</label>
-            <textarea class="form-control bg-dark text-white border-secondary" rows="3"
+            <textarea class="form-control" rows="3"
                       @bind="_article.Summary"></textarea>
         </div>
 
         <div>
             <label class="form-label text-secondary small">Tags (comma-separated)</label>
-            <input class="form-control bg-dark text-white border-secondary"
+                 <input class="form-control"
                    @bind="_tagsInput" />
         </div>
 
@@ -83,7 +83,7 @@ else
 
         <div>
             <label class="form-label text-secondary small">Lifetime</label>
-            <select class="form-select bg-dark text-white border-secondary"
+                <select class="form-select"
                     value="@(_article.ExpiresAfterDays?.ToString() ?? "")"
                     @onchange="OnLifetimeChanged">
                 <option value="">Unlimited</option>
@@ -112,7 +112,8 @@ else
 
         <div>
             <label class="form-label text-secondary small">Content</label>
-            <SfRichTextEditor Value="@_article.Content"
+            <SfRichTextEditor EditorMode="EditorMode.Markdown"
+                              Value="@_article.Content"
                               ValueChanged="@OnContentChanged"
                               Height="500px">
                 <RichTextEditorToolbarSettings Items="@_toolbarItems" />
