@@ -15,6 +15,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Identity.Web;
 using Syncfusion.Blazor;
 using System.Security.Claims;
+using TrainingArchitect.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,7 @@ if (!string.IsNullOrEmpty(syncfusionKey))
 if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
 {
     builder.Services.AddApplicationInsightsTelemetry();
+    builder.Services.AddApplicationInsightsTelemetryProcessor<BotProbe404TelemetryFilter>();
     builder.Services.Configure<Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration>(config =>
         config.SetAzureTokenCredential(new DefaultAzureCredential()));
 }
