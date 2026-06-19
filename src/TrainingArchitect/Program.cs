@@ -193,7 +193,7 @@ builder.Services.AddSingleton(sp =>
     return new TrainingArchitect.Client.Models.ClientConfig
     {
         SyncfusionLicenseKey = cfg["Syncfusion:LicenseKey"] ?? string.Empty,
-        ImageContainerUrl = blobEndpoint.TrimEnd('/') + "/article-images/"
+        ImageContainerUrl = blobEndpoint.TrimEnd('/') + "/images/"
     };
 });
 

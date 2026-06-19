@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Azure Storage Account — Blob storage for article images
 //
-// Creates a StorageV2 account with a public blob container 'article-images'.
+// Creates a StorageV2 account with a public blob container 'images'.
 // Images are served directly from the public blob endpoint.
 // Write access is controlled via RBAC (see storage-rbac.bicep).
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
 }
 
 resource imageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: 'article-images'
+  name: 'images'
   parent: blobService
   properties: {
     publicAccess: 'Blob'
@@ -83,7 +83,7 @@ resource lifecyclePolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2
           definition: {
             filters: {
               blobTypes: ['blockBlob']
-              prefixMatch: ['article-images/']
+              prefixMatch: ['images/']
             }
             actions: {
               baseBlob: {

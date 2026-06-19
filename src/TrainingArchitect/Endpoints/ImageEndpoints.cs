@@ -51,7 +51,7 @@ public static class ImageEndpoints
 
                         var credential = new DefaultAzureCredential();
                         var blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential);
-                        var containerClient = blobServiceClient.GetBlobContainerClient("article-images");
+                        var containerClient = blobServiceClient.GetBlobContainerClient("images");
                         var blobClient = containerClient.GetBlobClient(blobName);
 
                         await blobClient.UploadAsync(processedStream, new BlobUploadOptions
@@ -97,7 +97,7 @@ public static class ImageEndpoints
 
             var credential = new DefaultAzureCredential();
             var blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential);
-            var containerClient = blobServiceClient.GetBlobContainerClient("article-images");
+            var containerClient = blobServiceClient.GetBlobContainerClient("images");
 
             var blobName = $"{Guid.NewGuid():N}.png";
             var blobClient = containerClient.GetBlobClient(blobName);
@@ -112,7 +112,7 @@ public static class ImageEndpoints
 
             var sasBuilder = new BlobSasBuilder
             {
-                BlobContainerName = "article-images",
+                BlobContainerName = "images",
                 BlobName = blobName,
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow.AddMinutes(-5),

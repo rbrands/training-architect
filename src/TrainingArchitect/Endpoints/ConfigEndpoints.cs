@@ -12,7 +12,7 @@ public static class ConfigEndpoints
         app.MapGet("/api/config", (IConfiguration config) =>
         {
             var blobEndpoint = config["Storage:BlobEndpoint"] ?? string.Empty;
-            var imageContainerUrl = blobEndpoint.TrimEnd('/') + "/article-images/";
+            var imageContainerUrl = blobEndpoint.TrimEnd('/') + "/images/";
 
             return Results.Ok(new ClientConfig
             {

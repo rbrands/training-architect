@@ -203,7 +203,7 @@ infra/
     ├── custom-domain-ssl.bicep     # Free managed SSL certificate for www subdomain
     ├── keyvault.bicep              # Key Vault
     ├── keyvault-rbac.bicep         # KV Certificate User + Secrets User → Web App identity
-    ├── storage.bicep               # Storage Account + article-images blob container
+    ├── storage.bicep               # Storage Account + images blob container
     └── storage-rbac.bicep          # Storage Blob Data Contributor → Web App identity
 src/
 ├── TrainingArchitect/             # Blazor Web App host (SSR + API)
@@ -281,6 +281,18 @@ This script also assigns **Contributor** and **User Access Administrator** roles
 For this repository, infrastructure deployment runs at **subscription scope** and orchestrates resources across two resource groups (`app` and `central`) in one deployment.
 Because of that, the deployment principal must be able to validate and execute deployments at `/subscriptions/<id>`.
 
+> **Important (multi-RG/shared storage setup):**
+> This deployment uses an **existing** Storage Account from the `central` resource group.
+> Ensure the blob container `images` exists before first image upload.
+> If it does not exist yet, create it manually:
+>
+> ```bash
+> az storage container create \
+>   --name images \
+>   --account-name <storage-account-name> \
+>   --auth-mode login
+> ```
+
 ```powershell
 # Optional: create/update the deployment principal using your toolkit script
 .\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name>
@@ -350,9 +362,11 @@ deploy-infrastructure.yml creates:
 
 - Key Vault
 - Cosmos DB account, database, container
-- Storage Account with article-images container
+- RBAC assignments for the existing shared Storage Account
 - App Service Plan + Web App
 - All RBAC role assignments (Managed Identity)
+
+For multi-resource-group installations with shared central resources, the `images` blob container must already exist in the shared Storage Account.
 
 Application deployment flow:
 
