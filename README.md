@@ -2,8 +2,9 @@
 
 *AI-powered cycling coach backed by intervals.icu*
 
-Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and provides athletes with a personalised virtual coaching experience. A conversational AI coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
-TODO:Reference to intervals.icu
+Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and gives athletes a personalised virtual coaching experience. A conversational AI coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
+
+It is the user interface for the data and coaching layer published in [intervals-icu-sync](https://github.com/rbrands/intervals-icu-sync), reusing that repository's coaching logic and prompts. If you don't want to set up the MCP server in your own GenAI tooling, the hosted version at [training-architect.com](https://training-architect.com) can be used straight away.
 
 **Key capabilities:**
 
@@ -27,6 +28,7 @@ TODO:Reference to intervals.icu
 | Hosting | [Azure Web App (App Service)](https://learn.microsoft.com/en-us/azure/app-service/) |
 | Database | [Azure Cosmos DB NoSQL](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/) |
 | Authentication | [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/) via [Microsoft.Identity.Web](https://github.com/AzureAD/microsoft-identity-web) |
+| GenAI Agent | Microsoft Foundry Agent (for coaching orchestration) |
 | UI Components | [Syncfusion Blazor](https://www.syncfusion.com/blazor-components) (Community License) |
 | CI/CD | [GitHub Actions](https://docs.github.com/en/actions) |
 | Observability | Azure Application Insights + Log Analytics |
@@ -42,16 +44,17 @@ graph TD
         INFRA["TrainingArchitect.Infrastructure\n(Class Library)"]
     end
 
+  subgraph GenAI["GenAI Layer"]
+    FDRY["Microsoft Foundry Agent\n(Coaching Orchestration)"]
+  end
+
     BA --> BAC
     BA --> CORE
     BA --> INFRA
     BAC --> CORE
     INFRA --> CORE
-
-   
-   
- 
-   
+  BA -. invokes .-> FDRY
+  FDRY -. uses contracts from .-> CORE
 ```
 
 ---
@@ -256,10 +259,14 @@ Public pages use Static SSR and depend only on `Core` interfaces, served from Co
 
 Before GitHub Actions can deploy infrastructure and code, a one-time manual setup is required to bootstrap the deployment identity and permissions.
 
-### 1. Create Resource Group
+### 1. Create Resource Groups
 ```bash
 az group create \
-  --name <resource-group-name> \
+  --name <app-resource-group-name> \
+  --location <location>
+
+az group create \
+  --name <central-resource-group-name> \
   --location <location>
 ```
 
@@ -271,17 +278,22 @@ Use `Create-ServicePrincipalForDeployment.ps1` from [cloud-admin-toolkit](https:
 ```
 This script also assigns **Contributor** and **User Access Administrator** roles on the target resource group.
 
-If your deployment spans both an app resource group and a shared central resource group (for example Cosmos DB in the central group), run the command twice with the resource-group parameter:
+For this repository, infrastructure deployment runs at **subscription scope** and orchestrates resources across two resource groups (`app` and `central`) in one deployment.
+Because of that, the deployment principal must be able to validate and execute deployments at `/subscriptions/<id>`.
 
 ```powershell
-# App resource group
-.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name> -ResourceGroupName <app-resource-group>
+# Optional: create/update the deployment principal using your toolkit script
+.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name>
 
-# Central/shared resource group
-.\Create-ServicePrincipalForDeployment.ps1 -ConfigName <project-name> -ResourceGroupName <central-resource-group>
+# Required for this repository's subscription-scope Bicep deployment
+az role assignment create \
+  --assignee-object-id <service-principal-object-id> \
+  --assignee-principal-type ServicePrincipal \
+  --role Contributor \
+  --scope /subscriptions/<azure-subscription-id>
 ```
 
-Without permissions on both groups, infrastructure deployment can fail when templates reference existing shared resources in the central group.
+If the same principal creates RBAC assignments in deployment, assign **User Access Administrator** (or **Owner**) on the relevant scope as well.
 
 ### 3. Add OIDC Federated Credential
 
@@ -485,6 +497,51 @@ The following secrets are set:
 
 > **Note:** `SYNCFUSION_LICENSE_KEY` is **not** a GitHub Secret. It is stored in Azure Key Vault and loaded at startup via `AddAzureKeyVault()`. Set it with `setup.ps1 -KeyVault`.
 
+### Infrastructure Deployment Runbook (Quick Checklist)
+
+Use this checklist before or during a failed `deploy-infrastructure.yml` run.
+
+1. Confirm workflow context
+  - `deploy-infrastructure.yml` deploys at **subscription scope** (`scope: subscription`).
+  - Because of this, resource-group-only permissions are not sufficient.
+2. Confirm OIDC identity is correct
+  - `AZURE_CLIENT_ID`, `TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` must point to the intended deployment service principal and subscription.
+3. Confirm minimum RBAC for the deployment principal
+  - Required at subscription scope: `Contributor`.
+  - Required where RBAC assignments are created by IaC: `User Access Administrator` (or `Owner`) on the relevant scope.
+4. Verify role assignments quickly
+
+```bash
+az role assignment list --all \
+  --query "[?principalId=='<SERVICE_PRINCIPAL_OBJECT_ID>'].{role:roleDefinitionName,scope:scope}" \
+  --output table
+```
+
+5. If missing, assign subscription-level Contributor
+
+```bash
+az role assignment create \
+  --assignee-object-id <SERVICE_PRINCIPAL_OBJECT_ID> \
+  --assignee-principal-type ServicePrincipal \
+  --role Contributor \
+  --scope /subscriptions/<AZURE_SUBSCRIPTION_ID>
+```
+
+6. Re-run workflow after RBAC propagation
+  - Role assignments can take a short time to propagate.
+  - Re-run `deploy-infrastructure.yml` after assignment.
+
+#### Known Error Pattern
+
+If GitHub Actions shows this error:
+
+```text
+AuthorizationFailed: ... does not have authorization to perform action
+'Microsoft.Resources/deployments/validate/action' over scope '/subscriptions/...'
+```
+
+Then the deployment identity is missing effective subscription-scope permissions (or propagation is not complete yet).
+
 ### Deploying Infrastructure (Bicep)
 
 Infrastructure is defined in `infra/main.bicep`.
@@ -499,8 +556,8 @@ Infrastructure is defined in `infra/main.bicep`.
 **2. Deploy to Azure:**
 
 ```bash
-az deployment group create \
-  --resource-group <your-resource-group> \
+az deployment sub create \
+  --location <azure-region> \
   --template-file infra/main.bicep \
   --parameters infra/main.local.bicepparam
 ```
@@ -579,14 +636,15 @@ git commit --allow-empty -m "chore: deploy custom domain"
 git push origin main
 ```
 
-`deploy-infrastructure.yml` passes `customDomain=${{ secrets.CUSTOM_DOMAIN }}` to Bicep. The deployment:
+`deploy-infrastructure.yml` passes `siteUrl=${{ secrets.SITE_URL }}` to Bicep.
+`main.bicep` derives the apex domain from `siteUrl` and then the deployment:
 1. Adds hostname bindings for apex and www
-2. Issues a free managed certificate for `www.{customDomain}` (CNAME validation)
+2. Issues a free managed certificate for `www.{apexDomain}` (CNAME validation)
 3. Enables SNI SSL on the www binding via a nested deployment
 
 #### After deployment
 
-Add `https://www.{customDomain}/signin-oidc` to the **Redirect URIs** in your Entra ID App Registration:
+Add `https://www.{apexDomain}/signin-oidc` to the **Redirect URIs** in your Entra ID App Registration:
 ```
 Azure Portal → App registrations → your app → Authentication → Add URI
 ```
