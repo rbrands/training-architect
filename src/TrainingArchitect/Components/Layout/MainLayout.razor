@@ -8,41 +8,52 @@
 <CascadingValue Value="@(_about?.HeaderSubtitle ?? "Header Subtitle")" Name="SiteSubTitle">
 <CascadingValue Value="_isOwner" Name="IsOwner">
 
-<nav class="navbar navbar-light border-bottom sticky-top premium-nav">
-    <div class="container" style="max-width: 900px;">
+<nav class="navbar navbar-light border-bottom sticky-top premium-nav navbar-expand-md">
+    <div class="container premium-nav-container" style="max-width: 900px;">
+        <div class="premium-nav-toprow">
+            <!-- Left: Avatar + Brand -->
+            <a class="navbar-brand d-flex align-items-center gap-2 text-decoration-none" href="/">
+                <img src="@(!string.IsNullOrEmpty(_about?.AvatarUrl) ? _about.AvatarUrl : "/images/avatar.png")"
+                     width="40" height="40"
+                     style="object-fit: cover; border-radius: 12px;"
+                     alt="Training Architect logo" />
+                <div class="lh-sm">
+                    <div class="text-dark brand-name">@(_about?.HeaderTitle ?? "Header Title")</div>
+                    <div class="text-secondary brand-subtitle">@(_about?.HeaderSubtitle ?? "Subtitle")</div>
+                </div>
+            </a>
 
-        <!-- Left: Avatar + Brand -->
-        <a class="navbar-brand d-flex align-items-center gap-2 text-decoration-none" href="/">
-            <img src="@(!string.IsNullOrEmpty(_about?.AvatarUrl) ? _about.AvatarUrl : "/images/avatar.png")"
-                 width="40" height="40"
-                  style="object-fit: cover; border-radius: 12px;"
-                 alt="Training Architect logo" />
-            <div class="lh-sm">
-                <div class="text-dark brand-name">@(_about?.HeaderTitle ?? "Header Title")</div>
-                <div class="text-secondary brand-subtitle">@(_about?.HeaderSubtitle ?? "Subtitle")</div>
-            </div>
-        </a>
-
-        <!-- Center: Navigation tabs -->
-        <div class="d-flex gap-1">
-            <NavLink href="/"
-                 Match="NavLinkMatch.All"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Start
-            </NavLink>
-            <NavLink href="/coach"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Coach
-            </NavLink>
-            <NavLink href="/blog"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Blog
-            </NavLink>
+            <button class="navbar-toggler premium-menu-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#primaryNav"
+                    aria-controls="primaryNav"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
         </div>
 
+        <div class="collapse navbar-collapse premium-nav-collapse" id="primaryNav">
+            <div class="premium-nav-links">
+                <NavLink href="/"
+                         Match="NavLinkMatch.All"
+                         class="nav-pill-inactive"
+                         ActiveClass="nav-pill-active">
+                    Start
+                </NavLink>
+                <NavLink href="/coach"
+                         class="nav-pill-inactive"
+                         ActiveClass="nav-pill-active">
+                    Coach
+                </NavLink>
+                <NavLink href="/blog"
+                         class="nav-pill-inactive"
+                         ActiveClass="nav-pill-active">
+                    Blog
+                </NavLink>
+            </div>
+        </div>
     </div>
 </nav>
 
