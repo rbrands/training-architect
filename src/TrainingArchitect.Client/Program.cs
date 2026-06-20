@@ -36,6 +36,12 @@ builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStatePr
 builder.Services.AddScoped<IAboutRepository, HttpAboutRepository>();
 builder.Services.AddScoped<IProjectRepository, HttpProjectRepository>();
 builder.Services.AddScoped<IArticleRepository, HttpArticleRepository>();
+// Creditals store: persists Athlete-ID + API-Key in localStorage (opt-in via "remember")
+builder.Services.AddScoped<ICredentialStore, CredentialStore>(); // ersetzt NullCredentialStore
+// Coach-Session-State: Scoped = one instance per user (in WASM effectively singleton)
+builder.Services.AddScoped<IAthleteSession, AthleteSession>();
+// TEMPORARY — replaced by real implementations
+builder.Services.AddScoped<IAthleteDataClient, StubAthleteDataClient>();
 
 // OwnerService: same logic as server-side — checks user.IsInRole("SiteAdmin")
 builder.Services.AddScoped<IOwnerService, OwnerService>();

@@ -1,5 +1,9 @@
 @page "/coach"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject IAthleteSession Session
+@inject ICredentialStore CredentialStore
+@implements IDisposable
+
 
 <PageTitle>AI Coach · Training Architect</PageTitle>
 
@@ -15,23 +19,82 @@
         <CardContent>
             <div class="coach-status-layout">
                 <div class="coach-status-copy">
-                    <div class="coach-status-topline">
+                    <div class="coach-status-topline @StatusCssClass">
                         <span class="coach-status-badge" aria-hidden="true">
-                            <i class="bi bi-check-circle"></i>
+                            <i class="bi @StatusIconClass"></i>
                         </span>
-                        <span class="coach-status-title">Connected · Athlete 12345</span>
+                        <span class="coach-status-title">@StatusText@AthleteSuffix</span>
                     </div>
-                    <div class="coach-status-note">
-                        <i class="bi bi-key"></i>
-                        <span>API key remembered on this device</span>
-                    </div>
+                    @if (ShowRememberedNote)
+                    {
+                        <div class="coach-status-note">
+                            <i class="bi bi-key"></i>
+                            <span>API key remembered on this device</span>
+                        </div>
+                    }
                 </div>
 
                 <div class="coach-status-actions">
-                    <button type="button" class="coach-inline-link">View Data</button>
-                    <button type="button" class="coach-inline-link coach-inline-link-muted">Disconnect</button>
+                    <button type="button" class="coach-inline-link" disabled="@(!CanUseCoachActions)">View Data</button>
+                    @if (Session.State == CoachConnectionState.Connected)
+                    {
+                        <button type="button"
+                                class="coach-inline-link coach-inline-link-muted"
+                                @onclick="DisconnectAsync"
+                                disabled="@IsBusy">
+                            Disconnect
+                        </button>
+                    }
                 </div>
             </div>
+
+            @if (CanConnect)
+            {
+                <div class="credential-form">
+                    <h2>Connect to intervals.icu</h2>
+                    <p class="subtitle">Enter your Athlete ID and API key to load your training data.</p>
+
+                    <label class="field">
+                        <span>Athlete ID</span>
+                        <input type="text"
+                               autocomplete="off"
+                               placeholder="e.g. 12345"
+                               disabled="@IsBusy"
+                               @bind="_athleteId" @bind:event="oninput" />
+                    </label>
+
+                    <label class="field">
+                        <span>API Key</span>
+                        <input type="password"
+                               autocomplete="off"
+                               placeholder="Your intervals.icu API key"
+                               disabled="@IsBusy"
+                               @bind="_apiKey" @bind:event="oninput" />
+                    </label>
+
+                    <label class="remember">
+                        <input type="checkbox" disabled="@IsBusy" @bind="_remember" />
+                        <span>Remember on this device</span>
+                    </label>
+
+                    @if (Session.State == CoachConnectionState.Error && !string.IsNullOrEmpty(Session.ErrorMessage))
+                    {
+                        <p class="error" role="alert">@Session.ErrorMessage</p>
+                    }
+
+                    <button class="connect" disabled="@(!CanSubmit)" @onclick="ConnectAsync">
+                        @if (IsBusy)
+                        {
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span>Connecting...</span>
+                        }
+                        else
+                        {
+                            <span>Connect</span>
+                        }
+                    </button>
+                </div>
+            }
         </CardContent>
     </SfCard>
 
@@ -51,7 +114,7 @@
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>
-                            <SfButton CssClass="e-btn coach-outline-button">
+                            <SfButton CssClass="e-btn coach-outline-button" Disabled="@(!CanUseCoachActions)">
                                 <span>Assess</span>
                                 <span aria-hidden="true">→</span>
                             </SfButton>
@@ -75,7 +138,7 @@
                     </p>
                 </div>
 
-                <SfButton CssClass="e-btn coach-primary-button">
+                <SfButton CssClass="e-btn coach-primary-button" Disabled="@(!CanUseCoachActions)">
                     <span>Create Plan</span>
                     <span aria-hidden="true">→</span>
                 </SfButton>
@@ -85,6 +148,52 @@
 </div>
 
 @code {
+    private string StatusText => Session.State switch
+    {
+        CoachConnectionState.Connected => "Connected",
+        CoachConnectionState.Connecting => "Connecting",
+        CoachConnectionState.Error => "Connection Error",
+        _ => "Disconnected"
+    };
+
+    private string AthleteSuffix => string.IsNullOrWhiteSpace(Session.AthleteId)
+        ? string.Empty
+        : $" · Athlete {Session.AthleteId}";
+
+    private string StatusCssClass => Session.State switch
+    {
+        CoachConnectionState.Connected => "status-connected",
+        CoachConnectionState.Connecting => "status-connecting",
+        CoachConnectionState.Error => "status-error",
+        _ => "status-disconnected"
+    };
+
+    private string StatusIconClass => Session.State switch
+    {
+        CoachConnectionState.Connected => "bi-check-circle",
+        CoachConnectionState.Connecting => "bi-arrow-repeat",
+        CoachConnectionState.Error => "bi-exclamation-triangle",
+        _ => "bi-dash-circle"
+    };
+
+    private bool CanUseCoachActions => Session.State == CoachConnectionState.Connected;
+
+    private bool _showRememberedHint;
+
+    private bool ShowRememberedNote => _showRememberedHint;
+
+    private string _athleteId = string.Empty;
+    private string _apiKey = string.Empty;
+    private bool _remember;
+
+    private bool IsBusy => Session.State == CoachConnectionState.Connecting;
+
+    private bool CanSubmit => !IsBusy
+        && !string.IsNullOrWhiteSpace(_athleteId)
+        && !string.IsNullOrWhiteSpace(_apiKey);
+
+    private bool CanConnect => Session.State is CoachConnectionState.Disconnected or CoachConnectionState.Error;
+
     private static readonly IReadOnlyList<PromptCardModel> PromptCards =
     [
         new("bi bi-speedometer2", "Metrics & Wellness", "Complete view of CTL/ATL/TSB and wellness data."),
@@ -93,4 +202,63 @@
     ];
 
     private sealed record PromptCardModel(string IconClass, string Title, string Description);
+
+    private async Task ConnectAsync()
+    {
+        if (!CanSubmit)
+            return;
+
+        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _remember);
+        await RefreshRememberedHintAsync();
+    }
+
+    private async Task DisconnectAsync()
+    {
+        if (IsBusy)
+            return;
+
+        await Session.DisconnectAsync();
+        await RefreshRememberedHintAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnSessionChanged;
+
+        var loaded = await CredentialStore.LoadAsync();
+        if (loaded is not null)
+        {
+            _athleteId = loaded.Credential.AthleteId;
+            _apiKey = loaded.Credential.ApiKey;
+            _remember = loaded.Durability == CredentialDurability.Persistent;
+        }
+
+        await RefreshRememberedHintAsync();
+    }
+
+    private void OnSessionChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshRememberedHintAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task RefreshRememberedHintAsync()
+    {
+        var loaded = await CredentialStore.LoadAsync();
+
+        _showRememberedHint =
+            loaded is not null
+            && loaded.Durability == CredentialDurability.Persistent
+            && !string.IsNullOrWhiteSpace(loaded.Credential.ApiKey)
+            && (string.IsNullOrWhiteSpace(Session.AthleteId)
+                || string.Equals(loaded.Credential.AthleteId, Session.AthleteId, StringComparison.Ordinal));
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnSessionChanged;
+    }
 }

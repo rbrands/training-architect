@@ -70,15 +70,42 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background-color: #edf5e4;
-    color: #3c6c28;
+    background-color: #ece7dd;
+    color: #5d5548;
     font-size: 1rem;
 }
 
 .coach-status-title {
     font-size: 1.15rem;
     font-weight: 700;
+    color: #4d463b;
+}
+
+.coach-status-topline.status-connected .coach-status-badge {
+    background-color: #edf5e4;
     color: #3c6c28;
+}
+
+.coach-status-topline.status-connected .coach-status-title {
+    color: #3c6c28;
+}
+
+.coach-status-topline.status-connecting .coach-status-badge {
+    background-color: #fff2da;
+    color: #8a5f13;
+}
+
+.coach-status-topline.status-connecting .coach-status-title {
+    color: #8a5f13;
+}
+
+.coach-status-topline.status-error .coach-status-badge {
+    background-color: #f9dede;
+    color: #a64141;
+}
+
+.coach-status-topline.status-error .coach-status-title {
+    color: #a64141;
 }
 
 .coach-status-note {
@@ -104,8 +131,129 @@
     font-weight: 600;
 }
 
+.coach-inline-link:disabled {
+    color: #8d8a83;
+    cursor: not-allowed;
+}
+
 .coach-inline-link-muted {
     color: #4d463b;
+}
+
+.credential-form {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ba-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 36rem;
+}
+
+.credential-form h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2f2b24;
+}
+
+.credential-form .subtitle {
+    margin: 0;
+    color: #5f7087;
+    font-size: 0.95rem;
+}
+
+.credential-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.credential-form .field span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4f463b;
+}
+
+.credential-form input[type="text"],
+.credential-form input[type="password"] {
+    border: 1px solid var(--ba-border);
+    border-radius: 10px;
+    background-color: #fffdf8;
+    color: #1f2328;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.credential-form input[type="text"]:focus,
+.credential-form input[type="password"]:focus {
+    outline: none;
+    border-color: #2e67bf;
+    box-shadow: 0 0 0 2px rgba(46, 103, 191, 0.15);
+}
+
+.credential-form input[type="text"]:disabled,
+.credential-form input[type="password"]:disabled {
+    background-color: #f4efe7;
+    color: #8f877a;
+}
+
+.credential-form .remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4f463b;
+    font-size: 0.9rem;
+}
+
+.credential-form .error {
+    margin: 0;
+    color: #a64141;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.credential-form .connect {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: fit-content;
+    min-width: 8rem;
+    border: 1px solid #2e67bf;
+    background-color: #2e67bf;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 0.65rem 1rem;
+    font-weight: 700;
+}
+
+.credential-form .connect:hover,
+.credential-form .connect:focus-visible {
+    background-color: #28599f;
+    border-color: #28599f;
+}
+
+.credential-form .connect:disabled {
+    background-color: #7f99c4;
+    border-color: #7f99c4;
+    color: #eaf0fb;
+    cursor: not-allowed;
+}
+
+.credential-form .spinner {
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: coach-spin 0.8s linear infinite;
+}
+
+@keyframes coach-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .coach-section {
@@ -181,6 +329,23 @@
     color: #1f2328;
 }
 
+.coach-page ::deep .coach-outline-button:disabled,
+.coach-page ::deep .coach-outline-button.e-disabled,
+.coach-page ::deep .coach-primary-button:disabled,
+.coach-page ::deep .coach-primary-button.e-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.coach-page ::deep .coach-outline-button:disabled,
+.coach-page ::deep .coach-outline-button.e-disabled {
+    background-color: #f3eee5;
+    border-color: #d8c7ac;
+    color: #7f776d;
+}
+
 .coach-page ::deep .coach-plan-card {
     background-color: #c8d7f1;
     border-color: #5c8fdf;
@@ -233,6 +398,13 @@
     background-color: #2e5ea5;
     border-color: #2e5ea5;
     color: #ffffff;
+}
+
+.coach-page ::deep .coach-primary-button:disabled,
+.coach-page ::deep .coach-primary-button.e-disabled {
+    background-color: #7f99c4;
+    border-color: #7f99c4;
+    color: #eaf0fb;
 }
 
 @media (max-width: 991.98px) {

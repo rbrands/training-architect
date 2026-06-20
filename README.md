@@ -728,6 +728,11 @@ Always use the `https` profile — the OIDC flow requires HTTPS for cookies to w
 dotnet run --project src/TrainingArchitect --launch-profile https
 ```
 
+or
+```bash
+dotnet watch --project src/TrainingArchitect run --launch-profile https --no-restore
+```
+
 The host project in `src/TrainingArchitect` is the only supported startup target. The client project is loaded by the host and should not be started directly.
 
 The app starts at `https://localhost:7000`.
