@@ -1,0 +1,441 @@
+Icon ID,Icon Name,Icon Class,Keywords,Category
+1,Edit,e-edit,"edit,modify,update,change,revise,write,input",user_actions
+2,Save,e-save,"save,store,persist,write,disk,export,commit",user_actions
+3,Save As,e-save-as,"save as,duplicate save,export copy,rename save,store new",user_actions
+4,Copy,e-copy,"copy,duplicate,clone,replicate,clipboard copy",user_actions
+5,Cut,e-cut,"cut,remove,move,clipboard cut,extract",user_actions
+6,Paste,e-paste,"paste,insert,clipboard paste,apply content",user_actions
+7,Paste Text Only,e-paste-text-only,"paste plain text,remove formatting,clean paste",user_actions
+8,Undo,e-undo,"undo,revert,rollback,step back,reverse action",user_actions
+9,Redo,e-redo,"redo,repeat action,restore,step forward",user_actions
+10,Delete Row,e-delete-row,"delete row,remove row,clear row,erase row",user_actions
+11,Delete Column,e-delete-column,"delete column,remove column,clear column",user_actions
+12,Duplicate,e-duplicate,"duplicate,copy,clone,replicate",user_actions
+13,Insert Left,e-insert-left,"insert left,add column left,shift right",user_actions
+14,Insert Right,e-insert-right,"insert right,add column right,shift left",user_actions
+15,Insert Above,e-insert-above,"insert above,add row above,shift down",user_actions
+16,Insert Below,e-insert-below,"insert below,add row below,shift up",user_actions
+17,Add Notes,e-add-notes,"add note,comment note,annotation add",user_actions
+18,Edit Notes,e-edit-notes,"edit note,modify note,update annotation",user_actions
+19,Delete Notes,e-delete-notes,"delete note,remove annotation,clear note",user_actions
+20,Clear Format,e-clear-format,"clear format,remove style,reset formatting",user_actions
+21,Replace,e-replace,"replace,find replace,substitute,text replace",user_actions
+22,Trash,e-trash,"delete,trash,remove,discard,bin",user_actions
+23,Check,e-check,"check,confirm,select,approve,mark done",user_actions
+24,Close,e-close,"close,dismiss,exit,remove view",user_actions
+25,Cancel,e-cancel,"cancel,abort,stop action,discard",user_actions
+26,Add,e-plus,"add,create,new,plus,insert",user_actions
+27,Rename,e-rename,"rename,edit name,change label",user_actions
+28,Refresh,e-refresh,"refresh,reload,update,sync,retry",user_actions
+29,Expand,e-expand,"expand,open,maximize,show more",user_actions
+30,Collapse,e-collapse-2,"collapse,minimize,hide,compress",user_actions
+31,Merge Cells,e-merge-cells,"merge cells,combine cells,join data",user_actions
+32,Group,e-group-1,"group,combine,cluster,organize",user_actions
+33,Ungroup,e-ungroup-1,"ungroup,separate,split group,disband",user_actions
+34,Format Painter,e-format-painter,"copy format,apply style,paint format",user_actions
+35,Paint Bucket,e-paint-bucket,"fill color,background fill,paint",user_actions
+36,Magic Wand,e-magic-wand,"auto format,smart select,auto enhance",user_actions
+37,Smart Edit,e-smart-edit,"smart edit,ai edit,auto modify,intelligent edit",user_actions
+38,Smart Paste,e-smart-paste,"smart paste,ai paste,context paste,auto fill",user_actions
+39,Comment Add,e-comment-add,"add comment,insert comment,feedback add",user_actions
+40,Comment Resolve,e-comment-resolve,"resolve comment,mark done,close comment",user_actions
+41,Reply,e-reply-arrow,"reply,respond,answer,comment reply",user_actions
+42,Forward,e-forward-arrow,"forward,share,send,pass along",user_actions
+43,Accept Changes,e-changes-accept,"accept changes,approve edit,confirm revision",user_actions
+44,Reject Changes,e-changes-reject,"reject changes,deny edit,discard revision",user_actions
+45,Track Changes,e-changes-track,"track changes,revision history,monitor edits",user_actions
+46,Search,e-search,"search,find,lookup,query,explore",user_actions
+47,Filter,e-filter,"filter,refine,data filter,apply filter",user_actions
+48,Filter Clear,e-filter-clear,"clear filter,reset filter,remove filter",user_actions
+49,Sort Ascending,e-sort-ascending,"sort ascending,low to high,a-z,order up",user_actions
+50,Sort Descending,e-sort-descending,"sort descending,high to low,z-a,order down",user_actions
+51,Select All,e-select-all,"select all,highlight all,choose all",user_actions
+52,Zoom In,e-zoom-in,"zoom in,magnify,enlarge,scale up",user_actions
+53,Zoom Out,e-zoom-out,"zoom out,shrink,scale down,reduce view",user_actions
+54,Zoom To Fit,e-zoom-to-fit,"fit screen,auto zoom,adjust view",user_actions
+55,Pan,e-pan,"pan,move canvas,drag view,navigate",user_actions
+56,Resize,e-resize,"resize,scale,adjust size,stretch",user_actions
+57,Arrow Up,e-arrow-up,"move up,navigate up,scroll up,shift up",user_actions
+58,Arrow Down,e-arrow-down,"move down,navigate down,scroll down",user_actions
+59,Arrow Left,e-arrow-left,"move left,navigate left,previous",user_actions
+60,Arrow Right,e-arrow-right,"move right,navigate right,next",user_actions
+61,Chevron Up,e-chevron-up,"expand up,collapse up,navigate up",user_actions
+62,Chevron Down,e-chevron-down,"expand down,collapse down,navigate down",user_actions
+63,Chevron Left,e-chevron-left,"back,previous,navigate left",user_actions
+64,Chevron Right,e-chevron-right,"forward,next,navigate right",user_actions
+65,First Page,e-first-page,"first page,start,beginning,navigate start",user_actions
+66,Last Page,e-last-page,"last page,end,final,navigate end",user_actions
+67,Bring To Front,e-bring-to-front,"bring front,layer top,foreground",user_actions
+68,Send To Back,e-send-to-back,"send back,background,layer bottom",user_actions
+69,Layers,e-layers,"layers,stack,arrange,order elements",user_actions
+70,More,e-more-horizontal-1,"more options,menu,additional actions,ellipsis",user_actions
+71,Bold,e-bold,"bold,strong,emphasis,font weight,text bold",content_editing
+72,Italic,e-italic,"italic,slant,emphasis,style italic",content_editing
+73,Underline,e-underline,"underline,text underline,emphasis,line below",content_editing
+74,Strikethrough,e-strikethrough,"strikethrough,delete mark,cross out,text strike",content_editing
+75,Superscript,e-superscript,"superscript,raise text,upper index,exponent",content_editing
+76,Subscript,e-subscript,"subscript,lower text,index,chemical notation",content_editing
+77,Font Name,e-font-name,"font family,typeface,text font,style font",content_editing
+78,Font Size,e-font-size,"font size,text size,increase size,decrease size",content_editing
+79,Font Color,e-font-color,"font color,text color,apply color,foreground color",content_editing
+80,Highlight,e-highlight,"highlight,mark text,emphasis,selection color",content_editing
+81,Highlight Color,e-highlight-color,"highlight color,marker color,text background color",content_editing
+82,Align Left,e-align-left,"align left,text left,flush left",content_editing
+83,Align Center,e-align-center,"align center,center text,center align",content_editing
+84,Align Right,e-align-right,"align right,text right,flush right",content_editing
+85,Align Top,e-align-top,"align top,vertical top,top align",content_editing
+86,Align Middle,e-align-middle,"align middle,center vertical,vertical center",content_editing
+87,Align Bottom,e-align-bottom,"align bottom,vertical bottom,bottom align",content_editing
+88,Justify,e-justify,"justify,full align,text justify,even spacing",content_editing
+89,Increase Indent,e-increase-indent,"indent increase,shift right,tab space",content_editing
+90,Decrease Indent,e-decrease-indent,"indent decrease,shift left,remove indent",content_editing
+91,Line Spacing,e-line-spacing,"line spacing,paragraph spacing,line height",content_editing
+92,Upper Case,e-upper-case,"uppercase,capital letters,text upper",content_editing
+93,Lower Case,e-lower-case,"lowercase,small letters,text lower",content_editing
+94,Change Case,e-change-case,"change case,toggle case,convert text case",content_editing
+95,Ordered List,e-list-ordered,"numbered list,ordered list,sequence list",content_editing
+96,Unordered List,e-list-unordered,"bullet list,unordered list,points list",content_editing
+97,Bullet Style,e-bullet-1,"bullet style,bullet type,list style",content_editing
+98,Heading 1,e-heading-1,"heading 1,title,large heading,h1",content_editing
+99,Heading 2,e-heading-2,"heading 2,section heading,h2",content_editing
+100,Heading 3,e-heading-3,"heading 3,subheading,h3",content_editing
+101,Heading 4,e-heading-4,"heading 4,minor heading,h4",content_editing
+102,Paragraph,e-paragraph,"paragraph,text block,body text",content_editing
+103,Blockquote,e-blockquote,"blockquote,quote text,quoted content",content_editing
+104,Preformat Code,e-preformat-code,"code block,preformat,monospace,code view",content_editing
+105,Increase Font Size,e-increase-fontsize,"increase font size,zoom text,grow text",content_editing
+106,Decrease Font Size,e-decrease-fontsize,"decrease font size,shrink text,reduce text",content_editing
+107,Checklist,e-checklist,"checklist,todo list,task list,checkbox list",content_editing
+108,Table,e-table,"table,grid,insert table,data table",content_editing
+109,Table Cell,e-table-cell,"table cell,cell edit,data cell",content_editing
+110,Table Delete,e-table-delete,"delete table,remove table,clear table",content_editing
+111,Table Insert Row,e-table-insert-row,"insert row,add row,table row add",content_editing
+112,Table Insert Column,e-table-insert-column,"insert column,add column,table column add",content_editing
+113,Table Header,e-table-header,"table header,column header,heading row",content_editing
+114,Insert Code,e-insert-code,"insert code,code snippet,embed code",content_editing
+115,Freeze Row,e-freeze-row,"freeze row,lock row,sticky row",content_editing
+116,Freeze Column,e-freeze-column,"freeze column,lock column,sticky column",content_editing
+117,Freeze Pane,e-freeze-pane,"freeze pane,lock view,split freeze",content_editing
+118,Auto Fit Content,e-auto-fit-content,"auto fit content,adjust size,fit content",content_editing
+119,Auto Fit Column,e-auto-fit-column,"auto fit column,resize column,fit width",content_editing
+120,Header,e-header,"header,page header,top section",content_editing
+121,Footer,e-footer,"footer,page footer,bottom section",content_editing
+122,Caption,e-caption,"caption,label,description text",content_editing
+123,Grid View,e-grid-view,"grid view,table view,layout grid",content_editing
+124,Columns,e-columns,"columns,layout columns,multi column",content_editing
+125,Page Numbering,e-page-numbering,"page numbers,pagination,page index",content_editing
+126,Border All,e-border-all,"border all,full border,outline all",content_editing
+127,Border Outer,e-border-outer,"outer border,table border outside",content_editing
+128,Border Inner,e-border-inner,"inner border,cell borders inside",content_editing
+129,Border Top,e-border-top,"top border,upper border line",content_editing
+130,Border Bottom,e-border-bottom,"bottom border,lower border line",content_editing
+131,Border Left,e-border-left,"left border,side border",content_editing
+132,Border Right,e-border-right,"right border,side border",content_editing
+133,Border None,e-border-none,"no border,remove border,clear border",content_editing
+134,Horizontal Line,e-horizontal-line,"horizontal line,divider,separator",content_editing
+135,Page Break,e-break-page,"page break,new page,split page",content_editing
+136,Section Break,e-break-section,"section break,split section,layout break",content_editing
+137,Filter,e-filters,"filter,apply filter,refine content",content_editing
+138,Brightness,e-brightness,"brightness,lightness,adjust light",content_editing
+139,Contrast,e-contrast,"contrast,adjust contrast,light dark balance",content_editing
+140,Saturation,e-saturation,"saturation,color intensity,vividness",content_editing
+141,Flip Vertical,e-flip-vertical,"flip vertical,mirror up down,rotate vertical",content_editing
+142,Flip Horizontal,e-flip-horizontal,"flip horizontal,mirror left right",content_editing
+143,Transform,e-transform,"transform,resize,rotate,scale",content_editing
+144,Frame,e-frame-1,"frame,border style,decorate frame",content_editing
+145,Chart,e-chart,"chart,graph,visualization",data_visualization
+146,Chart Insert Column,e-chart-insert-column,"column chart,insert chart,vertical bar",data_visualization
+147,Chart Insert Bar,e-chart-insert-bar,"bar chart,horizontal bar,insert chart",data_visualization
+148,Chart Insert Line,e-chart-insert-line,"line chart,trend chart,insert chart",data_visualization
+149,Chart Insert Pie,e-chart-insert-pie,"pie chart,percentage chart,insert chart",data_visualization
+150,Chart Insert X Y Scatter,e-chart-insert-x-y-scatter,"scatter chart,x y plot,data distribution",data_visualization
+151,Chart Scatter,e-chart-scatter,"scatter plot,data distribution",data_visualization
+152,Add Chart Element,e-add-chart-element,"add chart element,chart options",data_visualization
+153,Chart Title,e-chart-title,"chart title,heading",data_visualization
+154,Chart Title None,e-chart-title-none,"no title,remove title",data_visualization
+155,Chart Title Centered Overlay,e-chart-title-centered-overlay,"centered title,overlay title",data_visualization
+156,Chart Axes,e-chart-axes,"axes,x axis,y axis",data_visualization
+157,Chart Axes Primary Horizontal,e-chart-axes-primary-horizontal,"horizontal axis,x axis",data_visualization
+158,Chart Axes Primary Vertical,e-chart-axes-primary-vertical,"vertical axis,y axis",data_visualization
+159,Chart Axis Titles,e-chart-axis-titles,"axis titles,axis labels",data_visualization
+160,Chart Axis Titles Primary Horizontal,e-chart-axis-titles-primary-horizontal,"x axis title",data_visualization
+161,Chart Axis Titles Primary Vertical,e-chart-axis-titles-primary-vertical,"y axis title",data_visualization
+162,Chart Legend,e-chart-legend,"legend,chart legend",data_visualization
+163,Chart Legend None,e-chart-legend-none,"no legend,remove legend",data_visualization
+164,Chart Legend Left,e-chart-legend-left,"legend left",data_visualization
+165,Chart Legend Right,e-chart-legend-right,"legend right",data_visualization
+166,Chart Legend Top,e-chart-legend-top,"legend top",data_visualization
+167,Chart Legend Bottom,e-chart-legend-bottom,"legend bottom",data_visualization
+168,Chart Data Labels,e-chart-data-labels,"data labels,values display",data_visualization
+169,Chart Data Labels None,e-chart-data-labels-none,"no data labels",data_visualization
+170,Chart Data Labels Center,e-chart-data-labels-center,"center labels",data_visualization
+171,Chart Data Labels Inside Base,e-chart-data-labels-inside-base,"labels inside base",data_visualization
+172,Chart Data Labels Inside End,e-chart-data-labels-inside-end,"labels inside end",data_visualization
+173,Chart Data Labels Outside End,e-chart-data-labels-outside-end,"labels outside end",data_visualization
+174,Chart Gridlines,e-chart-gridlines,"gridlines,chart grid",data_visualization
+175,Chart Primary Major Horizontal,e-chart-primary-major-horizontal,"major horizontal grid",data_visualization
+176,Chart Primary Minor Horizontal,e-chart-primary-minor-horizontal,"minor horizontal grid",data_visualization
+177,Chart Primary Major Vertical,e-chart-primary-major-vertical,"major vertical grid",data_visualization
+178,Chart Primary Minor Vertical,e-chart-primary-minor-vertical,"minor vertical grid",data_visualization
+179,Chart Lines,e-chart-lines,"chart lines,series lines",data_visualization
+180,Chart Switch Row Column,e-chart-switch-row-column,"switch row column,transpose data",data_visualization
+181,Chart 2D Clustered Column,e-chart-2d-clustered-column,"clustered column chart",data_visualization
+182,Chart 2D Stacked Column,e-chart-2d-stacked-column,"stacked column chart",data_visualization
+183,Chart 2D 100 Percent Stacked Column,e-chart-2d-100-percent-stacked-column,"100 percent stacked column",data_visualization
+184,Chart 2D Clustered Bar,e-chart-2d-clustered-bar,"clustered bar chart",data_visualization
+185,Chart 2D Stacked Bar,e-chart-2d-stacked-bar,"stacked bar chart",data_visualization
+186,Chart 2D 100 Percent Stacked Bar,e-chart-2d-100-percent-stacked-bar,"100 percent stacked bar",data_visualization
+187,Chart 2D Line,e-chart-2d-line,"line chart",data_visualization
+188,Chart 2D Line Marked,e-chart-2d-line-marked,"line chart markers",data_visualization
+189,Chart 2D Stacked Line,e-chart-2d-stacked-line,"stacked line chart",data_visualization
+190,Chart 2D Stacked Line Marked,e-chart-2d-stacked-line-marked,"stacked line markers",data_visualization
+191,Chart 2D 100 Percent Stacked Line,e-chart-2d-100-percent-stacked-line,"100 percent stacked line",data_visualization
+192,Chart 2D 100 Percent Stacked Line Marked,e-chart-2d-100-percent-stacked-line-marked,"100 percent stacked line markers",data_visualization
+193,Chart 2D Area,e-chart-2d-area,"area chart",data_visualization
+194,Chart 2D Stacked Area,e-chart-2d-stacked-area,"stacked area chart",data_visualization
+195,Chart 2D 100 Percent Stacked Area,e-chart-2d-100-percent-stacked-area,"100 percent stacked area",data_visualization
+196,Chart 2D Pie 2,e-chart-2d-pie-2,"pie chart variant",data_visualization
+197,Chart Donut,e-chart-donut,"donut chart",data_visualization
+198,More Scatter Charts,e-more-scatter-charts,"more charts,scatter options",data_visualization
+199,Shapes,e-shapes,"shapes,draw tools",data_visualization
+200,Circle,e-circle,"circle,shape",data_visualization
+201,Circle Add,e-circle-add,"add circle,create circle",data_visualization
+202,Circle Check,e-circle-check,"check circle,confirm",data_visualization
+203,Circle Close,e-circle-close,"close circle,remove",data_visualization
+204,Circle Remove,e-circle-remove,"remove circle,delete",data_visualization
+205,Circle Info,e-circle-info,"info circle,information",data_visualization
+206,Rectangle,e-rectangle,"rectangle,box shape",data_visualization
+207,Box,e-box,"box,container shape",data_visualization
+208,Pentagon,e-pentagon,"pentagon,polygon",data_visualization
+209,Triangle,e-triangle,"triangle,shape",data_visualization
+210,Line,e-line,"line,draw line",data_visualization
+211,Stroke Width,e-stroke-width,"stroke width,line thickness",data_visualization
+212,Opacity,e-opacity,"opacity,transparency",data_visualization
+213,Radius,e-radius,"radius,corner radius",data_visualization
+214,Perimeter,e-perimeter,"perimeter,outline length",data_visualization
+215,Length,e-length,"length,measure",data_visualization
+216,Area,e-area,"area,size measure",data_visualization
+217,Dimension,e-dimension,"dimension,size,width height",data_visualization
+218,Volume,e-volume,"volume,3d size",data_visualization
+219,Callout,e-callout,"callout,annotation",data_visualization
+220,Bar Head,e-bar-head,"arrow head,bar head",data_visualization
+221,Bar Tail,e-bar-tail,"arrow tail,bar tail",data_visualization
+222,Circle Head,e-circle-head,"circle head,connector",data_visualization
+223,Circle Head Fill,e-circle-head-fill,"filled circle head",data_visualization
+224,Circle Tail,e-circle-tail,"circle tail",data_visualization
+225,Circle Tail Fill,e-circle-tail-fill,"filled circle tail",data_visualization
+226,Square Head,e-square-head,"square head",data_visualization
+227,Square Head Fill,e-square-head-fill,"filled square head",data_visualization
+228,Square Tail,e-square-tail,"square tail",data_visualization
+229,Square Tail Fill,e-square-tail-fill,"filled square tail",data_visualization
+230,Mouse Pointer,e-mouse-pointer,"pointer,cursor",data_visualization
+231,Drag And Drop,e-drag-and-drop,"drag drop,move",data_visualization
+232,Drag And Drop Indicator,e-drag-and-drop-indicator,"drag indicator",data_visualization
+233,Selection,e-selection,"selection,select",data_visualization
+234,Conditional Formatting,e-conditional-formatting,"conditional formatting,rules",data_visualization
+235,Conditional Formatting Large,e-conditional-formatting-large,"conditional formatting large",data_visualization
+236,Top 10,e-top-10,"top 10,highest values",data_visualization
+237,Bottom 10,e-bottom-10,"bottom 10,lowest values",data_visualization
+238,Top 10 Items,e-top-10-items,"top items",data_visualization
+239,Bottom 10 Items,e-bottom-10-items,"bottom items",data_visualization
+240,Above Average,e-above-average,"above average",data_visualization
+241,Below Average,e-below-average,"below average",data_visualization
+242,Iconsets,e-iconsets,"icon sets,visual indicators",data_visualization
+243,Data Bars,e-data-bars,"data bars,cell bars",data_visualization
+244,Color Scales,e-color-scales,"color scales,heatmap",data_visualization
+245,Top Bottom Rules,e-top-bottom-rules,"top bottom rules,ranking rules",data_visualization
+246,Folder,e-folder,"folder,directory,container,storage",file_management
+247,Folder Open,e-folder-open,"open folder,browse files,directory open",file_management
+248,File New,e-file-new,"new file,create file,add document",file_management
+249,File Document,e-file-document,"file,document,text file,doc",file_management
+250,Upload 1,e-upload-1,"upload,file upload,send file,cloud upload",file_management
+251,Download,e-download,"download,get file,save locally",file_management
+252,Export,e-export,"export,download file,convert output",file_management
+253,Export PDF,e-export-pdf,"export pdf,save as pdf,convert pdf",file_management
+254,Export PDF 1,e-export-pdf-1,"export pdf variant,save pdf",file_management
+255,Export XLS,e-export-xls,"export xls,excel export,spreadsheet",file_management
+256,Export Excel,e-export-excel,"export excel,xlsx export,data export",file_management
+257,Export CSV,e-export-csv,"export csv,comma separated,data export",file_management
+258,Export PNG,e-export-png,"export png,image export,save image",file_management
+259,Export SVG,e-export-svg,"export svg,vector export,graphic export",file_management
+260,Export JPEG,e-export-jpeg,"export jpeg,image export,photo export",file_management
+261,Export Word 1,e-export-word-1,"export word,doc export,document export",file_management
+262,Import,e-import,"import,upload data,load file",file_management
+263,Import 1,e-import-1,"import variant,upload file",file_management
+264,Import Word,e-import-word,"import word,load doc,read document",file_management
+265,Properties 1,e-properties-1,"properties,file info,metadata,details",file_management
+266,Properties 2,e-properties-2,"properties advanced,file settings",file_management
+267,Settings,e-settings,"settings,preferences,configuration,options",file_management
+268,Password,e-password,"password,security,credentials,authentication",file_management
+269,Protect Sheet,e-protect-sheet,"protect sheet,lock sheet,restrict editing",file_management
+270,Protect Workbook,e-protect-workbook,"protect workbook,file protection,lock workbook",file_management
+271,Lock,e-lock,"lock,secure,protect,restrict access",file_management
+272,Unlock,e-unlock,"unlock,remove lock,access enable",file_management
+273,Spell Check,e-spell-check,"spell check,grammar check,proofread",file_management
+274,Data Validation,e-data-validation,"data validation,rules,input validation",file_management
+275,Field Settings,e-field-settings,"field settings,configure field,data field options",file_management
+276,Style,e-style,"style,format style,design preset",file_management
+277,Character Style,e-character-style,"character style,text style,font style",file_management
+278,Linked Style,e-linked-style,"linked style,connected format,style link",file_management
+279,XML Mapping,e-xml-mapping,"xml mapping,data binding,xml structure",file_management
+280,Content Control,e-content-control,"content control,form field,input control",file_management
+281,Print,e-print,"print,hard copy,printer output",file_management
+282,Export Word 1,e-export-word-1,"export word duplicate,doc export",file_management
+283,Bookmark,e-bookmark,"bookmark,save position,mark location",file_management
+284,Add Bookmark,e-add-bookmark,"add bookmark,save page,mark section",file_management
+285,Notes,e-notes,"notes,annotations,comments",file_management
+286,Add Notes,e-add-notes,"add note,create note,insert comment",file_management
+287,Edit Notes,e-edit-notes,"edit note,modify comment",file_management
+288,Delete Notes,e-delete-notes,"delete note,remove comment",file_management
+289,All Notes,e-all-notes,"all notes,view notes,list comments",file_management
+290,Next Note,e-next-note,"next note,navigate comment,forward note",file_management
+291,Previous Note,e-previous-note,"previous note,back comment,navigate back",file_management
+292,Convert All Note,e-convert-all-note,"convert notes,transform notes",file_management
+293,End Footnote,e-end-footnote,"end footnote,reference note,footer note",file_management
+294,View Side,e-view-side,"side view,split view,layout panel",interface_elements
+295,Print Layout,e-print-layout,"print layout,page view,print preview",interface_elements
+296,Web Layout,e-web-layout,"web layout,online view",interface_elements
+297,Reading View,e-reading-view,"reading view,read mode,focus mode",interface_elements
+298,Code View,e-code-view,"code view,source view,html view",interface_elements
+299,Full Screen,e-full-screen,"full screen,maximize view",interface_elements
+300,Exit Full Screen,e-exit-full-screen,"exit full screen,minimize view",interface_elements
+301,Show Hide Panel,e-show-hide-panel,"toggle panel,show hide panel",interface_elements
+302,Show Side Panel,e-show-side-panel,"side panel,open sidebar",interface_elements
+303,Eye,e-eye,"view,visible,show",interface_elements
+304,Eye Slash,e-eye-slash,"hide,invisible,visibility off",interface_elements
+305,Display,e-display,"display,screen,view mode",interface_elements
+306,Home,e-home,"home,start,main page",interface_elements
+307,Menu,e-menu,"menu,options,hamburger",interface_elements
+308,Launcher,e-launcher,"launcher,app launcher,start apps",interface_elements
+309,Grip Vertical,e-grip-vertical,"drag handle,grip,reorder",interface_elements
+310,Resizer 1,e-resizer-1,"resize,adjust size",interface_elements
+311,Resizer Vertical,e-resizer-vertical,"resize vertical,adjust height",interface_elements
+312,Resizer Horizontal,e-resizer-horizontal,"resize horizontal,adjust width",interface_elements
+313,Resizer Right,e-resizer-right,"resize right,drag right",interface_elements
+314,Multiple Page,e-multiple-page,"multiple pages,page view",interface_elements
+315,Landscape,e-landscape,"landscape orientation,horizontal page",interface_elements
+316,Page Orientation,e-page-orientation,"page orientation,rotate page",interface_elements
+317,Page Size,e-page-size,"page size,document size",interface_elements
+318,Page Setup,e-page-setup,"page setup,print settings",interface_elements
+319,Page Text Wrap,e-page-text-wrap,"text wrap,page wrap",interface_elements
+320,Page Columns,e-page-columns,"columns,page columns layout",interface_elements
+321,Left Wrap,e-left-wrap,"wrap left,text wrap left",interface_elements
+322,Right Wrap,e-right-wrap,"wrap right,text wrap right",interface_elements
+323,All Bookmarks,e-all-bookmarks,"all bookmarks,bookmark list",interface_elements
+324,All Notes,e-all-notes,"all notes,notes list",interface_elements
+325,All,e-all,"all items,select all",interface_elements
+326,Link,e-link,"link,hyperlink,connect",interface_elements
+327,Link Remove,e-link-remove,"remove link,unlink",interface_elements
+328,Hyperlink Edit,e-hyperlink-edit,"edit link,modify hyperlink",interface_elements
+329,Hyperlink Copy,e-hyperlink-copy,"copy link,duplicate url",interface_elements
+330,Hyperlink Open,e-hyperlink-open,"open link,visit url",interface_elements
+331,Hyperlink Remove,e-hyperlink-remove,"remove hyperlink,unlink",interface_elements
+332,Open Link,e-open-link,"open link,launch url",interface_elements
+333,Attachment,e-attachment,"attachment,file attach,clip",interface_elements
+334,Play,e-play,"play,start media",interface_elements
+335,Pause,e-pause,"pause,stop temporarily",interface_elements
+336,Stop Rectangle,e-stop-rectangle,"stop,halt media",interface_elements
+337,Video,e-video,"video,media video",interface_elements
+338,Audio,e-audio,"audio,sound media",interface_elements
+339,Image,e-image,"image,picture,photo",interface_elements
+340,Volume,e-volume,"volume,sound level",interface_elements
+341,Crop,e-crop,"crop,image crop,trim",interface_elements
+342,Microphone,e-microphone,"microphone,voice,input audio",interface_elements
+343,Star Filled,e-star-filled,"star,favorite,highlight",interface_elements
+344,Emoji,e-emoji,"emoji,smiley,emoticon",interface_elements
+345,Hand Gestures,e-hand-gestures,"hand gestures,emoji hands",interface_elements
+346,Travel And Places,e-travel-and-places,"travel,places,location icons",interface_elements
+347,Nature,e-nature,"nature,environment icons",interface_elements
+348,Food And Drinks,e-food-and-drinks,"food,drink icons",interface_elements
+349,Animals,e-animals,"animals,creatures",interface_elements
+350,Objects,e-objects,"objects,things icons",interface_elements
+351,Activities,e-activities,"activities,sports icons",interface_elements
+352,Symbols,e-symbols,"symbols,signs icons",interface_elements
+353,Flags,e-flags,"flags,country flags",interface_elements
+354,User,e-user,"user,person,account,profile",user_status
+355,People,e-people,"people,users,group,team",user_status
+356,Clock,e-clock,"clock,time,current time",user_status
+357,Timeline Today,e-timeline-today,"today timeline,current day",user_status
+358,Timeline Day,e-timeline-day,"day timeline,daily view",user_status
+359,Timeline Week,e-timeline-week,"week timeline,weekly view",user_status
+360,Timeline Work Week,e-timeline-work-week,"work week,business days",user_status
+361,Timeline Month,e-timeline-month,"month timeline,monthly view",user_status
+362,Date Occurring,e-date-occurring,"date occurring,event date",user_status
+363,Day,e-day,"day,date",user_status
+364,Week,e-week,"week,weekly",user_status
+365,Month,e-month,"month,monthly",user_status
+366,Agenda Date Range,e-agenda-date-range,"date range,agenda range",user_status
+367,Month Agenda,e-month-agenda,"month agenda,calendar view",user_status
+368,Time Zone,e-time-zone,"time zone,timezone,location time",user_status
+369,Circle Info,e-circle-info,"info,information,status info",user_status
+370,Warning,e-warning,"warning,alert,caution",user_status
+371,Error Treeview,e-error-treeview,"error,issue,problem state",user_status
+372,Critical Path,e-critical-path,"critical path,priority,important",user_status
+373,Intermediate State,e-intermediate-state,"intermediate,partial state",user_status
+374,Intermediate State 2,e-intermediate-state-2,"intermediate state variant",user_status
+375,Check,e-check,"check,success,completed",user_status
+376,Check Tick,e-check-tick,"tick,confirm,done",user_status
+377,Double Check,e-double-check,"double check,verified",user_status
+378,Squiggly,e-squiggly,"squiggly,underline,error highlight",user_status
+379,Radio Button,e-radio-button,"radio button,selection option",user_status
+380,Sum,e-sum,"sum,addition,total,calculate",advanced_features
+381,Order,e-order,"order,sort,sequence,arrange",advanced_features
+382,Number Formatting,e-number-formatting,"number format,format numbers,currency,percentage",advanced_features
+383,Text That Contains,e-text-that-contains,"text contains,filter text,match text",advanced_features
+384,Between,e-between,"between,range filter,value range",advanced_features
+385,Greater Than,e-greater-than,"greater than,comparison,more than",advanced_features
+386,Less Than,e-less-than,"less than,comparison,lower than",advanced_features
+387,Equalto,e-equalto,"equal to,equals,comparison",advanced_features
+388,Text Annotation,e-text-annotation,"text annotation,comment,markup",advanced_features
+389,Signature,e-signature,"signature,sign,approval",advanced_features
+390,Stamp,e-stamp,"stamp,seal,mark",advanced_features
+391,Redaction,e-redaction,"redaction,hide text,mask data",advanced_features
+392,Form Field,e-form-field,"form field,input field,form control",advanced_features
+393,Button Field,e-button-field,"button field,form button,action button",advanced_features
+394,Drop Down,e-drop-down,"dropdown,select menu,options list",advanced_features
+395,Dropdown List,e-dropdown-list,"dropdown list,selection list",advanced_features
+396,Combo Box,e-combo-box,"combo box,input select,dropdown input",advanced_features
+397,Repeating Section,e-repeating-section,"repeating section,dynamic section",advanced_features
+398,Building Block,e-building-block,"building block,template,content block",advanced_features
+399,Check Box,e-check-box,"checkbox,selection box,form input",advanced_features
+400,Calculated Member,e-calculated-member,"calculated member,computed field",advanced_features
+401,Named Set,e-named-set,"named set,group set",advanced_features
+402,MDX,e-mdx,"mdx,query,analysis expression",advanced_features
+403,Dimension,e-dimension,"dimension,data dimension,axis",advanced_features
+404,KPI,e-kpi,"kpi,metric,performance indicator",advanced_features
+405,AI Chat,e-ai-chat,"ai chat,chatbot,assistant",advanced_features
+406,Translate,e-translate,"translate,language convert",advanced_features
+407,Shorten,e-shorten,"shorten,text reduce,summarize",advanced_features
+408,Elaborate,e-elaborate,"elaborate,expand text,detail",advanced_features
+409,Rephrase,e-rephrase,"rephrase,paraphrase,rewrite",advanced_features
+410,Grammar Check,e-grammar-check,"grammar check,proofread,correct text",advanced_features
+411,Smart Paste,e-smart-paste,"smart paste,ai paste,auto fill",advanced_features
+412,Smart Edit,e-smart-edit,"smart edit,ai edit,auto modify",advanced_features
+413,Magic Wand,e-magic-wand,"magic wand,auto enhance,ai tool",advanced_features
+414,Thumbs Up,e-thumbs-up,"thumbs up,like,approve",advanced_features
+415,Thumbs Down,e-thumbs-down,"thumbs down,dislike,reject",advanced_features
+416,Thumbs Up Fill,e-thumbs-up-fill,"thumbs up filled,like active",advanced_features
+417,Thumbs Down Fill,e-thumbs-down-fill,"thumbs down filled,dislike active",advanced_features
+418,Copy Code,e-copy-code,"copy code,copy snippet",advanced_features
+419,Insert Sheet,e-insert-sheet,"insert sheet,add sheet",advanced_features
+420,Duplicate,e-duplicate,"duplicate,copy item",advanced_features
+421,Freeze Pane,e-freeze-pane,"freeze pane,lock view",advanced_features
+422,Auto Fit Column,e-auto-fit-column,"auto fit column,resize column",advanced_features
+423,Auto Fit All Column,e-auto-fit-all-column,"auto fit all columns,resize all",advanced_features
+424,Columns,e-columns,"columns,layout columns",advanced_features
+425,Send,e-send,"send,share,submit",advanced_features
+426,Location,e-location,"location,place,map point",advanced_features
+427,Description,e-description,"description,details,info text",advanced_features
+428,User Defined,e-user-defined,"user defined,custom",advanced_features
+429,Continue Numbering,e-continue-numbering,"continue numbering,list numbering",advanced_features
+430,Level 1,e-level-1,"level 1,indent level",advanced_features
+431,Level 2,e-level-2,"level 2,indent level",advanced_features
+432,Level 3,e-level-3,"level 3,indent level",advanced_features
+433,Level 4,e-level-4,"level 4,indent level",advanced_features
+434,Level 5,e-level-5,"level 5,indent level",advanced_features
+435,Text Alternative,e-text-alternative,"alt text,accessibility,text alternative",advanced_features
+436,Change Scale Ratio,e-change-scale-ratio,"scale ratio,resize proportion",advanced_features
+437,Reset,e-reset,"reset,restore default",advanced_features
+438,File Format,e-file-format,"file format,type,extension",advanced_features
+439,Pin,e-pin,"pin,fix,attach",advanced_features
+440,Unpin,e-unpin,"unpin,remove pin,detach",advanced_features

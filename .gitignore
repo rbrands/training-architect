@@ -72,3 +72,6 @@ infra/modules/*.json
 
 # Bicep local parameter files (may contain secrets)
 infra/*.local.bicepparam
+
+# APM dependencies
+apm_modules/

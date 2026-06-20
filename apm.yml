@@ -1,0 +1,10 @@
+name: training-architect
+version: 1.0.0
+description: APM project for training-architect
+author: Robert Brands
+dependencies:
+  apm:
+  - syncfusion/blazor-ui-builder
+  mcp: []
+includes: auto
+scripts: {}
