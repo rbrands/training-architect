@@ -26,7 +26,7 @@
     color: #5b5245 !important;
     text-decoration: none;
     padding: 6px 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid transparent;
     transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -43,7 +43,7 @@
     color: #1f2328 !important;
     background-color: #e1c39a;
     padding: 6px 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid #d4b184;
     box-shadow: 0 1px 4px rgba(84, 60, 31, 0.12);
     font-weight: 600;

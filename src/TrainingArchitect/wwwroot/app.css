@@ -214,3 +214,24 @@ article img {
     background-color: #e1c39a;
     color: #1f2328;
 }
+
+.cta-sand-button {
+    --bs-btn-color: #1f2328;
+    --bs-btn-bg: #e1c39a;
+    --bs-btn-border-color: #d8c7ac;
+    --bs-btn-hover-color: #1f2328;
+    --bs-btn-hover-bg: #d8c7ac;
+    --bs-btn-hover-border-color: #cdb892;
+    --bs-btn-focus-shadow-rgb: 216, 199, 172;
+    --bs-btn-active-color: #1f2328;
+    --bs-btn-active-bg: #cdb892;
+    --bs-btn-active-border-color: #c5ad80;
+    --bs-btn-disabled-color: #1f2328;
+    --bs-btn-disabled-bg: #e1c39a;
+    --bs-btn-disabled-border-color: #d8c7ac;
+}
+
+.cta-sand-button:hover,
+.cta-sand-button:focus-visible {
+    color: #1f2328;
+}

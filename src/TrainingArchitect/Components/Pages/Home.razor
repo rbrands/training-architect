@@ -4,17 +4,30 @@
 @inject NavigationManager Nav
 @inject IConfiguration Config
 @using Markdig
+@using System.Text.Json
 
 <PageTitle>@_siteTitle · @_siteSubTitle</PageTitle>
 <HeadContent>
     <meta name="description"
           content="@(_about?.Subtitle ?? "Training Architect.")" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="@_siteTitle" />
     <meta property="og:title"
           content="@_siteTitle · @_siteSubTitle" />
     <meta property="og:description"
           content="@(_about?.Subtitle ?? "Subtitle")" />
     <meta property="og:url" content="@(Config["SiteUrl"])/" />
     <meta property="og:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
+    <meta name="twitter:title" content="@_siteTitle · @_siteSubTitle" />
+    <meta name="twitter:description" content="@(_about?.Subtitle ?? "Subtitle")" />
+    <meta name="twitter:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
+    <meta name="twitter:image:alt" content="@_siteTitle" />
+    @if (!string.IsNullOrWhiteSpace(StructuredDataJson))
+    {
+        <script type="application/ld+json">
+            @((MarkupString)StructuredDataJson)
+        </script>
+    }
     <link rel="canonical" href="@(Config["SiteUrl"])/" />
 </HeadContent>
 
@@ -42,13 +55,26 @@ else
         <h1 class="fw-bold mb-2">@_about.Title</h1>
         <p class="text-secondary mb-3">@_about.Subtitle</p>
 
-        <!-- Skill tags -->
-        <div class="d-flex flex-wrap gap-2 mb-4">
-            @foreach (var tag in Tags)
-            {
-                <span class="tag-pill">@tag</span>
-            }
+        <div class="mb-4 d-flex flex-wrap align-items-center gap-3">
+            <a href="/coach"
+               class="btn cta-sand-button btn-lg rounded-pill px-4 py-2 fw-semibold shadow-sm d-inline-flex align-items-center gap-2"
+               title="Go to Coach">
+                <span>Go to Coach</span>
+                <span aria-hidden="true">→</span>
+            </a>
+            <span class="text-secondary fw-semibold">Connect with your intervals.icu account</span>
         </div>
+
+        @if (Tags.Any())
+        {
+            <!-- Skill tags -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                @foreach (var tag in Tags)
+                {
+                    <span class="tag-pill">@tag</span>
+                }
+            </div>
+        }
 
         @if (!string.IsNullOrWhiteSpace(_about.HeaderText))
         {
@@ -127,15 +153,26 @@ else
 
     private static readonly string[] _defaultTags =
     [
-        "Cloud Adoption (Azure)",
-        "Solution Architecture",
-        "GenAI & Copilot"
     ];
 
     private IEnumerable<string> Tags =>
         _about?.Tags is { Count: > 0 } tags
             ? tags.SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             : _defaultTags;
+
+    private string StructuredDataJson => JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "WebSite",
+        ["name"] = _siteTitle,
+        ["description"] = _about?.Subtitle ?? "Training Architect.",
+        ["url"] = $"{Config["SiteUrl"]}/",
+        ["image"] = $"{Config["SiteUrl"]}/images/training-architect-og.png",
+        ["sameAs"] = _about?.Links
+            .Select(link => link.Url)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToArray() ?? []
+    });
 
     protected override async Task OnInitializedAsync()
     {
