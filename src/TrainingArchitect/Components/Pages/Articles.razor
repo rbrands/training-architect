@@ -1,23 +1,31 @@
-@page "/articles"
+@page "/blog"
+@page "/blog/tag/{tag}"
 @attribute [StreamRendering]
 @inject IArticleRepository ArticleRepo
 @inject IConfiguration Config
+@inject IHttpContextAccessor HttpContextAccessor
 
-<PageTitle>Articles · @_siteTitle</PageTitle>
+<PageTitle>@(string.IsNullOrWhiteSpace(Tag) ? "Blog" : $"Tag: {Tag}") · @_siteTitle</PageTitle>
 <HeadContent>
     <meta name="description"
           content="Articles about cloud architecture, Azure, and practical GenAI enablement." />
-    <meta property="og:title" content="Articles · @_siteTitle" />
+    <meta property="og:title" content="Blog · @_siteTitle" />
     <meta property="og:description"
           content="Articles about cloud architecture, Azure, and practical GenAI enablement." />
-    <meta property="og:url" content="@(Config["SiteUrl"])/articles" />
+    <meta property="og:url" content="@(Config["SiteUrl"])/blog" />
     <meta property="og:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
-    <link rel="canonical" href="@(Config["SiteUrl"])/articles" />
+    <link rel="canonical" href="@(Config["SiteUrl"])/blog" />
 </HeadContent>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="fw-bold mb-0"><span class="me-2">📝</span>Articles</h1>
-    @if (IsOwner)
+    <div>
+        <h1 class="fw-bold mb-0"><span class="me-2">📝</span>Blog</h1>
+        @if (!string.IsNullOrWhiteSpace(Tag))
+        {
+            <p class="text-secondary small mb-0 mt-1">Showing articles tagged “@Tag”.</p>
+        }
+    </div>
+    @if (EffectiveIsOwner)
     {
         <a href="/admin/articles/new" class="btn btn-outline-secondary btn-sm">+ New Article</a>
     }
@@ -31,21 +39,23 @@
         </div>
     </div>
 }
-else if (_articles.Count == 0)
+else if (FilteredArticles.Count == 0)
 {
-    <p class="text-secondary text-center py-5">No articles published yet.</p>
+    <p class="text-secondary text-center py-5">No articles found for this tag yet.</p>
 }
 else
 {
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        @foreach (var article in _articles)
-        {
-            <div class="col">
-                <div class="card h-100 card-dark position-relative">
+    @if (PublishedArticles.Count > 0)
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var article in PublishedArticles)
+            {
+                <div class="col">
+                    <div class="card h-100 card-dark position-relative">
 
                     @if (!string.IsNullOrEmpty(article.TitleImageUrl))
                     {
-                        <a href="/articles/@article.Slug">
+                        <a href="@GetArticleUrl(article)">
                             <img src="@article.TitleImageUrl"
                                  class="card-img-top rounded-top"
                                  style="height: 160px; object-fit: cover;"
@@ -53,7 +63,7 @@ else
                         </a>
                     }
 
-                    @if (IsOwner)
+                    @if (EffectiveIsOwner)
                     {
                         <a href="/admin/articles/@article.Id"
                            class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2"
@@ -73,7 +83,9 @@ else
                             <div class="d-flex flex-wrap gap-1 mb-3">
                                 @foreach (var tag in article.Tags)
                                 {
-                                    <span class="badge rounded-pill fw-normal text-dark" style="background-color: #eadcc5;">@tag</span>
+                                    <a href="@GetTagUrl(tag)"
+                                       class="badge rounded-pill fw-normal text-dark text-decoration-none"
+                                       style="background-color: #eadcc5;">@tag</a>
                                 }
                             </div>
                         }
@@ -83,7 +95,7 @@ else
                             <p class="card-text text-secondary small flex-grow-1">@article.Summary</p>
                         }
 
-                        <a href="/articles/@article.Slug"
+                        <a href="@GetArticleUrl(article)"
                            class="text-secondary text-decoration-none small mt-3">
                             Read more →
                         </a>
@@ -91,8 +103,74 @@ else
                     </div>
                 </div>
             </div>
-        }
-    </div>
+            }
+        </div>
+    }
+
+    @if (EffectiveIsOwner && UnpublishedArticles.Count > 0)
+    {
+        <section class="mt-5 pt-4 border-top">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 fw-semibold mb-0">Unpublished</h2>
+                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis">Drafts</span>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                @foreach (var article in UnpublishedArticles)
+                {
+                    <div class="col">
+                        <div class="card h-100 card-dark position-relative border-warning-subtle">
+                            @if (!string.IsNullOrEmpty(article.TitleImageUrl))
+                            {
+                                <a href="@GetArticleUrl(article)">
+                                    <img src="@article.TitleImageUrl"
+                                         class="card-img-top rounded-top"
+                                         style="height: 160px; object-fit: cover;"
+                                         alt="@article.Title" />
+                                </a>
+                            }
+
+                            @if (EffectiveIsOwner)
+                            {
+                                <a href="/admin/articles/@article.Id"
+                                   class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2"
+                                   title="Edit">✏️</a>
+                            }
+
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title fw-bold mb-1 text-dark">@article.Title</h5>
+                                <p class="text-secondary small mb-2">
+                                    @article.PublishedDate?.ToString("MMMM d, yyyy")
+                                </p>
+
+                                @if (article.Tags.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-3">
+                                        @foreach (var tag in article.Tags)
+                                        {
+                                            <a href="@GetTagUrl(tag)"
+                                               class="badge rounded-pill fw-normal text-dark text-decoration-none"
+                                               style="background-color: #eadcc5;">@tag</a>
+                                        }
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(article.Summary))
+                                {
+                                    <p class="card-text text-secondary small flex-grow-1">@article.Summary</p>
+                                }
+
+                                <a href="@GetArticleUrl(article)"
+                                   class="text-secondary text-decoration-none small mt-3">
+                                    Read more →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    }
 }
 
 @code {
@@ -102,11 +180,37 @@ else
     [CascadingParameter(Name = "SiteTitle")]
     private string _siteTitle { get; set; } = "Header Title";
 
+    [Parameter]
+    public string Tag { get; set; } = string.Empty;
+
     private IReadOnlyList<Article>? _articles;
+
+    private IReadOnlyList<Article> FilteredArticles =>
+        _articles?.Where(article =>
+            string.IsNullOrWhiteSpace(Tag)
+                || article.Tags.Any(tag => string.Equals(tag, Tag, StringComparison.OrdinalIgnoreCase)))
+            .ToArray() ?? [];
+
+    private IReadOnlyList<Article> PublishedArticles =>
+        FilteredArticles.Where(a => a.IsPublished).ToArray();
+
+    private IReadOnlyList<Article> UnpublishedArticles =>
+        FilteredArticles.Where(a => !a.IsPublished).ToArray();
+
+    private bool EffectiveIsOwner => IsOwner
+        || (HttpContextAccessor.HttpContext?.User?.IsInRole("SiteAdmin") ?? false);
+
+    private static string GetArticleUrl(Article article) =>
+        string.IsNullOrWhiteSpace(article.Slug)
+            ? $"/blog/{article.Id}"
+            : $"/blog/{article.Slug}";
+
+    private static string GetTagUrl(string tag) =>
+        $"/blog/tag/{Uri.EscapeDataString(tag)}";
 
     protected override async Task OnInitializedAsync()
     {
-        _articles = IsOwner
+        _articles = EffectiveIsOwner
             ? await ArticleRepo.GetAllAsync()
             : await ArticleRepo.GetPublishedAsync();
     }

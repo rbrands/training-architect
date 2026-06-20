@@ -164,7 +164,7 @@ else
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (!OwnerService.IsOwner(authState.User))
         {
-            Nav.NavigateTo("/articles");
+            Nav.NavigateTo("/blog");
             return;
         }
 
@@ -179,7 +179,7 @@ else
             var existing = await ArticleRepo.GetByIdAsync(Id);
             if (existing is null)
             {
-                Nav.NavigateTo("/articles");
+                Nav.NavigateTo("/blog");
                 return;
             }
             _article = existing;
@@ -199,6 +199,10 @@ else
             .Where(t => !string.IsNullOrEmpty(t))
             .ToList();
 
+        _article.Slug = NormalizeSlug(_article.Slug);
+        if (string.IsNullOrWhiteSpace(_article.Slug))
+            _article.Slug = NormalizeSlug(_article.Title);
+
         if (_article.IsPublished && _article.PublishedDate is null)
             _article.PublishedDate = DateTime.UtcNow;
 
@@ -206,7 +210,17 @@ else
             _article.PublishedDate = null;
 
         await ArticleRepo.UpsertAsync(_article);
-        Nav.NavigateTo($"/articles/{_article.Slug}");
+        Nav.NavigateTo($"/blog/{_article.Slug}");
+    }
+
+    private static string NormalizeSlug(string value)
+    {
+        var slug = value.Trim().ToLowerInvariant();
+
+        slug = System.Text.RegularExpressions.Regex.Replace(slug, "[^a-z0-9]+", "-");
+        slug = slug.Trim('-');
+
+        return slug;
     }
 
     private void OnLifetimeChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
@@ -217,37 +231,62 @@ else
 
     // OnImageUploadSuccess fires BEFORE ValueChanged updates _article.Content.
     // Store the pending fix here; OnContentChanged applies it when ValueChanged fires.
-    private string? _pendingWrongSrc;
     private string? _pendingBlobUrl;
+    private IReadOnlyList<string>? _pendingWrongSrcCandidates;
 
     private void OnImageUploadSuccess(ImageSuccessEventArgs args)
     {
         var blobUrl = ExtractBlobUrl(args);
         if (string.IsNullOrEmpty(blobUrl)) return;
-        _pendingWrongSrc = Config.ImageContainerUrl.TrimEnd('/') + "/" + args.File?.Name;
+
         _pendingBlobUrl = blobUrl;
+        _pendingWrongSrcCandidates = GetWrongSrcCandidates(args.File?.Name).ToArray();
     }
 
     private async Task OnContentChanged(string value)
     {
-        string? wrongSrc = null;
+        string? replacedSrc = null;
         string? correctSrc = null;
 
-        if (_pendingWrongSrc is not null && _pendingBlobUrl is not null
-            && value.Contains(_pendingWrongSrc))
+        if (_pendingBlobUrl is not null && _pendingWrongSrcCandidates is not null)
         {
-            wrongSrc = _pendingWrongSrc;
-            correctSrc = _pendingBlobUrl;
-            value = value.Replace(wrongSrc, correctSrc);
-            _pendingWrongSrc = null;
+            foreach (var wrongSrc in _pendingWrongSrcCandidates)
+            {
+                if (value.Contains(wrongSrc, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = value.Replace(wrongSrc, _pendingBlobUrl, StringComparison.OrdinalIgnoreCase);
+                    replacedSrc = wrongSrc;
+                    correctSrc = _pendingBlobUrl;
+                }
+            }
+
             _pendingBlobUrl = null;
+            _pendingWrongSrcCandidates = null;
         }
 
         _article.Content = value;
 
         // Also patch the editor DOM so the image displays immediately.
-        if (wrongSrc is not null && correctSrc is not null)
-            await JSRuntime.InvokeVoidAsync("sfFixImageSrc", wrongSrc, correctSrc);
+        if (!string.IsNullOrEmpty(replacedSrc) && !string.IsNullOrEmpty(correctSrc))
+            await JSRuntime.InvokeVoidAsync("sfFixImageSrc", replacedSrc, correctSrc);
+    }
+
+    private IEnumerable<string> GetWrongSrcCandidates(string? fileName)
+    {
+        var candidates = new List<string>();
+        var containerUrl = Config.ImageContainerUrl?.TrimEnd('/') ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            candidates.Add($"{containerUrl}/{fileName}");
+            candidates.Add($"/images/{fileName}");
+            candidates.Add($"images/{fileName}");
+            candidates.Add(fileName.TrimStart('/'));
+        }
+
+        return candidates
+            .Where(static candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string? ExtractBlobUrl(ImageSuccessEventArgs args)
@@ -263,7 +302,7 @@ else
         return null;
     }
 
-    private void Cancel() => Nav.NavigateTo("/articles");
+    private void Cancel() => Nav.NavigateTo("/blog");
 
     private async Task DeleteAsync()
     {
@@ -272,6 +311,6 @@ else
 
         _deleting = true;
         await ArticleRepo.DeleteAsync(_article.Id);
-        Nav.NavigateTo("/articles");
+        Nav.NavigateTo("/blog");
     }
 }

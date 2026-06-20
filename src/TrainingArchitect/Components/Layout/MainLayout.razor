@@ -14,10 +14,9 @@
         <!-- Left: Avatar + Brand -->
         <a class="navbar-brand d-flex align-items-center gap-2 text-decoration-none" href="/">
             <img src="@(!string.IsNullOrEmpty(_about?.AvatarUrl) ? _about.AvatarUrl : "/images/avatar.png")"
-                 class="rounded-circle"
                  width="40" height="40"
-                 style="object-fit: cover;"
-                 alt="Brands Advisory avatar" />
+                  style="object-fit: cover; border-radius: 12px;"
+                 alt="Training Architect logo" />
             <div class="lh-sm">
                 <div class="text-dark brand-name">@(_about?.HeaderTitle ?? "Header Title")</div>
                 <div class="text-secondary brand-subtitle">@(_about?.HeaderSubtitle ?? "Subtitle")</div>
@@ -30,32 +29,17 @@
                  Match="NavLinkMatch.All"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
-                About
-            </NavLink>
-            <NavLink href="/projects"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Projects
-            </NavLink>
-            <NavLink href="/articles"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Articles
+                Start
             </NavLink>
             <NavLink href="/coach"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
                 Coach
             </NavLink>
-            <NavLink href="/training-plan"
+            <NavLink href="/blog"
                  class="nav-pill-inactive"
                  ActiveClass="nav-pill-active">
-                Plan
-            </NavLink>
-            <NavLink href="/dashboard"
-                 class="nav-pill-inactive"
-                 ActiveClass="nav-pill-active">
-                Dashboard
+                Blog
             </NavLink>
         </div>
 

@@ -1,7 +1,9 @@
-@page "/articles/{slug}"
+@page "/blog/{slug}"
 @inject IArticleRepository ArticleRepo
 @inject IConfiguration Config
+@inject IHttpContextAccessor HttpContextAccessor
 @using Markdig
+@using System.Text.RegularExpressions
 
 @if (_article is null && !_loaded)
 {
@@ -16,7 +18,7 @@ else if (_article is null)
     <PageTitle>Article not found</PageTitle>
     <div class="text-center py-5">
         <p class="text-secondary">Article not found.</p>
-        <a href="/articles" class="btn btn-outline-secondary btn-sm">← Back to Articles</a>
+        <a href="/blog" class="btn btn-outline-secondary btn-sm">← Back to Blog</a>
     </div>
 }
 else
@@ -28,7 +30,7 @@ else
               content="@_article.Title · @_siteTitle" />
         <meta property="og:description" content="@_article.Summary" />
         <meta property="og:url"
-              content="@(Config["SiteUrl"])/articles/@_article.Slug" />
+              content="@(Config["SiteUrl"])/blog/@_article.Slug" />
         <meta property="og:type" content="article" />
         @if (_article.PublishedDate.HasValue)
         {
@@ -51,7 +53,7 @@ else
             <meta property="og:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
         }
         <link rel="canonical"
-              href="@(Config["SiteUrl"])/articles/@_article.Slug" />
+              href="@(Config["SiteUrl"])/blog/@_article.Slug" />
     </HeadContent>
 
     <article class="card-dark p-4">
@@ -65,7 +67,7 @@ else
                     </div>
                 }
             </div>
-            @if (IsOwner)
+            @if (EffectiveIsOwner)
             {
                 <a href="/admin/articles/@_article.Id"
                    class="btn btn-sm btn-outline-secondary flex-shrink-0">
@@ -100,12 +102,12 @@ else
         }
 
         <div class="article-content text-secondary">
-            @((MarkupString)Markdown.ToHtml(_article.Content ?? string.Empty))
+            @((MarkupString)Markdown.ToHtml(NormalizeMarkdownImageUrls(_article.Content ?? string.Empty)))
         </div>
     </article>
 
     <div class="mt-4">
-        <a href="/articles" class="text-secondary small text-decoration-none">← Back to Articles</a>
+        <a href="/blog" class="text-secondary small text-decoration-none">← Back to Blog</a>
     </div>
 }
 
@@ -122,9 +124,40 @@ else
     private Article? _article;
     private bool _loaded;
 
+    private bool EffectiveIsOwner => IsOwner
+        || (HttpContextAccessor.HttpContext?.User?.IsInRole("SiteAdmin") ?? false);
+
+    private string NormalizeMarkdownImageUrls(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+            return string.Empty;
+
+        var blobEndpoint = Config["Storage:BlobEndpoint"];
+        if (string.IsNullOrWhiteSpace(blobEndpoint))
+            return markdown;
+
+        var blobBaseUrl = blobEndpoint.TrimEnd('/');
+
+        return Regex.Replace(markdown, @"(!\[[^\]]*\]\()(?<path>/?images/[^)\s]+)(\))", match =>
+        {
+            var relativePath = match.Groups["path"].Value.TrimStart('/');
+            return $"{match.Groups[1].Value}{blobBaseUrl}/{relativePath}{match.Groups[3].Value}";
+        }, RegexOptions.IgnoreCase);
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        _article = await ArticleRepo.GetBySlugAsync(Slug);
+        if (EffectiveIsOwner)
+        {
+            _article = await ArticleRepo.GetBySlugAsync(Slug)
+                ?? await ArticleRepo.GetByIdAsync(Slug);
+        }
+        else
+        {
+            _article = (await ArticleRepo.GetPublishedAsync())
+                .FirstOrDefault(a => a.Slug == Slug || a.Id == Slug);
+        }
+
         _loaded = true;
     }
 }

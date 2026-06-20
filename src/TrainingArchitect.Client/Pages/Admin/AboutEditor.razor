@@ -45,7 +45,21 @@ else
                  <input class="form-control"
                    @bind="_about.HeaderSubtitle" />
         </div>
-
+        <div>
+            <label class="form-label text-secondary small">Subtitle</label>
+            <textarea class="form-control"
+                      rows="3"
+                      @bind="_about.Subtitle" />
+        </div>
+        <div>
+            <label class="form-label text-secondary small">Header Text (Markdown)</label>
+            <SfRichTextEditor EditorMode="EditorMode.Markdown"
+                              Value="@_about.HeaderText"
+                              ValueChanged="@(v => _about.HeaderText = v)"
+                              Height="300px">
+                <RichTextEditorToolbarSettings Items="@_headerTextToolbarItems" />
+            </SfRichTextEditor>
+        </div>
         <div>
             <label class="form-label text-secondary small">Avatar Image</label>
             <ImageUploader
@@ -56,14 +70,6 @@ else
                 ShowUrl="false" />
             <div class="form-text text-secondary small">Recommended: square, min 200×200px</div>
         </div>
-
-        <div>
-            <label class="form-label text-secondary small">Subtitle</label>
-            <textarea class="form-control"
-                      rows="3"
-                      @bind="_about.Subtitle" />
-        </div>
-
         <div>
             <label class="form-label text-secondary small">Location</label>
                  <input class="form-control"
@@ -177,6 +183,21 @@ else
     private AboutContent? _about;
     private bool _saving;
     private string _tagsInput = string.Empty;
+
+    private readonly List<ToolbarItemModel> _headerTextToolbarItems =
+    [
+        new() { Command = ToolbarCommand.Bold },
+        new() { Command = ToolbarCommand.Italic },
+        new() { Command = ToolbarCommand.Separator },
+        new() { Command = ToolbarCommand.Formats },
+        new() { Command = ToolbarCommand.OrderedList },
+        new() { Command = ToolbarCommand.UnorderedList },
+        new() { Command = ToolbarCommand.Separator },
+        new() { Command = ToolbarCommand.CreateLink },
+        new() { Command = ToolbarCommand.Separator },
+        new() { Command = ToolbarCommand.SourceCode },
+        new() { Command = ToolbarCommand.FullScreen }
+    ];
 
     protected override async Task OnInitializedAsync()
     {
