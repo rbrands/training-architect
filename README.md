@@ -2,13 +2,13 @@
 
 *AI-powered cycling coach backed by intervals.icu*
 
-Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and gives athletes a personalised virtual coaching experience. A conversational AI coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
+Training Architect is a Blazor web application that connects to [intervals.icu](https://intervals.icu) and gives athletes a personalised virtual coaching experience. An AI-powered coach analyses current fitness data (CTL, ATL, TSB) and proposes structured weekly training plans, which the athlete can accept, adjust, or reject directly in the app.
 
 It is the user interface for the data and coaching layer published in [intervals-icu-sync](https://github.com/rbrands/intervals-icu-sync), reusing that repository's coaching logic and prompts. If you don't want to set up the MCP server in your own GenAI tooling, the hosted version at [training-architect.com](https://training-architect.com) can be used straight away.
 
 **Key capabilities:**
 
-- **Virtual coach** — chat-based interface powered by an AI orchestration pipeline (Microsoft.Extensions.AI / Semantic Kernel)
+- **Virtual coach** — structured prompt interface powered by a Microsoft Foundry Agent (coaching orchestration)
 - **intervals.icu integration** — reads athlete fitness data and workout library via the intervals.icu REST API
 - **Structured plan proposals** — weekly training plans with day-by-day workouts including zone, TSS, IF, and coaching notes
 - **Athlete confirmation flow** — Accept / Adjust / Reject without a full page reload; decision forwarded to the coaching agent
@@ -69,9 +69,8 @@ The repository includes a scaffolded front-end for an AI-powered cycling coachin
 
 | Route | Render mode | Description |
 |---|---|---|
-| `/coach` | `InteractiveWebAssembly` | Coaching chat (message list + input); backed by `IChatService` |
-| `/training-plan` | Static SSR + embedded WASM | Structured weekly plan viewer; athlete confirms via `PlanConfirmation` |
-| `/dashboard` | `InteractiveWebAssembly` | CTL / ATL / TSB KPI cards and 28-day progression chart |
+| `/coach` | `InteractiveWebAssembly` | Coaching panel; backed by `IChatService` |
+| `/blog` | `InteractiveWebAssembly` | knowledge base with articles around training |
 
 ### Render-mode Strategy
 
@@ -84,12 +83,10 @@ Static SSR (default)
 
 InteractiveWebAssembly (minimal surface)
   ├─ /coach        ← IChatService scoped per WASM session
-  └─ /dashboard    ← IIntervalsDataProvider returns sample fitness data
 ```
 
 The WASM surface is kept minimal: only the two pages that require client-side reactivity
-(`/coach` and `/dashboard`) run as full WASM circuits. The training-plan confirmation
-component is an island of interactivity inside an otherwise SSR page.
+(`/coach`) run as full WASM circuits.
 
 ### Orchestration Plug-in Points
 
@@ -99,7 +96,7 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 
 | Interface | Stub | Integration point |
 |---|---|---|
-| `IChatService` | `StubChatService` | Call the .NET orchestration pipeline (e.g. `Microsoft.Extensions.AI` / Semantic Kernel agent graph) |
+| `IChatService` | `StubChatService` | Invoke the Microsoft Foundry Agent and forward messages through the MCP server |
 | `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
 | `IIntervalsDataProvider` | `StubIntervalsDataProvider` | Call the intervals.icu REST API with the athlete's stored API key (retrieved server-side from Key Vault) |
 
@@ -120,8 +117,8 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 
 ### Render Modes
 
-- **Static SSR** is the default render mode for all public pages (`/`, `/projects`, `/articles`, `/articles/{slug}`). This ensures fast initial load times and full SEO indexability without JavaScript requirements. All public pages include full SEO meta tags: title, description, Open Graph (`og:*`), article tags, and canonical URLs. Article detail pages use the article's own title and summary for dynamic meta tags.
-- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/projects`, `/admin/articleeditor/{id?}`, `/admin/legal`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `TrainingArchitect.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
+- **Static SSR** is the default render mode for all public pages (`/`, `/blog`, `/blog/{slug}`). This ensures fast initial load times and full SEO indexability without JavaScript requirements. All public pages include full SEO meta tags: title, description, Open Graph (`og:*`), article tags, and canonical URLs. Article detail pages use the article's own title and summary for dynamic meta tags.
+- **InteractiveWebAssembly** is used for admin edit pages (`/admin/about`, `/admin/articleeditor/{id?}`, `/admin/legal`) that require Syncfusion Grid and Rich Text Editor interactivity. These pages live in the `TrainingArchitect.Client` Blazor WebAssembly project and are served by the host server. Data is fetched via minimal API endpoints (`/api/about`, `/api/projects`, `/api/articles`) that require the `SiteAdmin` role.
 
 ### Owner-Only Editing
 
@@ -182,7 +179,6 @@ All content is stored in a single Cosmos DB container (`content`) with a `type` 
 |---|---|
 | `about` | Single document, id = `about` |
 | `article` | One document per article, partition key = `article` |
-| `project` | One document per project, partition key = `project` |
 
 ---
 
@@ -213,7 +209,6 @@ src/
 │   ├── Endpoints/              # Minimal API endpoints for admin data
 │   │   ├── AboutEndpoints.cs
 │   │   ├── ArticleEndpoints.cs
-│   │   └── ProjectEndpoints.cs
 │   ├── Models/
 │   │   └── UserInfo.cs         # DTO for /api/user (auth state for WASM)
 │   └── Program.cs
@@ -221,24 +216,20 @@ src/
 │   ├── Pages/Admin/            # Admin edit pages (InteractiveWebAssembly)
 │   │   ├── AboutEditor.razor
 │   │   ├── ArticleEditor.razor
-│   │   └── Projects.razor
 │   ├── Services/
 │   │   ├── ApiAuthenticationStateProvider.cs  # Calls /api/user
 │   │   ├── HttpAboutRepository.cs
 │   │   ├── HttpArticleRepository.cs
-│   │   └── HttpProjectRepository.cs
 │   └── Program.cs
 ├── TrainingArchitect.Core/        # Domain layer (no infrastructure dependencies)
 │   ├── Interfaces/
 │   │   ├── IRepository.cs          # Generic base repository interface
 │   │   ├── IArticleRepository.cs
-│   │   ├── IProjectRepository.cs
 │   │   ├── IAboutRepository.cs
 │   │   └── IOwnerService.cs
 │   ├── Models/
 │   │   ├── CosmosDocument.cs       # Base class for all Cosmos DB documents
 │   │   ├── Article.cs
-│   │   ├── Project.cs
 │   │   ├── AboutContent.cs
 │   │   └── ProfileLink.cs
 │   └── Services/
@@ -247,7 +238,6 @@ src/
     └── Repositories/
         ├── CosmosRepository.cs     # Generic base repository (Cosmos DB SDK)
         ├── ArticleRepository.cs
-        ├── ProjectRepository.cs
         └── AboutRepository.cs
 ```
 
