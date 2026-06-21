@@ -10,6 +10,23 @@ public enum CoachConnectionState
     Error
 }
 
+public enum CoachLanguage
+{
+    English,
+    German,
+    Spanish,
+    French,
+    Turkish
+}
+
+public enum AthleteProfileGoal
+{
+    Climber,
+    Criterium,
+    Marathon,
+    RoadRace
+}
+
 public interface IAthleteSession
 {
     CoachConnectionState State { get; }
@@ -17,6 +34,8 @@ public interface IAthleteSession
     bool IsRefreshing { get; }          // Re-sync without tearing down the connected view
 
     string? AthleteId { get; }
+    CoachLanguage? Language { get; }
+    AthleteProfileGoal? ProfileGoal { get; }
     DateTimeOffset? LastSynced { get; }
     string? ErrorMessage { get; }
 
@@ -25,7 +44,13 @@ public interface IAthleteSession
 
     event Action? Changed;
 
-    Task ConnectAsync(string athleteId, string apiKey, bool remember, CancellationToken ct = default);
+    Task ConnectAsync(
+        string athleteId,
+        string apiKey,
+        CoachLanguage language,
+        AthleteProfileGoal profileGoal,
+        bool remember,
+        CancellationToken ct = default);
     Task RefreshAsync(CancellationToken ct = default);
     Task DisconnectAsync(bool forget = true);   // Was void in the draft, async because localStorage must be cleared
 }
@@ -54,13 +79,21 @@ public sealed class AthleteSession(
     public CoachConnectionState State { get; private set; } = CoachConnectionState.Disconnected;
     public bool IsRefreshing { get; private set; }
     public string? AthleteId { get; private set; }
+    public CoachLanguage? Language { get; private set; }
+    public AthleteProfileGoal? ProfileGoal { get; private set; }
     public DateTimeOffset? LastSynced { get; private set; }
     public string? ErrorMessage { get; private set; }
     public string? AthleteDataJson { get; private set; }
 
     public event Action? Changed;
 
-    public async Task ConnectAsync(string athleteId, string apiKey, bool remember, CancellationToken ct = default)
+    public async Task ConnectAsync(
+        string athleteId,
+        string apiKey,
+        CoachLanguage language,
+        AthleteProfileGoal profileGoal,
+        bool remember,
+        CancellationToken ct = default)
     {
         if (State == CoachConnectionState.Connecting)
             return; // a connect request is already in progress
@@ -74,6 +107,8 @@ public sealed class AthleteSession(
             var json = await dataClient.FetchAsync(athleteId, apiKey, ct);
 
             AthleteId = athleteId;
+            Language = language;
+            ProfileGoal = profileGoal;
             _apiKey = apiKey;
             AthleteDataJson = json;
             LastSynced = DateTimeOffset.Now;
@@ -84,14 +119,26 @@ public sealed class AthleteSession(
             if (remember)
             {
                 await credentialStore.SaveAsync(
-                    new StoredCredential(athleteId, apiKey),
+                    new StoredCredential
+                    {
+                        AthleteId = athleteId,
+                        ApiKey = apiKey,
+                        Language = language,
+                        ProfileGoal = profileGoal
+                    },
                     CredentialDurability.Persistent,
                     ct);
             }
             else
             {
                 await credentialStore.SaveAsync(
-                    new StoredCredential(athleteId, apiKey),
+                    new StoredCredential
+                    {
+                        AthleteId = athleteId,
+                        ApiKey = apiKey,
+                        Language = language,
+                        ProfileGoal = profileGoal
+                    },
                     CredentialDurability.Session,
                     ct);
             }
@@ -173,6 +220,8 @@ public sealed class AthleteSession(
     private void ClearData()
     {
         AthleteId = null;
+        Language = null;
+        ProfileGoal = null;
         AthleteDataJson = null;
         LastSynced = null;
     }

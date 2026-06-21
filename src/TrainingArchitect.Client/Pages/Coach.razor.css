@@ -176,7 +176,8 @@
 }
 
 .credential-form input[type="text"],
-.credential-form input[type="password"] {
+.credential-form input[type="password"],
+.credential-form select {
     border: 1px solid var(--ba-border);
     border-radius: 10px;
     background-color: #fffdf8;
@@ -186,14 +187,16 @@
 }
 
 .credential-form input[type="text"]:focus,
-.credential-form input[type="password"]:focus {
+.credential-form input[type="password"]:focus,
+.credential-form select:focus {
     outline: none;
     border-color: #2e67bf;
     box-shadow: 0 0 0 2px rgba(46, 103, 191, 0.15);
 }
 
 .credential-form input[type="text"]:disabled,
-.credential-form input[type="password"]:disabled {
+.credential-form input[type="password"]:disabled,
+.credential-form select:disabled {
     background-color: #f4efe7;
     color: #8f877a;
 }

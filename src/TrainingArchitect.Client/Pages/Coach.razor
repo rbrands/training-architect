@@ -72,6 +72,27 @@
                                @bind="_apiKey" @bind:event="oninput" />
                     </label>
 
+                    <label class="field">
+                        <span>Language</span>
+                        <select disabled="@IsBusy" @bind="_language">
+                            <option value="@CoachLanguage.English">English</option>
+                            <option value="@CoachLanguage.German">German</option>
+                            <option value="@CoachLanguage.Spanish">Spanish</option>
+                            <option value="@CoachLanguage.French">French</option>
+                            <option value="@CoachLanguage.Turkish">Turkish</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Athlete Profile Goal</span>
+                        <select disabled="@IsBusy" @bind="_profileGoal">
+                            <option value="@AthleteProfileGoal.Climber">climber</option>
+                            <option value="@AthleteProfileGoal.Criterium">criterium</option>
+                            <option value="@AthleteProfileGoal.Marathon">marathon</option>
+                            <option value="@AthleteProfileGoal.RoadRace">roadrace</option>
+                        </select>
+                    </label>
+
                     <label class="remember">
                         <input type="checkbox" disabled="@IsBusy" @bind="_remember" />
                         <span>Remember on this device</span>
@@ -184,6 +205,8 @@
 
     private string _athleteId = string.Empty;
     private string _apiKey = string.Empty;
+    private CoachLanguage _language = CoachLanguage.English;
+    private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
     private bool _remember;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
@@ -208,7 +231,7 @@
         if (!CanSubmit)
             return;
 
-        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _remember);
+        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _language, _profileGoal, _remember);
         await RefreshRememberedHintAsync();
     }
 
@@ -230,6 +253,8 @@
         {
             _athleteId = loaded.Credential.AthleteId;
             _apiKey = loaded.Credential.ApiKey;
+            _language = loaded.Credential.Language;
+            _profileGoal = loaded.Credential.ProfileGoal;
             _remember = loaded.Durability == CredentialDurability.Persistent;
         }
 
