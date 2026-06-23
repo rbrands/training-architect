@@ -52,7 +52,19 @@
             {
                 <div class="credential-form">
                     <h2>Connect to intervals.icu</h2>
-                    <p class="subtitle">Enter your Athlete ID and API key to load your training data.</p>
+                    <p class="subtitle subtitle-with-help">
+                        <span>Enter your Athlete ID and API key to load your training data.</span>
+                        <button type="button"
+                                class="credential-help-inline-trigger"
+                                title="Show where to find Athlete ID and API Key"
+                                aria-label="Show where to find Athlete ID and API Key"
+                                aria-expanded="@_showCredentialHelp"
+                                aria-controls="credential-help-modal"
+                                @onclick="ToggleCredentialHelp">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span>Where to find these values</span>
+                        </button>
+                    </p>
 
                     <label class="field">
                         <span>Athlete ID</span>
@@ -114,6 +126,37 @@
                             <span>Connect</span>
                         }
                     </button>
+
+                    @if (_showCredentialHelp)
+                    {
+                        <div class="credential-help-overlay" @onclick="CloseCredentialHelp">
+                            <div id="credential-help-modal"
+                                 class="credential-help-modal"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-labelledby="credential-help-title"
+                                 @onclick:stopPropagation="true">
+                                <div class="credential-help-header">
+                                    <h3 id="credential-help-title">Where to find Athlete ID and API Key</h3>
+                                    <button type="button"
+                                            class="credential-help-close"
+                                            aria-label="Close help"
+                                            @onclick="CloseCredentialHelp">
+                                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+
+                                <p class="credential-help-copy">
+                                    Open intervals.icu, go to <strong>Settings</strong>, scroll down, and use
+                                    <strong>Developer Settings</strong>.
+                                </p>
+
+                                  <img class="credential-help-image"
+                                      src="/images/intervals-developer-settings.png"
+                                     alt="Screenshot of intervals.icu Settings page with Developer Settings section" />
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </CardContent>
@@ -200,6 +243,7 @@
     private bool CanUseCoachActions => Session.State == CoachConnectionState.Connected;
 
     private bool _showRememberedHint;
+    private bool _showCredentialHelp;
 
     private bool ShowRememberedNote => _showRememberedHint;
 
@@ -280,6 +324,16 @@
             && !string.IsNullOrWhiteSpace(loaded.Credential.ApiKey)
             && (string.IsNullOrWhiteSpace(Session.AthleteId)
                 || string.Equals(loaded.Credential.AthleteId, Session.AthleteId, StringComparison.Ordinal));
+    }
+
+    private void ToggleCredentialHelp()
+    {
+        _showCredentialHelp = !_showCredentialHelp;
+    }
+
+    private void CloseCredentialHelp()
+    {
+        _showCredentialHelp = false;
     }
 
     public void Dispose()
