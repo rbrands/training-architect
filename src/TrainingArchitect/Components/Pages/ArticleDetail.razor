@@ -103,7 +103,7 @@ else
         }
 
         <div class="article-content text-secondary">
-            @((MarkupString)Markdown.ToHtml(NormalizeMarkdownImageUrls(_article.Content ?? string.Empty)))
+            @((MarkupString)Markdown.ToHtml(NormalizeMarkdownImageUrls(_article.Content ?? string.Empty), MarkdownPipeline))
         </div>
         </div>
     </article>
@@ -114,6 +114,10 @@ else
 }
 
 @code {
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 

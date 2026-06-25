@@ -77,9 +77,6 @@ article img {
     max-width: 72ch;
 }
 
-.article-content {
-}
-
 .article-content h1 { font-size: 1.6rem; font-weight: 700; margin-top: 1.75rem; margin-bottom: 0.5rem; }
 .article-content h2 { font-size: 1.25rem; font-weight: 700; margin-top: 1.5rem;  margin-bottom: 0.4rem; }
 .article-content h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.3rem; }
@@ -96,6 +93,45 @@ article img {
 .article-content ul,
 .article-content ol  { padding-left: 1.5rem; margin-bottom: 1rem; }
 .article-content li  { line-height: 1.7; margin-bottom: 0.25rem; }
+
+.article-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.article-content th,
+.article-content td {
+    border: 1px solid var(--ba-border);
+    padding: 0.5rem 0.65rem;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.article-content thead th {
+    background-color: #f0dfc5;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .article-layout {
+        max-width: 100%;
+    }
+
+    .article-content table {
+        font-size: 0.875rem;
+    }
+
+    .article-content th,
+    .article-content td {
+        white-space: normal;
+        word-break: break-word;
+    }
+}
 
 .article-content code {
     background-color: #f0dfc5;
