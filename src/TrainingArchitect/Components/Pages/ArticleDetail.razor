@@ -57,6 +57,7 @@ else
     </HeadContent>
 
     <article class="card-dark p-4">
+        <div class="article-layout">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
             <div>
                 <h1 class="fw-bold mb-1">@_article.Title</h1>
@@ -103,6 +104,7 @@ else
 
         <div class="article-content text-secondary">
             @((MarkupString)Markdown.ToHtml(NormalizeMarkdownImageUrls(_article.Content ?? string.Empty)))
+        </div>
         </div>
     </article>
 
