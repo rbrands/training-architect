@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Client.Services;
 
@@ -39,7 +40,8 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = envelope.MethodName ?? string.Empty,
             DataRaw = raw,
-            DataParsed = parsed
+            DataParsed = parsed,
+            DataDeserialized = envelope.DataDeserialized
         };
     }
 
@@ -50,7 +52,8 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = string.Empty,
             DataRaw = empty.GetRawText(),
-            DataParsed = empty
+            DataParsed = empty,
+            DataDeserialized = null
         };
     }
 
@@ -59,5 +62,6 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         public string? MethodName { get; init; }
         public string? DataRaw { get; init; }
         public JsonElement DataParsed { get; init; }
+        public WeekDataDto? DataDeserialized { get; init; }
     }
 }

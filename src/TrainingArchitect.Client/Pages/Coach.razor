@@ -259,7 +259,34 @@
                     <button type="button" class="coach-inline-link" @onclick="DownloadJsonAsync">Download JSON</button>
                 </div>
 
-                <pre class="data-view-json">@DataParsedPrettyJson</pre>
+                <SfTab CssClass="coach-data-tabs">
+                    <TabItems>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Deserialized (WeekDataDto)"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <pre class="data-view-json">@DataDeserializedPrettyJson</pre>
+                            </ContentTemplate>
+                        </TabItem>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Parsed JSON"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <pre class="data-view-json">@DataParsedPrettyJson</pre>
+                            </ContentTemplate>
+                        </TabItem>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Raw JSON"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <pre class="data-view-json">@DataRawPrettyJson</pre>
+                            </ContentTemplate>
+                        </TabItem>
+                    </TabItems>
+                </SfTab>
             </div>
         </div>
     }
@@ -340,6 +367,47 @@
             }
 
             return JsonSerializer.Serialize(parsed.Value, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+    }
+
+    private string DataRawPrettyJson
+    {
+        get
+        {
+            var raw = Session.AthleteDataRaw;
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return "{}";
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(raw);
+                return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+            }
+            catch (JsonException)
+            {
+                return raw;
+            }
+        }
+    }
+
+    private string DataDeserializedPrettyJson
+    {
+        get
+        {
+            if (Session.AthleteDataDeserialized is null)
+            {
+                return "{}";
+            }
+
+            return JsonSerializer.Serialize(Session.AthleteDataDeserialized, new JsonSerializerOptions
             {
                 WriteIndented = true
             });

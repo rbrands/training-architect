@@ -5,6 +5,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Models;
 using TrainingArchitect.Endpoints;
 
 namespace TrainingArchitect.Services;
@@ -79,8 +80,21 @@ public sealed class McpAthleteDataService(
             AthleteId = athleteId,
             MethodName = McpToolNames.PrepareWeekData,
             DataRaw = extractedData.GetRawText(),
-            DataParsed = normalizedData
+            DataParsed = normalizedData,
+            DataDeserialized = TryDeserializeWeekData(normalizedData)
         };
+    }
+
+    private static WeekDataDto? TryDeserializeWeekData(JsonElement payload)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<WeekDataDto>(payload.GetRawText());
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static JsonElement ExtractDataJson(CallToolResult result)
