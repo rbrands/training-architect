@@ -753,6 +753,20 @@ The app starts at `https://localhost:7000`.
 
 ---
 
+## Versioning
+
+This repository uses **Semantic Versioning** (`MAJOR.MINOR.PATCH`) and tracks releases in [CHANGELOG.md](CHANGELOG.md).
+
+- Source of truth for release history: `CHANGELOG.md`
+- Source of truth for runtime UI version display: `src/TrainingArchitect.Core/Models/ApplicationVersionInfo.cs`
+
+When creating a new release:
+
+1. Update `ApplicationVersionInfo.Current` with the new semantic version and release date.
+2. Add a matching entry in `CHANGELOG.md` using the same version and date.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
