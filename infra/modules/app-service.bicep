@@ -48,6 +48,9 @@ param appInsightsConnectionString string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
+@description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
+param mcpAthleteDataEndpoint string
+
 @description('Tags to apply to the Web App resource.')
 param tags object = {}
 
@@ -118,6 +121,10 @@ var baseAppSettings = [
   {
     name: 'XDT_MicrosoftApplicationInsights_Mode'
     value: 'Recommended'
+  }
+  {
+    name: 'Mcp__AthleteData__Endpoint'
+    value: mcpAthleteDataEndpoint
   }
 ]
 

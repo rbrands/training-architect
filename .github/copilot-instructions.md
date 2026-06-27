@@ -60,4 +60,20 @@
 - Set secrets with: 
   dotnet user-secrets set "Section:Key" "value"
   from the src/TrainingArchitect/ directory
+
+## Config Propagation Pattern
+- When adding a new configuration value, always propagate it through the full config chain in one change.
+- Add the key to `config.example.ps1` with a placeholder value.
+- Read and propagate it in `setup.ps1` for all relevant targets:
+  - dotnet user-secrets (`Section:Key`)
+  - GitHub Secrets (`UPPER_SNAKE_CASE`)
+  - generated `infra/main.local.bicepparam` (if infrastructure needs it)
+- If runtime infrastructure/app settings require the value:
+  - add a parameter in `infra/main.bicep`
+  - pass it to the corresponding module (for example `infra/modules/app-service.bicep`)
+  - map it to App Service settings using `Section__Key` naming
+  - add placeholder parameter in `infra/main.bicepparam`
+  - pass it in `.github/workflows/deploy-infrastructure.yml`
+- If the app reads it from configuration, ensure a placeholder exists in `src/TrainingArchitect/appsettings.json` using `__PLACEHOLDER_NAME__` format.
+- Update `README.md` whenever a new config key/placeholder is introduced.
   

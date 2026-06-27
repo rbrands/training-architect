@@ -100,6 +100,18 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 | `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
 | `IIntervalsDataProvider` | `StubIntervalsDataProvider` | Call the intervals.icu REST API with the athlete's stored API key (retrieved server-side from Key Vault) |
 
+### MCP Athlete Data Endpoint
+
+The endpoint at `/api/athlete-data` now supports credential forwarding via headers and executes the MCP tool `prepare_week_data` server-side.
+
+- Required request headers:
+  - `X-Intervals-Athlete-Id`
+  - `X-Intervals-Api-Key`
+- Required server configuration in `src/TrainingArchitect/appsettings.json`:
+  - `Mcp:AthleteData:Endpoint`
+
+For local development, set real values with user-secrets instead of committing non-placeholder values.
+
 ### New Core Models
 
 | Model | Purpose |

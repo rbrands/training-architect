@@ -41,3 +41,7 @@ param appInsightsName = '__APP_INSIGHTS_NAME__'
 // Set to your custom domain (e.g. https://www.example.com) or the azurewebsites.net default URL.
 // If this is a custom domain, the Bicep template automatically deploys hostname bindings + managed SSL.
 param siteUrl = '__SITE_URL__'
+
+// MCP
+// Public MCP endpoint used by the app for athlete-data tool calls.
+param mcpAthleteDataEndpoint = '__MCP_ATHLETE_DATA_ENDPOINT__'

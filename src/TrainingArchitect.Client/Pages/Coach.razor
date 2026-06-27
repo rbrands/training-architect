@@ -2,6 +2,8 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IAthleteSession Session
 @inject ICredentialStore CredentialStore
+@inject IJSRuntime JS
+@using System.Text.Json
 @implements IDisposable
 
 
@@ -35,13 +37,25 @@
                 </div>
 
                 <div class="coach-status-actions">
-                    <button type="button" class="coach-inline-link" disabled="@(!CanUseCoachActions)">View Data</button>
+                    <button type="button"
+                            class="coach-inline-link"
+                            disabled="@(!CanViewData)"
+                            @onclick="OpenDataView">
+                        View Data
+                    </button>
                     @if (Session.State == CoachConnectionState.Connected)
                     {
                         <button type="button"
+                                class="coach-inline-link"
+                                @onclick="RefreshAsync"
+                                disabled="@(!CanRefresh)">
+                            @(Session.IsRefreshing ? "Refreshing..." : "Refresh")
+                        </button>
+
+                        <button type="button"
                                 class="coach-inline-link coach-inline-link-muted"
                                 @onclick="DisconnectAsync"
-                                disabled="@IsBusy">
+                                disabled="@IsActionBusy">
                             Disconnect
                         </button>
                     }
@@ -208,6 +222,47 @@
             </div>
         </CardContent>
     </SfCard>
+
+    @if (_showDataView)
+    {
+        <div class="data-view-overlay" @onclick="CloseDataView">
+            <div class="data-view-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="data-view-title"
+                 @onclick:stopPropagation="true">
+                <div class="data-view-header">
+                    <h3 id="data-view-title">Athlete Data JSON</h3>
+                    <button type="button"
+                            class="data-view-close"
+                            aria-label="Close data view"
+                            @onclick="CloseDataView">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="data-view-meta">
+                    <span><strong>Method:</strong> @DataMethodName</span>
+                    @if (Session.LastSynced is not null)
+                    {
+                        <span><strong>Last synced:</strong> @Session.LastSynced.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_dataViewFeedback))
+                {
+                    <p class="data-view-feedback">@_dataViewFeedback</p>
+                }
+
+                <div class="data-view-actions">
+                    <button type="button" class="connect" @onclick="CopyJsonAsync">Copy JSON</button>
+                    <button type="button" class="coach-inline-link" @onclick="DownloadJsonAsync">Download JSON</button>
+                </div>
+
+                <pre class="data-view-json">@DataParsedPrettyJson</pre>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -240,9 +295,12 @@
     };
 
     private bool CanUseCoachActions => Session.State == CoachConnectionState.Connected;
+    private bool CanViewData => CanUseCoachActions && (Session.AthleteDataParsed is not null || !string.IsNullOrWhiteSpace(Session.AthleteDataJson));
 
     private bool _showRememberedHint;
     private bool _showCredentialHelp;
+    private bool _showDataView;
+    private string _dataViewFeedback = string.Empty;
 
     private bool ShowRememberedNote => _showRememberedHint;
 
@@ -253,8 +311,10 @@
     private bool _remember;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
+    private bool IsActionBusy => IsBusy || Session.IsRefreshing;
+    private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
 
-    private bool CanSubmit => !IsBusy
+    private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
         && !string.IsNullOrWhiteSpace(_apiKey);
 
@@ -269,6 +329,27 @@
 
     private sealed record PromptCardModel(string IconClass, string Title, string Description);
 
+    private string DataParsedPrettyJson
+    {
+        get
+        {
+            var parsed = Session.AthleteDataParsed;
+            if (parsed is null)
+            {
+                return string.IsNullOrWhiteSpace(Session.AthleteDataJson) ? "{}" : Session.AthleteDataJson;
+            }
+
+            return JsonSerializer.Serialize(parsed.Value, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+    }
+
+    private string DataMethodName => string.IsNullOrWhiteSpace(Session.AthleteDataMethodName)
+        ? "n/a"
+        : Session.AthleteDataMethodName;
+
     private async Task ConnectAsync()
     {
         if (!CanSubmit)
@@ -280,11 +361,74 @@
 
     private async Task DisconnectAsync()
     {
-        if (IsBusy)
+        if (IsActionBusy)
             return;
 
         await Session.DisconnectAsync();
+        _showDataView = false;
         await RefreshRememberedHintAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!CanRefresh)
+            return;
+
+        await Session.RefreshAsync();
+    }
+
+    private void OpenDataView()
+    {
+        if (!CanViewData)
+            return;
+
+        _dataViewFeedback = string.Empty;
+        _showDataView = true;
+    }
+
+    private void CloseDataView()
+    {
+        _showDataView = false;
+        _dataViewFeedback = string.Empty;
+    }
+
+    private async Task CopyJsonAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", DataParsedPrettyJson);
+            _dataViewFeedback = "JSON copied to clipboard.";
+        }
+        catch
+        {
+            _dataViewFeedback = "Copy failed. Please copy manually from the JSON panel.";
+        }
+    }
+
+    private async Task DownloadJsonAsync()
+    {
+        var fileName = BuildCoachInputFileName();
+
+        await JS.InvokeVoidAsync("trainingArchitect.downloadText", fileName, DataParsedPrettyJson);
+        _dataViewFeedback = "JSON file download started.";
+    }
+
+    private string BuildCoachInputFileName()
+    {
+        var parsed = Session.AthleteDataParsed;
+        if (parsed is not null
+            && parsed.Value.ValueKind == JsonValueKind.Object
+            && parsed.Value.TryGetProperty("week_starting", out var weekStarting)
+            && weekStarting.ValueKind == JsonValueKind.String)
+        {
+            var weekStartingText = weekStarting.GetString();
+            if (DateOnly.TryParse(weekStartingText, out var weekStartingDate))
+            {
+                return $"coach_input_{weekStartingDate:yyyy-MM-dd}.json";
+            }
+        }
+
+        return $"coach_input_{DateTime.UtcNow:yyyy-MM-dd}.json";
     }
 
     protected override async Task OnInitializedAsync()

@@ -8,10 +8,11 @@ namespace TrainingArchitect.Services;
 public interface IAthleteDataService
 {
     /// <summary>
-    /// Retrieves athlete data for the requested scope.
+    /// Retrieves athlete data by calling the MCP tool for the provided athlete.
     /// </summary>
-    /// <param name="request">Athlete credentials and requested data scope.</param>
+    /// <param name="athleteId">Intervals athlete identifier.</param>
+    /// <param name="apiKey">Intervals API key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Resolved athlete data response.</returns>
-    Task<AthleteDataResponse> GetAsync(AthleteDataRequest request, CancellationToken ct);
+    Task<AthleteDataResponse> GetAsync(string athleteId, string apiKey, CancellationToken ct);
 }

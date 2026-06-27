@@ -59,6 +59,7 @@ if ($Secrets -or $All) {
     dotnet user-secrets set "KeyVault:Url"                                            "https://$($config.KeyVaultName).vault.azure.net" -p $project
     dotnet user-secrets set "Syncfusion:LicenseKey"                                   $config.SyncfusionLicenseKey -p $project
     dotnet user-secrets set "SiteUrl"                                                  $config.SiteUrl              -p $project
+    dotnet user-secrets set "Mcp:AthleteData:Endpoint"                                $config.McpAthleteDataEndpoint -p $project
 
     Write-Host "dotnet user-secrets set." -ForegroundColor Green
 }
@@ -87,6 +88,7 @@ if ($GitHub -or $All) {
     gh secret set STORAGE_ACCOUNT_NAME   --body $config.StorageAccountName
     gh secret set APP_INSIGHTS_NAME      --body $config.AppInsightsName
     gh secret set SITE_URL               --body $config.SiteUrl
+    gh secret set MCP_ATHLETE_DATA_ENDPOINT --body $config.McpAthleteDataEndpoint
 
     Write-Host "GitHub Secrets set." -ForegroundColor Green
 }
@@ -117,6 +119,7 @@ param clientId              = '$($config.ClientId)'
 param storageAccountName    = '$($config.StorageAccountName)'
 param appInsightsName       = '$($config.AppInsightsName)'
 param siteUrl               = '$($config.SiteUrl)'
+param mcpAthleteDataEndpoint = '$($config.McpAthleteDataEndpoint)'
 "@
 
     $outputPath = Join-Path $PSScriptRoot "infra/main.local.bicepparam"

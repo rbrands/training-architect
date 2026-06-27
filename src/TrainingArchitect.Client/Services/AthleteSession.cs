@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace TrainingArchitect.Client.Services;
 
@@ -41,6 +42,9 @@ public interface IAthleteSession
 
     // Raw intervals.icu JSON forwarded verbatim to /api/coach.
     string? AthleteDataJson { get; }
+    string? AthleteDataRaw { get; }
+    JsonElement? AthleteDataParsed { get; }
+    string? AthleteDataMethodName { get; }
 
     event Action? Changed;
 
@@ -62,8 +66,15 @@ public interface IAthleteSession
 
 public interface IAthleteDataClient
 {
-    // POST /api/athlete-data -> raw intervals.icu JSON.
-    Task<string> FetchAsync(string athleteId, string apiKey, CancellationToken ct = default);
+    // GET /api/athlete-data -> parsed + raw payload.
+    Task<AthleteDataResult> FetchAsync(string athleteId, string apiKey, CancellationToken ct = default);
+}
+
+public sealed class AthleteDataResult
+{
+    public string MethodName { get; init; } = string.Empty;
+    public string DataRaw { get; init; } = string.Empty;
+    public JsonElement DataParsed { get; init; }
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +95,9 @@ public sealed class AthleteSession(
     public DateTimeOffset? LastSynced { get; private set; }
     public string? ErrorMessage { get; private set; }
     public string? AthleteDataJson { get; private set; }
+    public string? AthleteDataRaw { get; private set; }
+    public JsonElement? AthleteDataParsed { get; private set; }
+    public string? AthleteDataMethodName { get; private set; }
 
     public event Action? Changed;
 
@@ -104,13 +118,16 @@ public sealed class AthleteSession(
 
         try
         {
-            var json = await dataClient.FetchAsync(athleteId, apiKey, ct);
+            var result = await dataClient.FetchAsync(athleteId, apiKey, ct);
 
             AthleteId = athleteId;
             Language = language;
             ProfileGoal = profileGoal;
             _apiKey = apiKey;
-            AthleteDataJson = json;
+            AthleteDataMethodName = result.MethodName;
+            AthleteDataRaw = result.DataRaw;
+            AthleteDataParsed = result.DataParsed;
+            AthleteDataJson = result.DataParsed.GetRawText();
             LastSynced = DateTimeOffset.Now;
             State = CoachConnectionState.Connected;
 
@@ -172,8 +189,11 @@ public sealed class AthleteSession(
 
         try
         {
-            var json = await dataClient.FetchAsync(AthleteId, _apiKey, ct);
-            AthleteDataJson = json;
+            var result = await dataClient.FetchAsync(AthleteId, _apiKey, ct);
+            AthleteDataMethodName = result.MethodName;
+            AthleteDataRaw = result.DataRaw;
+            AthleteDataParsed = result.DataParsed;
+            AthleteDataJson = result.DataParsed.GetRawText();
             LastSynced = DateTimeOffset.Now;
             ErrorMessage = null;
         }
@@ -223,6 +243,9 @@ public sealed class AthleteSession(
         Language = null;
         ProfileGoal = null;
         AthleteDataJson = null;
+        AthleteDataRaw = null;
+        AthleteDataParsed = null;
+        AthleteDataMethodName = null;
         LastSynced = null;
     }
 
