@@ -41,12 +41,6 @@ if (-not (Test-Path $configPath)) {
 }
 . $configPath
 
-$existingManagedCertificateName = if ($null -ne $config.ExistingManagedCertificateName) {
-    $config.ExistingManagedCertificateName
-} else {
-    ""
-}
-
 # ---------------------------------------------------------------------------
 # 1. dotnet user-secrets
 # ---------------------------------------------------------------------------
@@ -94,7 +88,6 @@ if ($GitHub -or $All) {
     gh secret set STORAGE_ACCOUNT_NAME   --body $config.StorageAccountName
     gh secret set APP_INSIGHTS_NAME      --body $config.AppInsightsName
     gh secret set SITE_URL               --body $config.SiteUrl
-    gh secret set EXISTING_MANAGED_CERTIFICATE_NAME --body $existingManagedCertificateName
     gh secret set MCP_ATHLETE_DATA_ENDPOINT --body $config.McpAthleteDataEndpoint
 
     Write-Host "GitHub Secrets set." -ForegroundColor Green
@@ -126,7 +119,6 @@ param clientId              = '$($config.ClientId)'
 param storageAccountName    = '$($config.StorageAccountName)'
 param appInsightsName       = '$($config.AppInsightsName)'
 param siteUrl               = '$($config.SiteUrl)'
-param existingManagedCertificateName = '$($existingManagedCertificateName)'
 param mcpAthleteDataEndpoint = '$($config.McpAthleteDataEndpoint)'
 "@
 

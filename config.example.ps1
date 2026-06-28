@@ -43,16 +43,9 @@ $config = @{
     SyncfusionLicenseKey = "__SYNCFUSION_LICENSE_KEY__"
 
     # Site
-    # Used for: canonical URLs, Open Graph meta tags, and custom domain deployment.
-    # If this is a custom domain (not *.azurewebsites.net), the Bicep template
-    # automatically deploys the hostname binding and a free managed SSL certificate
-    # for the www subdomain. DNS records must exist at the registrar first.
-    # See README.md → Custom Domain for required DNS records.
+    # Used for: canonical URLs and Open Graph meta tags.
+    # Custom domains and SSL bindings are managed manually in App Service.
     SiteUrl              = "https://training-architect.azurewebsites.net"
-
-    # Optional: reuse an existing App Service managed certificate for www binding
-    # (for example: www.example.com-myapp). Leave empty to create a new managed certificate.
-    ExistingManagedCertificateName = ""
 
     # MCP
     # Public endpoint for the athlete-data MCP server.

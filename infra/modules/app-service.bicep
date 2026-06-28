@@ -272,7 +272,7 @@ output webAppName string = webApp.name
 @description('Principal ID of the Web App System-Assigned Managed Identity. Used for role assignments.')
 output principalId string = webApp.identity.principalId
 
-@description('Resource ID of the App Service Plan. Passed through for the custom-domain certificate module.')
+@description('Resource ID of the App Service Plan.')
 output appServicePlanId string = planId
 
 @description('Name of the development deployment slot.')

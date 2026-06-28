@@ -39,12 +39,8 @@ param appInsightsName = '__APP_INSIGHTS_NAME__'
 
 // Site
 // Set to your custom domain (e.g. https://www.example.com) or the azurewebsites.net default URL.
-// If this is a custom domain, the Bicep template automatically deploys hostname bindings + managed SSL.
+// This value is used by the app for canonical/Open Graph URLs only.
 param siteUrl = '__SITE_URL__'
-
-// Optional: reuse an existing App Service managed certificate for www SSL binding
-// (for example: www.example.com-myapp). Leave empty to create a new managed certificate.
-param existingManagedCertificateName = '__EXISTING_MANAGED_CERTIFICATE_NAME__'
 
 // MCP
 // Public MCP endpoint used by the app for athlete-data tool calls.

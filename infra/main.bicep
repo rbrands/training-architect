@@ -85,16 +85,8 @@ param appInsightsName string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
-@description('Optional existing App Service managed certificate name to reuse for www custom-domain SSL binding (e.g. www.example.com-myapp).')
-param existingManagedCertificateName string = ''
-
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
-
-// Derive the apex domain from siteUrl for the custom domain module.
-var apexDomain = contains(siteUrl, 'azurewebsites.net')
-  ? ''
-  : replace(replace(replace(siteUrl, 'https://', ''), 'http://', ''), 'www.', '')
 
 // ---------------------------------------------------------------------------
 // Existing central resources — read-only, never created or modified here
@@ -283,24 +275,6 @@ module appInsightsRbac 'modules/appinsights-rbac.bicep' = {
   params: {
     appInsightsName: appInsightsName
     principalId: appService.outputs.principalId
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Module: Custom Domain + Managed SSL (optional)  →  app RG
-// Deployed automatically when siteUrl is not an azurewebsites.net URL.
-// DNS records must be configured at the registrar before running this.
-// ---------------------------------------------------------------------------
-module domain 'modules/custom-domain.bicep' = if (!empty(apexDomain)) {
-  name: 'custom-domain'
-  scope: resourceGroup(appResourceGroupName)
-  params: {
-    location: location
-    appName: appName
-    customDomain: apexDomain
-    appServicePlanId: existingPlan.id
-    existingManagedCertificateName: existingManagedCertificateName
-    tags: tags
   }
 }
 

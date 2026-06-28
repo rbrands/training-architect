@@ -46,7 +46,7 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | Placeholder | Description |
 |---|---|
 | `__CENTRAL_RESOURCE_GROUP__` | Resource group for shared central resources (Plan, Cosmos, Key Vault, Storage, App Insights) |
-| `__APP_RESOURCE_GROUP__` | Resource group for app-specific resources (Web App, slots, custom domain bindings) |
+| `__APP_RESOURCE_GROUP__` | Resource group for app-specific resources (Web App and slots) |
 | `__APP_NAME__` | Web App name (must be globally unique, e.g. `training-architect`) |
 | `__PLAN_NAME__` | App Service Plan name (e.g. `plan-training-architect`) |
 | `__COSMOS_ACCOUNT_NAME__` | Existing Cosmos DB account name used by the deployment (globally unique) |
@@ -58,8 +58,7 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | `__CLIENT_ID__` | App Registration Application (client) ID |
 | `__STORAGE_ACCOUNT_NAME__` | Existing Storage Account name used by the app |
 | `__APP_INSIGHTS_NAME__` | Existing Application Insights resource name |
-| `__SITE_URL__` | Public site URL (custom domain or `*.azurewebsites.net` URL) |
-| `__EXISTING_MANAGED_CERTIFICATE_NAME__` | Optional existing App Service managed certificate name to reuse for www SSL binding (e.g. `www.example.com-myapp`) |
+| `__SITE_URL__` | Public site URL used by the app for canonical/Open Graph metadata |
 | `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
 
 ---

@@ -27,5 +27,5 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
 // Outputs
 // ---------------------------------------------------------------------------
 
-@description('Resource ID of the App Service Plan. Passed to the Web App and the custom-domain certificate.')
+@description('Resource ID of the App Service Plan. Passed to the Web App.')
 output planId string = appServicePlan.id
