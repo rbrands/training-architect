@@ -59,6 +59,7 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | `__STORAGE_ACCOUNT_NAME__` | Existing Storage Account name used by the app |
 | `__APP_INSIGHTS_NAME__` | Existing Application Insights resource name |
 | `__SITE_URL__` | Public site URL used by the app for canonical/Open Graph metadata |
+| `__AUTHOR__` | Global author name used by the app for HTML metadata |
 | `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
 
 ---

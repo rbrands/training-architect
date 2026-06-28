@@ -42,6 +42,9 @@ param appInsightsName = '__APP_INSIGHTS_NAME__'
 // This value is used by the app for canonical/Open Graph URLs only.
 param siteUrl = '__SITE_URL__'
 
+// Global author name used for the HTML author meta tag.
+param author = '__AUTHOR__'
+
 // MCP
 // Public MCP endpoint used by the app for athlete-data tool calls.
 param mcpAthleteDataEndpoint = '__MCP_ATHLETE_DATA_ENDPOINT__'

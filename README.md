@@ -355,6 +355,11 @@ cp config.example.ps1 config.ps1
 .\setup.ps1 -All
 ```
 
+Minimum SEO-related config values in `config.ps1`:
+
+- `SiteUrl = "https://www.example.com"`
+- `Author = "__AUTHOR__"`
+
 ### 6. CI/CD flow (after first push)
 
 ```bash
@@ -523,6 +528,7 @@ The following secrets are set:
 | `APP_INSIGHTS_NAME` | Application Insights resource name |
 | `LOG_ANALYTICS_NAME` | Log Analytics workspace name |
 | `SITE_URL` | Public site URL, e.g. `https://www.example.com` |
+| `AUTHOR` | Global author name used for HTML metadata |
 
 > **Note:** `SYNCFUSION_LICENSE_KEY` is **not** a GitHub Secret. It is stored in Azure Key Vault and loaded at startup via `AddAzureKeyVault()`. Set it with `setup.ps1 -KeyVault`.
 

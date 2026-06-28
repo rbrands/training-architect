@@ -4,6 +4,7 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @using Markdig
 @using System.Text.RegularExpressions
+@using System.Text.Json
 
 @if (_article is null && !_loaded)
 {
@@ -54,6 +55,7 @@ else
         }
         <link rel="canonical"
               href="@(Config["SiteUrl"])/blog/@_article.Slug" />
+          <script type="application/ld+json">@((MarkupString)BuildArticleJsonLd())</script>
     </HeadContent>
 
     <article class="card-dark p-4">
@@ -132,6 +134,29 @@ else
 
     private bool EffectiveIsOwner => IsOwner
         || (HttpContextAccessor.HttpContext?.User?.IsInRole("SiteAdmin") ?? false);
+
+    private string BuildArticleJsonLd()
+    {
+        if (_article is null)
+            return "{}";
+
+        var siteUrl = (Config["SiteUrl"] ?? string.Empty).TrimEnd('/');
+        var author = Config["Author"] ?? "__AUTHOR__";
+
+        var jsonLd = new Dictionary<string, object?>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "Article",
+            ["author"] = new Dictionary<string, object?>
+            {
+                ["@type"] = "Person",
+                ["name"] = author,
+                ["url"] = siteUrl
+            }
+        };
+
+        return JsonSerializer.Serialize(jsonLd);
+    }
 
     private string NormalizeMarkdownImageUrls(string markdown)
     {

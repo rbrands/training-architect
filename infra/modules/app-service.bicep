@@ -48,6 +48,9 @@ param appInsightsConnectionString string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
+@description('Author name used for the global HTML author meta tag.')
+param author string
+
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
 
@@ -173,6 +176,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'SiteUrl'
           value: siteUrl
         }
+        {
+          name: 'Author'
+          value: author
+        }
       ]
     }
   }
@@ -186,6 +193,7 @@ resource slotSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     appSettingNames: [
       'ASPNETCORE_ENVIRONMENT'
       'SiteUrl'
+      'Author'
     ]
   }
 }
@@ -220,6 +228,10 @@ resource devSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
         {
           name: 'SiteUrl'
           value: devSlotSiteUrl
+        }
+        {
+          name: 'Author'
+          value: author
         }
       ]
     }
@@ -256,6 +268,10 @@ resource stagingSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
         {
           name: 'SiteUrl'
           value: stagingSlotSiteUrl
+        }
+        {
+          name: 'Author'
+          value: author
         }
       ]
     }

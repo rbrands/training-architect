@@ -46,6 +46,7 @@ $config = @{
     # Used for: canonical URLs and Open Graph meta tags.
     # Custom domains and SSL bindings are managed manually in App Service.
     SiteUrl              = "https://training-architect.azurewebsites.net"
+    Author               = "__AUTHOR__"
 
     # MCP
     # Public endpoint for the athlete-data MCP server.

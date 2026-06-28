@@ -85,6 +85,9 @@ param appInsightsName string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
+@description('Author name used for the global HTML author meta tag.')
+param author string
+
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
 
@@ -151,6 +154,7 @@ module appService 'modules/app-service.bicep' = {
     storageBlobEndpoint: existingStorage.properties.primaryEndpoints.blob
     appInsightsConnectionString: existingAppInsights.properties.ConnectionString
     siteUrl: siteUrl
+    author: author
     mcpAthleteDataEndpoint: mcpAthleteDataEndpoint
     tags: tags
   }
