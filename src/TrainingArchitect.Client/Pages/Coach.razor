@@ -477,8 +477,8 @@
         AddMetric(rows, "Power Curve Slope", FormatNumber(GetNumericProperty(powerProfile, "curve_slope"), 3));
         AddMetric(rows, "Power Profile Period (days)", FormatNumber(GetNumericProperty(powerProfile, "period_days")));
 
-        AddMetric(rows, "CTL", FormatNumber(GetNumericProperty(metrics, "ctl") ?? 0d, 1, fixedDecimals: true));
-        AddMetric(rows, "ATL", FormatNumber(GetNumericProperty(metrics, "atl") ?? 0d, 1, fixedDecimals: true));
+        AddMetric(rows, "CTL", FormatNumber(GetNumericProperty(metrics, "ctl"), 1, fixedDecimals: true));
+        AddMetric(rows, "ATL", FormatNumber(GetNumericProperty(metrics, "atl"), 1, fixedDecimals: true));
         AddMetric(rows, "Resting HR (bpm)", FormatNumber(GetNumericProperty(metrics, "resting_hr")));
         AddMetric(rows, "Threshold HR / LTHR (bpm)", FormatNumber(GetNumericProperty(metrics, "lthr")));
         AddMetric(rows, "Max HR (bpm)", FormatNumber(GetNumericProperty(metrics, "max_hr")));
