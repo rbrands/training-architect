@@ -81,7 +81,6 @@ jobs:
           siteUrl=${{ secrets.SITE_URL }}
           mcpAthleteDataEndpoint=${{ secrets.MCP_ATHLETE_DATA_ENDPOINT }}
         failOnStdErr: false
-        deploymentMode: Incremental
 
     - name: Azure Logout
       run: az logout

@@ -109,6 +109,11 @@ var baseAppSettings = [
     name: 'KeyVault__Url'
     value: keyVaultUrl
   }
+  // ----- Syncfusion license (resolved by App Service from Key Vault) -----
+  {
+    name: 'Syncfusion__LicenseKey'
+    value: '@Microsoft.KeyVault(SecretUri=${keyVaultUrl}secrets/Syncfusion--LicenseKey)'
+  }
   // ----- Application Insights -----
   {
     name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
