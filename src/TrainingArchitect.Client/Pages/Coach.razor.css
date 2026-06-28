@@ -482,6 +482,80 @@
     word-break: break-word;
 }
 
+.coach-overview-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.coach-overview-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2f2b24;
+}
+
+.coach-overview-subtitle {
+    margin: 0.35rem 0 0 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #3d3830;
+}
+
+.coach-overview-empty {
+    margin: 0;
+    color: #5f7087;
+    font-size: 0.9rem;
+}
+
+.coach-overview-table-wrap {
+    overflow-x: auto;
+}
+
+.coach-overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--ba-border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 0.88rem;
+    background: #ffffff;
+}
+
+.coach-overview-table thead th {
+    text-align: left;
+    background: #f3f6fc;
+    color: #344967;
+    font-weight: 700;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--ba-border);
+    white-space: nowrap;
+}
+
+.coach-overview-table tbody th,
+.coach-overview-table tbody td {
+    text-align: left;
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid #e8edf5;
+    color: #1f2328;
+    vertical-align: top;
+}
+
+.coach-overview-table tbody th {
+    width: 48%;
+    font-weight: 600;
+    color: #2f3642;
+}
+
+.coach-overview-table tbody tr:last-child th,
+.coach-overview-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.coach-overview-trends-table tbody th {
+    width: auto;
+}
+
 .credential-form .connect:hover,
 .credential-form .connect:focus-visible {
     background-color: #28599f;
