@@ -448,7 +448,7 @@
         double? sleepHours = sleepSecs is null ? null : Math.Round(sleepSecs.Value / 3600d, 2, MidpointRounding.AwayFromZero);
         AddMetric(rows, "Sleep (h)", sleepHours is null ? "-" : FormatNumber(sleepHours, 2));
 
-        AddMetric(rows, "Sleep Quality (1=very good, 4=poor)", FormatNumber(GetNumericProperty(metrics, "sleep_quality")));
+        AddMetric(rows, "Sleep Quality", FormatText(GetTextProperty(metrics, "sleep_quality")));
 
         var ftp = GetNumericProperty(metrics, "ftp");
         var rollingFtp = GetNumericProperty(metrics, "rolling_ftp");
