@@ -360,6 +360,18 @@ cp config.example.ps1 config.ps1
 git push origin main
 ```
 
+Manual local infrastructure deployment (without GitHub Actions):
+
+```bash
+az deployment sub create \
+  --name ta-local-$(date +%Y%m%d%H%M%S) \
+  --location germanywestcentral \
+  --template-file infra/main.bicep \
+  --parameters infra/main.local.bicepparam
+```
+
+Important: pass the parameter file exactly as shown above (without `@` before the path).
+
 deploy-infrastructure.yml creates:
 
 - Key Vault
