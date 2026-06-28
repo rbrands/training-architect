@@ -59,6 +59,7 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | `__STORAGE_ACCOUNT_NAME__` | Existing Storage Account name used by the app |
 | `__APP_INSIGHTS_NAME__` | Existing Application Insights resource name |
 | `__SITE_URL__` | Public site URL (custom domain or `*.azurewebsites.net` URL) |
+| `__EXISTING_MANAGED_CERTIFICATE_NAME__` | Optional existing App Service managed certificate name to reuse for www SSL binding (e.g. `www.example.com-myapp`) |
 | `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
 
 ---

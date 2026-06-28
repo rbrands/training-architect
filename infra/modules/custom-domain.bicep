@@ -33,6 +33,9 @@ param customDomain string
 @description('Resource ID of the App Service Plan. Required for App Service managed certificates.')
 param appServicePlanId string
 
+@description('Optional existing managed certificate name to reuse (e.g. www.example.com-myapp). If set, certificate creation is skipped.')
+param existingManagedCertificateName string = ''
+
 @description('Tags to apply to the managed certificate resource.')
 param tags object = {}
 
@@ -70,10 +73,15 @@ resource wwwHostNameBinding 'Microsoft.Web/sites/hostNameBindings@2023-12-01' = 
 }
 
 // ---------------------------------------------------------------------------
-// Step 2: Free App Service managed certificate for www (CNAME validation)
-//         canonicalName must match the hostname that has the CNAME record.
+// Step 2: Managed certificate for www
+// - If existingManagedCertificateName is provided, reuse it.
+// - Otherwise create a free App Service managed certificate.
 // ---------------------------------------------------------------------------
-resource wwwCertificate 'Microsoft.Web/certificates@2023-12-01' = {
+resource existingWwwCertificate 'Microsoft.Web/certificates@2023-12-01' existing = if (!empty(existingManagedCertificateName)) {
+  name: existingManagedCertificateName
+}
+
+resource newWwwCertificate 'Microsoft.Web/certificates@2023-12-01' = if (empty(existingManagedCertificateName)) {
   name: 'cert-www-${replace(customDomain, '.', '-')}'
   location: location
   tags: tags
@@ -84,6 +92,10 @@ resource wwwCertificate 'Microsoft.Web/certificates@2023-12-01' = {
   dependsOn: [wwwHostNameBinding]
 }
 
+var certificateThumbprint = !empty(existingManagedCertificateName)
+  ? existingWwwCertificate!.properties.thumbprint
+  : newWwwCertificate!.properties.thumbprint
+
 // ---------------------------------------------------------------------------
 // Step 3: Enable SNI SSL on the www binding via a nested deployment.
 //         A nested module is required here because Bicep does not allow
@@ -92,9 +104,12 @@ resource wwwCertificate 'Microsoft.Web/certificates@2023-12-01' = {
 // ---------------------------------------------------------------------------
 module wwwSslBinding 'custom-domain-ssl.bicep' = {
   name: 'www-ssl-binding'
+  dependsOn: [
+    wwwHostNameBinding
+  ]
   params: {
     appName: appName
     hostname: 'www.${customDomain}'
-    thumbprint: wwwCertificate.properties.thumbprint
+    thumbprint: certificateThumbprint
   }
 }

@@ -85,6 +85,9 @@ param appInsightsName string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
+@description('Optional existing App Service managed certificate name to reuse for www custom-domain SSL binding (e.g. www.example.com-myapp).')
+param existingManagedCertificateName string = ''
+
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
 
@@ -296,6 +299,7 @@ module domain 'modules/custom-domain.bicep' = if (!empty(apexDomain)) {
     appName: appName
     customDomain: apexDomain
     appServicePlanId: existingPlan.id
+    existingManagedCertificateName: existingManagedCertificateName
     tags: tags
   }
 }
