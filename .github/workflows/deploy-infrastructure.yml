@@ -80,7 +80,7 @@ jobs:
           storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
           appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
           siteUrl=${{ secrets.SITE_URL }}
-          author=${{ secrets.AUTHOR }}
+          author='${{ secrets.AUTHOR }}'
           mcpAthleteDataEndpoint=${{ secrets.MCP_ATHLETE_DATA_ENDPOINT }}
         failOnStdErr: false
 
