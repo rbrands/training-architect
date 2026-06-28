@@ -51,6 +51,8 @@ public static class AthleteDataEndpoints
                     title: "MCP tool execution failed.",
                     detail: "The MCP server returned an error. Check server logs for details.",
                     statusCode: StatusCodes.Status502BadGateway);
+            }
+
             catch (HttpRequestException ex)
             {
                 logger.LogWarning(ex, "MCP server connection failed in /api/athlete-data.");
