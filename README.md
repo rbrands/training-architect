@@ -28,6 +28,7 @@ It is the user interface for the data and coaching layer published in [intervals
 | Hosting | [Azure Web App (App Service)](https://learn.microsoft.com/en-us/azure/app-service/) |
 | Database | [Azure Cosmos DB NoSQL](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/) |
 | Authentication | [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/) via [Microsoft.Identity.Web](https://github.com/AzureAD/microsoft-identity-web) |
+| MCP Integration | Intervals MCP Server (`prepare_week_data`) called by the app backend |
 | GenAI Agent | Microsoft Foundry Agent (for coaching orchestration) |
 | UI Components | [Syncfusion Blazor](https://www.syncfusion.com/blazor-components) (Community License) |
 | CI/CD | [GitHub Actions](https://docs.github.com/en/actions) |
@@ -48,12 +49,21 @@ graph TD
     FDRY["Microsoft Foundry Agent\n(Coaching Orchestration)"]
   end
 
+  subgraph MCP["MCP Layer"]
+    IMCP["Intervals MCP Server\n(prepare_week_data)"]
+  end
+
+  INTV["intervals.icu REST API"]
+
     BA --> BAC
     BA --> CORE
     BA --> INFRA
     BAC --> CORE
     INFRA --> CORE
   BA -. invokes .-> FDRY
+  BA -. calls tool .-> IMCP
+  IMCP -. fetches athlete data .-> INTV
+  IMCP -. returns prepared week data .-> BA
   FDRY -. uses contracts from .-> CORE
 ```
 
