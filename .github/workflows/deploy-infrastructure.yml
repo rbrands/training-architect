@@ -23,6 +23,7 @@
 # APP_INSIGHTS_NAME          - Application Insights resource name
 # LOG_ANALYTICS_NAME         - Log Analytics workspace name
 # SITE_URL                   - Public site URL, e.g. https://www.example.com
+# MCP_ATHLETE_DATA_ENDPOINT  - Public MCP endpoint, e.g. https://intervals-mcp.training-architect.com/mcp
 # Note: SYNCFUSION_LICENSE_KEY is stored in Key Vault, not passed as Bicep parameter
 #
 # Trigger: push to main when files in infra/ change
@@ -78,8 +79,8 @@ jobs:
           storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
           appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
           siteUrl=${{ secrets.SITE_URL }}
+          mcpAthleteDataEndpoint=${{ secrets.MCP_ATHLETE_DATA_ENDPOINT }}
         failOnStdErr: false
-        deploymentMode: Incremental
 
     - name: Azure Logout
       run: az logout

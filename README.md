@@ -28,6 +28,7 @@ It is the user interface for the data and coaching layer published in [intervals
 | Hosting | [Azure Web App (App Service)](https://learn.microsoft.com/en-us/azure/app-service/) |
 | Database | [Azure Cosmos DB NoSQL](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/) |
 | Authentication | [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/) via [Microsoft.Identity.Web](https://github.com/AzureAD/microsoft-identity-web) |
+| MCP Integration | Intervals MCP Server (`prepare_week_data`) called by the app backend |
 | GenAI Agent | Microsoft Foundry Agent (for coaching orchestration) |
 | UI Components | [Syncfusion Blazor](https://www.syncfusion.com/blazor-components) (Community License) |
 | CI/CD | [GitHub Actions](https://docs.github.com/en/actions) |
@@ -48,12 +49,21 @@ graph TD
     FDRY["Microsoft Foundry Agent\n(Coaching Orchestration)"]
   end
 
+  subgraph MCP["MCP Layer"]
+    IMCP["Intervals MCP Server\n(prepare_week_data)"]
+  end
+
+  INTV["intervals.icu REST API"]
+
     BA --> BAC
     BA --> CORE
     BA --> INFRA
     BAC --> CORE
     INFRA --> CORE
   BA -. invokes .-> FDRY
+  BA -. calls tool .-> IMCP
+  IMCP -. fetches athlete data .-> INTV
+  IMCP -. returns prepared week data .-> BA
   FDRY -. uses contracts from .-> CORE
 ```
 
@@ -99,6 +109,18 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 | `IChatService` | `StubChatService` | Invoke the Microsoft Foundry Agent and forward messages through the MCP server |
 | `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
 | `IIntervalsDataProvider` | `StubIntervalsDataProvider` | Call the intervals.icu REST API with the athlete's stored API key (retrieved server-side from Key Vault) |
+
+### MCP Athlete Data Endpoint
+
+The endpoint at `/api/athlete-data` now supports credential forwarding via headers and executes the MCP tool `prepare_week_data` server-side.
+
+- Required request headers:
+  - `X-Intervals-Athlete-Id`
+  - `X-Intervals-Api-Key`
+- Required server configuration in `src/TrainingArchitect/appsettings.json`:
+  - `Mcp:AthleteData:Endpoint`
+
+For local development, set real values with user-secrets instead of committing non-placeholder values.
 
 ### New Core Models
 
@@ -347,6 +369,18 @@ cp config.example.ps1 config.ps1
 ```bash
 git push origin main
 ```
+
+Manual local infrastructure deployment (without GitHub Actions):
+
+```bash
+az deployment sub create \
+  --name ta-local-$(date +%Y%m%d%H%M%S) \
+  --location germanywestcentral \
+  --template-file infra/main.bicep \
+  --parameters infra/main.local.bicepparam
+```
+
+Important: pass the parameter file exactly as shown above (without `@` before the path).
 
 deploy-infrastructure.yml creates:
 
@@ -738,6 +772,20 @@ The host project in `src/TrainingArchitect` is the only supported startup target
 The app starts at `https://localhost:7000`.
 
 > **Note:** Running with `--launch-profile http` (plain HTTP) will cause "Correlation failed" on the login callback because secure cookies cannot be set over HTTP.
+
+---
+
+## Versioning
+
+This repository uses **Semantic Versioning** (`MAJOR.MINOR.PATCH`) and tracks releases in [CHANGELOG.md](CHANGELOG.md).
+
+- Source of truth for release history: `CHANGELOG.md`
+- Source of truth for runtime UI version display: `src/TrainingArchitect.Core/Models/ApplicationVersionInfo.cs`
+
+When creating a new release:
+
+1. Update `ApplicationVersionInfo.Current` with the new semantic version and release date.
+2. Add a matching entry in `CHANGELOG.md` using the same version and date.
 
 ---
 

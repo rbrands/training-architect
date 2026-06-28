@@ -49,6 +49,11 @@
     box-shadow: inset 0 1px 0 rgba(141, 111, 72, 0.08);
 }
 
+::deep .app-version {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
 ::deep .brand-name {
     font-size: 0.95rem;
     font-weight: 650;

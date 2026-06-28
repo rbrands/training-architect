@@ -163,6 +163,105 @@
     font-size: 0.95rem;
 }
 
+.credential-form .subtitle-with-help {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+}
+
+.credential-form .credential-help-inline-trigger {
+    border: 0;
+    background: transparent;
+    color: #2e67bf;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0;
+    font-size: 0.87rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.credential-form .credential-help-inline-trigger:hover,
+.credential-form .credential-help-inline-trigger:focus-visible {
+    color: #234f91;
+    outline: none;
+}
+
+.credential-form .credential-help-inline-trigger i {
+    font-size: 0.95rem;
+}
+
+.credential-form .credential-help-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(23, 31, 43, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.credential-form .credential-help-modal {
+    width: min(52rem, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid var(--ba-border);
+    box-shadow: 0 20px 45px rgba(11, 20, 35, 0.28);
+    padding: 1rem;
+}
+
+.credential-form .credential-help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.credential-form .credential-help-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #2f2b24;
+}
+
+.credential-form .credential-help-close {
+    border: 0;
+    background: transparent;
+    color: #4f5f74;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+}
+
+.credential-form .credential-help-close:hover,
+.credential-form .credential-help-close:focus-visible {
+    background: #eaf0fb;
+    color: #2e67bf;
+    outline: none;
+}
+
+.credential-form .credential-help-copy {
+    margin: 0 0 0.75rem 0;
+    color: #424851;
+    font-size: 0.95rem;
+}
+
+.credential-form .credential-help-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--ba-border);
+    background: #f8f8f8;
+}
+
 .credential-form .field {
     display: flex;
     flex-direction: column;
@@ -176,7 +275,8 @@
 }
 
 .credential-form input[type="text"],
-.credential-form input[type="password"] {
+.credential-form input[type="password"],
+.credential-form select {
     border: 1px solid var(--ba-border);
     border-radius: 10px;
     background-color: #fffdf8;
@@ -186,14 +286,16 @@
 }
 
 .credential-form input[type="text"]:focus,
-.credential-form input[type="password"]:focus {
+.credential-form input[type="password"]:focus,
+.credential-form select:focus {
     outline: none;
     border-color: #2e67bf;
     box-shadow: 0 0 0 2px rgba(46, 103, 191, 0.15);
 }
 
 .credential-form input[type="text"]:disabled,
-.credential-form input[type="password"]:disabled {
+.credential-form input[type="password"]:disabled,
+.credential-form select:disabled {
     background-color: #f4efe7;
     color: #8f877a;
 }
@@ -226,6 +328,232 @@
     border-radius: 12px;
     padding: 0.65rem 1rem;
     font-weight: 700;
+}
+
+.data-view-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1250;
+    background: rgba(23, 31, 43, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.data-view-modal {
+    width: min(62rem, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid var(--ba-border);
+    box-shadow: 0 20px 45px rgba(11, 20, 35, 0.28);
+    padding: 1rem;
+}
+
+.data-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.data-view-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #2f2b24;
+}
+
+.data-view-close {
+    border: 0;
+    background: transparent;
+    color: #4f5f74;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+}
+
+.data-view-close:hover,
+.data-view-close:focus-visible {
+    background: #eaf0fb;
+    color: #2e67bf;
+    outline: none;
+}
+
+.data-view-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.6rem;
+    color: #4f463b;
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+}
+
+.data-view-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.7rem;
+}
+
+.data-view-feedback {
+    margin: 0 0 0.65rem 0;
+    color: #2e67bf;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.coach-data-tabs {
+    margin-top: 0.35rem;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header {
+    border-bottom: 0 !important;
+    background: transparent !important;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-items {
+    gap: 0.45rem;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap {
+    border: 1px solid #cfd7e6 !important;
+    border-radius: 10px 10px 0 0 !important;
+    background: #f5f8ff !important;
+    color: #365a9b !important;
+    min-height: 2.35rem;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap:hover,
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap:focus-visible {
+    background: #eaf1ff !important;
+    border-color: #9fb8ea !important;
+    color: #254b8c !important;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap .e-tab-text {
+    color: inherit !important;
+    font-weight: 600;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap {
+    background: #2e67bf !important;
+    border-color: #2e67bf !important;
+    color: #ffffff !important;
+}
+
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap .e-tab-text,
+::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-text-wrap {
+    color: #ffffff !important;
+}
+
+::deep .coach-data-tabs.e-tab .e-indicator {
+    display: none !important;
+}
+
+::deep .coach-data-tabs.e-tab .e-content {
+    margin-top: 0.55rem;
+    padding: 0.8rem;
+    border: 1px solid var(--ba-border);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+@media (max-width: 768px) {
+    ::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-items {
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+}
+
+.data-view-json {
+    margin: 0;
+    padding: 0.8rem;
+    border-radius: 10px;
+    border: 1px solid var(--ba-border);
+    background: #f7f8fb;
+    color: #1f2328;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.coach-overview-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.coach-overview-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2f2b24;
+}
+
+.coach-overview-subtitle {
+    margin: 0.35rem 0 0 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #3d3830;
+}
+
+.coach-overview-empty {
+    margin: 0;
+    color: #5f7087;
+    font-size: 0.9rem;
+}
+
+.coach-overview-table-wrap {
+    overflow-x: auto;
+}
+
+.coach-overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--ba-border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 0.88rem;
+    background: #ffffff;
+}
+
+.coach-overview-table thead th {
+    text-align: left;
+    background: #f3f6fc;
+    color: #344967;
+    font-weight: 700;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--ba-border);
+    white-space: nowrap;
+}
+
+.coach-overview-table tbody th,
+.coach-overview-table tbody td {
+    text-align: left;
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid #e8edf5;
+    color: #1f2328;
+    vertical-align: top;
+}
+
+.coach-overview-table tbody th {
+    width: 48%;
+    font-weight: 600;
+    color: #2f3642;
+}
+
+.coach-overview-table tbody tr:last-child th,
+.coach-overview-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.coach-overview-trends-table tbody th {
+    width: auto;
 }
 
 .credential-form .connect:hover,

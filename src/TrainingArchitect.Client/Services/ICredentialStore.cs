@@ -1,6 +1,12 @@
 namespace TrainingArchitect.Client.Services;
 
-public sealed record StoredCredential(string AthleteId, string ApiKey);
+public sealed record StoredCredential
+{
+    public string AthleteId { get; init; } = string.Empty;
+    public string ApiKey { get; init; } = string.Empty;
+    public CoachLanguage Language { get; init; } = CoachLanguage.English;
+    public AthleteProfileGoal ProfileGoal { get; init; } = AthleteProfileGoal.RoadRace;
+}
 
 public enum CredentialDurability
 {

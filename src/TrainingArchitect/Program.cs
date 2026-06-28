@@ -3,6 +3,7 @@ using Azure.Identity;
 using TrainingArchitect.Components;
 using TrainingArchitect.Endpoints;
 using TrainingArchitect.Models;
+using TrainingArchitect.Services;
 using Microsoft.AspNetCore.DataProtection;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Services;
@@ -172,6 +173,7 @@ builder.Services.AddSingleton<IProjectRepository, ProjectRepository>();
 builder.Services.AddSingleton<IAboutRepository, AboutRepository>();
 
 builder.Services.AddScoped<IOwnerService, OwnerService>();
+builder.Services.AddScoped<IAthleteDataService, McpAthleteDataService>();
 
 // Training Architect stubs — replace with real implementations once the
 // orchestration layer is connected.
@@ -322,6 +324,7 @@ app.MapAboutEndpoints();
 app.MapProjectEndpoints();
 app.MapArticleEndpoints();
 app.MapImageEndpoints();
+app.MapAthleteDataEndpoints();
 
 // Client config endpoint (non-sensitive values for WASM startup)
 app.MapConfigEndpoints();

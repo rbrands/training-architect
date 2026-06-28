@@ -2,6 +2,9 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IAthleteSession Session
 @inject ICredentialStore CredentialStore
+@inject IJSRuntime JS
+@using System.Globalization
+@using System.Text.Json
 @implements IDisposable
 
 
@@ -35,13 +38,25 @@
                 </div>
 
                 <div class="coach-status-actions">
-                    <button type="button" class="coach-inline-link" disabled="@(!CanUseCoachActions)">View Data</button>
+                    <button type="button"
+                            class="coach-inline-link"
+                            disabled="@(!CanViewData)"
+                            @onclick="OpenDataView">
+                        View Data
+                    </button>
                     @if (Session.State == CoachConnectionState.Connected)
                     {
                         <button type="button"
+                                class="coach-inline-link"
+                                @onclick="RefreshAsync"
+                                disabled="@(!CanRefresh)">
+                            @(Session.IsRefreshing ? "Refreshing..." : "Refresh")
+                        </button>
+
+                        <button type="button"
                                 class="coach-inline-link coach-inline-link-muted"
                                 @onclick="DisconnectAsync"
-                                disabled="@IsBusy">
+                                disabled="@IsActionBusy">
                             Disconnect
                         </button>
                     }
@@ -52,7 +67,19 @@
             {
                 <div class="credential-form">
                     <h2>Connect to intervals.icu</h2>
-                    <p class="subtitle">Enter your Athlete ID and API key to load your training data.</p>
+                    <p class="subtitle subtitle-with-help">
+                        <span>Enter your Athlete ID and API key to load your training data.</span>
+                        <button type="button"
+                                class="credential-help-inline-trigger"
+                                title="Show where to find Athlete ID and API Key"
+                                aria-label="Show where to find Athlete ID and API Key"
+                                aria-expanded="@_showCredentialHelp"
+                                aria-controls="credential-help-modal"
+                                @onclick="ToggleCredentialHelp">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span>Where to find these values</span>
+                        </button>
+                    </p>
 
                     <label class="field">
                         <span>Athlete ID</span>
@@ -70,6 +97,26 @@
                                placeholder="Your intervals.icu API key"
                                disabled="@IsBusy"
                                @bind="_apiKey" @bind:event="oninput" />
+                    </label>
+
+                    <label class="field">
+                        <span>Language</span>
+                        <select disabled="@IsBusy" @bind="_language">
+                            <option value="@CoachLanguage.English">English</option>
+                            <option value="@CoachLanguage.German">German</option>
+                            <option value="@CoachLanguage.Spanish">Spanish</option>
+                            <option value="@CoachLanguage.French">French</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Athlete Profile Goal</span>
+                        <select disabled="@IsBusy" @bind="_profileGoal">
+                            <option value="@AthleteProfileGoal.Climber">climber</option>
+                            <option value="@AthleteProfileGoal.Criterium">criterium</option>
+                            <option value="@AthleteProfileGoal.Marathon">marathon</option>
+                            <option value="@AthleteProfileGoal.RoadRace">roadrace</option>
+                        </select>
                     </label>
 
                     <label class="remember">
@@ -93,6 +140,37 @@
                             <span>Connect</span>
                         }
                     </button>
+
+                    @if (_showCredentialHelp)
+                    {
+                        <div class="credential-help-overlay" @onclick="CloseCredentialHelp">
+                            <div id="credential-help-modal"
+                                 class="credential-help-modal"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-labelledby="credential-help-title"
+                                 @onclick:stopPropagation="true">
+                                <div class="credential-help-header">
+                                    <h3 id="credential-help-title">Where to find Athlete ID and API Key</h3>
+                                    <button type="button"
+                                            class="credential-help-close"
+                                            aria-label="Close help"
+                                            @onclick="CloseCredentialHelp">
+                                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+
+                                <p class="credential-help-copy">
+                                    Open intervals.icu, go to <strong>Settings</strong>, scroll down, and use
+                                    <strong>Developer Settings</strong>.
+                                </p>
+
+                                  <img class="credential-help-image"
+                                      src="/images/intervals-developer-settings.png"
+                                     alt="Screenshot of intervals.icu Settings page with Developer Settings section" />
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </CardContent>
@@ -145,6 +223,140 @@
             </div>
         </CardContent>
     </SfCard>
+
+    @if (_showDataView)
+    {
+        <div class="data-view-overlay" @onclick="CloseDataView">
+            <div class="data-view-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="data-view-title"
+                 @onclick:stopPropagation="true">
+                <div class="data-view-header">
+                    <h3 id="data-view-title">Athlete Data JSON</h3>
+                    <button type="button"
+                            class="data-view-close"
+                            aria-label="Close data view"
+                            @onclick="CloseDataView">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="data-view-meta">
+                    <span><strong>Method:</strong> @DataMethodName</span>
+                    @if (Session.LastSynced is not null)
+                    {
+                        <span><strong>Last synced:</strong> @Session.LastSynced.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_dataViewFeedback))
+                {
+                    <p class="data-view-feedback">@_dataViewFeedback</p>
+                }
+
+                <div class="data-view-actions">
+                    <button type="button" class="connect" @onclick="CopyJsonAsync">Copy JSON</button>
+                    <button type="button" class="coach-inline-link" @onclick="DownloadJsonAsync">Download JSON</button>
+                </div>
+
+                <SfTab CssClass="coach-data-tabs">
+                    <TabItems>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Overview Metrics"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <div class="coach-overview-metrics">
+                                    <h4 class="coach-overview-title">Overview Metrics</h4>
+
+                                    @if (OverviewMetricRows.Count == 0)
+                                    {
+                                        <p class="coach-overview-empty">No metrics available in the parsed JSON.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="coach-overview-table-wrap">
+                                            <table class="coach-overview-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">Metric</th>
+                                                        <th scope="col">Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var row in OverviewMetricRows)
+                                                    {
+                                                        <tr>
+                                                            <th scope="row">@row.Metric</th>
+                                                            <td>@row.Value</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+
+                                    <h5 class="coach-overview-subtitle">Wellness Trends (simplified)</h5>
+
+                                    @if (WellnessTrendRows.Count == 0)
+                                    {
+                                        <p class="coach-overview-empty">No wellness trend data available.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="coach-overview-table-wrap">
+                                            <table class="coach-overview-table coach-overview-trends-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">Metric</th>
+                                                        <th scope="col">Current</th>
+                                                        <th scope="col">Avg 7d</th>
+                                                        <th scope="col">Avg prev 7d</th>
+                                                        <th scope="col">Trend 7d</th>
+                                                        <th scope="col">Unit</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var trend in WellnessTrendRows)
+                                                    {
+                                                        <tr>
+                                                            <th scope="row">@trend.Metric</th>
+                                                            <td>@trend.Current</td>
+                                                            <td>@trend.Avg7d</td>
+                                                            <td>@trend.AvgPrev7d</td>
+                                                            <td>@trend.Trend7d</td>
+                                                            <td>@trend.Unit</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </ContentTemplate>
+                        </TabItem>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Parsed JSON"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <pre class="data-view-json">@DataParsedPrettyJson</pre>
+                            </ContentTemplate>
+                        </TabItem>
+                        <TabItem>
+                            <ChildContent>
+                                <TabHeader Text="Raw JSON"></TabHeader>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <pre class="data-view-json">@DataRawPrettyJson</pre>
+                            </ContentTemplate>
+                        </TabItem>
+                    </TabItems>
+                </SfTab>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -177,18 +389,26 @@
     };
 
     private bool CanUseCoachActions => Session.State == CoachConnectionState.Connected;
+    private bool CanViewData => CanUseCoachActions && (Session.AthleteDataParsed is not null || !string.IsNullOrWhiteSpace(Session.AthleteDataJson));
 
     private bool _showRememberedHint;
+    private bool _showCredentialHelp;
+    private bool _showDataView;
+    private string _dataViewFeedback = string.Empty;
 
     private bool ShowRememberedNote => _showRememberedHint;
 
     private string _athleteId = string.Empty;
     private string _apiKey = string.Empty;
+    private CoachLanguage _language = CoachLanguage.English;
+    private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
     private bool _remember;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
+    private bool IsActionBusy => IsBusy || Session.IsRefreshing;
+    private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
 
-    private bool CanSubmit => !IsBusy
+    private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
         && !string.IsNullOrWhiteSpace(_apiKey);
 
@@ -202,23 +422,376 @@
     ];
 
     private sealed record PromptCardModel(string IconClass, string Title, string Description);
+    private sealed record OverviewMetricRow(string Metric, string Value);
+    private sealed record WellnessTrendRow(string Metric, string Current, string Avg7d, string AvgPrev7d, string Trend7d, string Unit);
+
+    private IReadOnlyList<OverviewMetricRow> OverviewMetricRows => BuildOverviewMetricRows();
+    private IReadOnlyList<WellnessTrendRow> WellnessTrendRows => BuildWellnessTrendRows();
+
+    private IReadOnlyList<OverviewMetricRow> BuildOverviewMetricRows()
+    {
+        var metrics = GetObjectProperty(Session.AthleteDataParsed, "metrics");
+        if (metrics is null)
+        {
+            return [];
+        }
+
+        var powerProfile = GetObjectProperty(metrics, "power_profile");
+        var weight = GetNumericProperty(metrics, "weight") ?? 0d;
+
+        var rows = new List<OverviewMetricRow>();
+        AddMetric(rows, "Age", FormatNumber(GetNumericProperty(metrics, "age")));
+        AddMetric(rows, "Sex", FormatText(GetTextProperty(metrics, "sex")));
+        AddMetric(rows, "Weight (kg)", FormatNumber(weight));
+
+        var sleepSecs = GetNumericProperty(metrics, "sleep_secs");
+        double? sleepHours = sleepSecs is null ? null : Math.Round(sleepSecs.Value / 3600d, 2, MidpointRounding.AwayFromZero);
+        AddMetric(rows, "Sleep (h)", sleepHours is null ? "-" : FormatNumber(sleepHours, 2));
+
+        AddMetric(rows, "Sleep Quality (1=very good, 4=poor)", FormatNumber(GetNumericProperty(metrics, "sleep_quality")));
+
+        var ftp = GetNumericProperty(metrics, "ftp");
+        var rollingFtp = GetNumericProperty(metrics, "rolling_ftp");
+        var eftp = GetNumericProperty(metrics, "eftp");
+
+        AddMetric(rows, "FTP (W)", FormatNumber(ftp));
+        AddMetric(rows, "FTP (W/kg)", FormatNumber(CalculateWattsPerKg(ftp, weight), 2));
+        AddMetric(rows, "Rolling FTP (W)", FormatNumber(rollingFtp));
+        AddMetric(rows, "Rolling FTP (W/kg)", FormatNumber(CalculateWattsPerKg(rollingFtp, weight), 2));
+        AddMetric(rows, "eFTP (W)", FormatNumber(eftp ?? 0d, 1, fixedDecimals: true));
+        AddMetric(rows, "eFTP (W/kg)", FormatNumber(CalculateWattsPerKg(eftp, weight), 2));
+
+        AddMetric(rows, "VO2Max (calc.)", FormatNumber(GetNumericProperty(metrics, "vo2max")));
+        AddMetric(rows, "W' (J)", FormatNumber(GetNumericProperty(metrics, "w_prime")));
+
+        var rollingWPrime = GetNumericProperty(metrics, "rolling_w_prime");
+        AddMetric(rows, "Rolling W' (J)", rollingWPrime is null ? "-" : FormatNumber(rollingWPrime, 1, fixedDecimals: true));
+
+        AddPowerRows(rows, powerProfile, "p15s", "Best 15s Power");
+        AddPowerRows(rows, powerProfile, "p30s", "Best 30s Power");
+        AddPowerRows(rows, powerProfile, "p1min", "Best 1-min Power");
+        AddPowerRows(rows, powerProfile, "p3min", "Best 3-min Power");
+        AddPowerRows(rows, powerProfile, "p5min", "Best 5-min Power");
+        AddPowerRows(rows, powerProfile, "p20min", "Best 20-min Power");
+
+        AddMetric(rows, "Power Curve Slope", FormatNumber(GetNumericProperty(powerProfile, "curve_slope"), 3));
+        AddMetric(rows, "Power Profile Period (days)", FormatNumber(GetNumericProperty(powerProfile, "period_days")));
+
+        AddMetric(rows, "CTL", FormatNumber(GetNumericProperty(metrics, "ctl"), 1, fixedDecimals: true));
+        AddMetric(rows, "ATL", FormatNumber(GetNumericProperty(metrics, "atl"), 1, fixedDecimals: true));
+        AddMetric(rows, "Resting HR (bpm)", FormatNumber(GetNumericProperty(metrics, "resting_hr")));
+        AddMetric(rows, "Threshold HR / LTHR (bpm)", FormatNumber(GetNumericProperty(metrics, "lthr")));
+        AddMetric(rows, "Max HR (bpm)", FormatNumber(GetNumericProperty(metrics, "max_hr")));
+        AddMetric(rows, "HRV", FormatNumber(GetNumericProperty(metrics, "hrv")));
+
+        return rows;
+    }
+
+    private IReadOnlyList<WellnessTrendRow> BuildWellnessTrendRows()
+    {
+        var metrics = GetObjectProperty(Session.AthleteDataParsed, "metrics");
+        if (metrics is null)
+        {
+            return [];
+        }
+
+        var wellnessTrends = GetObjectProperty(metrics, "wellness_trends");
+        if (wellnessTrends is null)
+        {
+            return [];
+        }
+
+        return
+        [
+            BuildWellnessTrendRow(wellnessTrends, "weight", "Weight", "kg"),
+            BuildWellnessTrendRow(wellnessTrends, "resting_hr", "Resting HR", "bpm"),
+            BuildWellnessTrendRow(wellnessTrends, "hrv", "HRV", "ms")
+        ];
+    }
+
+    private static WellnessTrendRow BuildWellnessTrendRow(JsonElement? wellnessTrends, string key, string label, string unit)
+    {
+        var trend = GetObjectProperty(wellnessTrends, key);
+
+        return new WellnessTrendRow(
+            label,
+            FormatJsonValue(GetAnyProperty(trend, "current")),
+            FormatJsonValue(GetAnyProperty(trend, "avg_7d")),
+            FormatJsonValue(GetAnyProperty(trend, "avg_prev_7d")),
+            FormatJsonValue(GetAnyProperty(trend, "trend_7d")),
+            unit);
+    }
+
+    private static void AddPowerRows(List<OverviewMetricRow> rows, JsonElement? powerProfile, string key, string labelPrefix)
+    {
+        var segment = GetObjectProperty(powerProfile, key);
+        AddMetric(rows, $"{labelPrefix} (W)", FormatNumber(GetNumericProperty(segment, "watts")));
+        AddMetric(rows, $"{labelPrefix} (W/kg)", FormatNumber(GetNumericProperty(segment, "w_per_kg"), 2));
+    }
+
+    private static void AddMetric(List<OverviewMetricRow> rows, string metric, string value)
+    {
+        rows.Add(new OverviewMetricRow(metric, value));
+    }
+
+    private static double? CalculateWattsPerKg(double? watts, double weight)
+    {
+        if (!watts.HasValue || watts.Value <= 0d || weight <= 0d)
+        {
+            return null;
+        }
+
+        return Math.Round(watts.Value / weight, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static JsonElement? GetObjectProperty(JsonElement? parent, string propertyName)
+    {
+        var property = GetAnyProperty(parent, propertyName);
+        if (property is null || property.Value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return property;
+    }
+
+    private static JsonElement? GetAnyProperty(JsonElement? parent, string propertyName)
+    {
+        if (parent is null || parent.Value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return parent.Value.TryGetProperty(propertyName, out var value)
+            ? value
+            : null;
+    }
+
+    private static double? GetNumericProperty(JsonElement? parent, string propertyName)
+    {
+        return ParseDouble(GetAnyProperty(parent, propertyName));
+    }
+
+    private static string? GetTextProperty(JsonElement? parent, string propertyName)
+    {
+        var value = GetAnyProperty(parent, propertyName);
+        if (value is null)
+        {
+            return null;
+        }
+
+        return value.Value.ValueKind == JsonValueKind.String
+            ? value.Value.GetString()
+            : value.Value.ToString();
+    }
+
+    private static double? ParseDouble(JsonElement? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.Number && value.Value.TryGetDouble(out var numericValue))
+        {
+            return numericValue;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.String
+            && double.TryParse(value.Value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedValue))
+        {
+            return parsedValue;
+        }
+
+        return null;
+    }
+
+    private static string FormatText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private static string FormatNumber(double? value, int decimals = 2, bool fixedDecimals = false)
+    {
+        if (!value.HasValue)
+        {
+            return "-";
+        }
+
+        var rounded = Math.Round(value.Value, decimals, MidpointRounding.AwayFromZero);
+        if (fixedDecimals)
+        {
+            return rounded.ToString($"F{decimals}", CultureInfo.InvariantCulture);
+        }
+
+        if (decimals <= 0)
+        {
+            return rounded.ToString("0", CultureInfo.InvariantCulture);
+        }
+
+        return rounded.ToString($"0.{new string('#', decimals)}", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatJsonValue(JsonElement? value)
+    {
+        if (value is null)
+        {
+            return "-";
+        }
+
+        return value.Value.ValueKind switch
+        {
+            JsonValueKind.Number => FormatNumber(ParseDouble(value)),
+            JsonValueKind.String => FormatText(value.Value.GetString()),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "-",
+            JsonValueKind.Undefined => "-",
+            _ => FormatText(value.Value.ToString())
+        };
+    }
+
+    private string DataParsedPrettyJson
+    {
+        get
+        {
+            var parsed = Session.AthleteDataParsed;
+            if (parsed is null)
+            {
+                return string.IsNullOrWhiteSpace(Session.AthleteDataJson) ? "{}" : Session.AthleteDataJson;
+            }
+
+            return JsonSerializer.Serialize(parsed.Value, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+    }
+
+    private string DataRawPrettyJson
+    {
+        get
+        {
+            var raw = Session.AthleteDataRaw;
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return "{}";
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(raw);
+                return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+            }
+            catch (JsonException)
+            {
+                return raw;
+            }
+        }
+    }
+
+    private string DataDeserializedPrettyJson
+    {
+        get
+        {
+            if (Session.AthleteDataDeserialized is null)
+            {
+                return "{}";
+            }
+
+            return JsonSerializer.Serialize(Session.AthleteDataDeserialized, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+    }
+
+    private string DataMethodName => string.IsNullOrWhiteSpace(Session.AthleteDataMethodName)
+        ? "n/a"
+        : Session.AthleteDataMethodName;
 
     private async Task ConnectAsync()
     {
         if (!CanSubmit)
             return;
 
-        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _remember);
+        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _language, _profileGoal, _remember);
         await RefreshRememberedHintAsync();
     }
 
     private async Task DisconnectAsync()
     {
-        if (IsBusy)
+        if (IsActionBusy)
             return;
 
         await Session.DisconnectAsync();
+        _showDataView = false;
         await RefreshRememberedHintAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!CanRefresh)
+            return;
+
+        await Session.RefreshAsync();
+    }
+
+    private void OpenDataView()
+    {
+        if (!CanViewData)
+            return;
+
+        _dataViewFeedback = string.Empty;
+        _showDataView = true;
+    }
+
+    private void CloseDataView()
+    {
+        _showDataView = false;
+        _dataViewFeedback = string.Empty;
+    }
+
+    private async Task CopyJsonAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", DataParsedPrettyJson);
+            _dataViewFeedback = "JSON copied to clipboard.";
+        }
+        catch
+        {
+            _dataViewFeedback = "Copy failed. Please copy manually from the JSON panel.";
+        }
+    }
+
+    private async Task DownloadJsonAsync()
+    {
+        var fileName = BuildCoachInputFileName();
+
+        await JS.InvokeVoidAsync("trainingArchitect.downloadText", fileName, DataParsedPrettyJson);
+        _dataViewFeedback = "JSON file download started.";
+    }
+
+    private string BuildCoachInputFileName()
+    {
+        var parsed = Session.AthleteDataParsed;
+        if (parsed is not null
+            && parsed.Value.ValueKind == JsonValueKind.Object
+            && parsed.Value.TryGetProperty("week_starting", out var weekStarting)
+            && weekStarting.ValueKind == JsonValueKind.String)
+        {
+            var weekStartingText = weekStarting.GetString();
+            if (DateOnly.TryParse(weekStartingText, out var weekStartingDate))
+            {
+                return $"coach_input_{weekStartingDate:yyyy-MM-dd}.json";
+            }
+        }
+
+        return $"coach_input_{DateTime.UtcNow:yyyy-MM-dd}.json";
     }
 
     protected override async Task OnInitializedAsync()
@@ -230,6 +803,8 @@
         {
             _athleteId = loaded.Credential.AthleteId;
             _apiKey = loaded.Credential.ApiKey;
+            _language = loaded.Credential.Language;
+            _profileGoal = loaded.Credential.ProfileGoal;
             _remember = loaded.Durability == CredentialDurability.Persistent;
         }
 
@@ -255,6 +830,16 @@
             && !string.IsNullOrWhiteSpace(loaded.Credential.ApiKey)
             && (string.IsNullOrWhiteSpace(Session.AthleteId)
                 || string.Equals(loaded.Credential.AthleteId, Session.AthleteId, StringComparison.Ordinal));
+    }
+
+    private void ToggleCredentialHelp()
+    {
+        _showCredentialHelp = !_showCredentialHelp;
+    }
+
+    private void CloseCredentialHelp()
+    {
+        _showCredentialHelp = false;
     }
 
     public void Dispose()

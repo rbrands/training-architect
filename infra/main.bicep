@@ -85,6 +85,9 @@ param appInsightsName string
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
+@description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
+param mcpAthleteDataEndpoint string
+
 // Derive the apex domain from siteUrl for the custom domain module.
 var apexDomain = contains(siteUrl, 'azurewebsites.net')
   ? ''
@@ -153,6 +156,7 @@ module appService 'modules/app-service.bicep' = {
     storageBlobEndpoint: existingStorage.properties.primaryEndpoints.blob
     appInsightsConnectionString: existingAppInsights.properties.ConnectionString
     siteUrl: siteUrl
+    mcpAthleteDataEndpoint: mcpAthleteDataEndpoint
     tags: tags
   }
 }

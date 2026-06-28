@@ -5,7 +5,8 @@ using Microsoft.JSInterop;
 
 namespace TrainingArchitect.Client.Services;
 
-// Persists athlete ID + API key. Durability selects the storage:
+// Persists athlete settings (ID, API key, language, profile goal).
+// Durability selects the storage:
 //   Persistent -> localStorage (survives browser restart)
 //   Session    -> sessionStorage (survives reload, cleared when the tab is closed)
 public sealed class CredentialStore(

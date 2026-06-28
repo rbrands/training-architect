@@ -50,6 +50,10 @@ $config = @{
     # See README.md → Custom Domain for required DNS records.
     SiteUrl              = "https://training-architect.azurewebsites.net"
 
+    # MCP
+    # Public endpoint for the athlete-data MCP server.
+    McpAthleteDataEndpoint = "__MCP_ATHLETE_DATA_ENDPOINT__"
+
     # GitHub Actions OIDC
     AzureClientId        = "__AZURE_CLIENT_ID__"
 }
