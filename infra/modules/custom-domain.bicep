@@ -64,6 +64,9 @@ resource apexHostNameBinding 'Microsoft.Web/sites/hostNameBindings@2023-12-01' =
 resource wwwHostNameBinding 'Microsoft.Web/sites/hostNameBindings@2023-12-01' = {
   name: 'www.${customDomain}'
   parent: webApp
+  dependsOn: [
+    apexHostNameBinding
+  ]
   properties: {
     siteName: appName
     hostNameType: 'Verified'
