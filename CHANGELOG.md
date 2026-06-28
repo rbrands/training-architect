@@ -40,7 +40,7 @@ Copy this section for each new release and place it below `Unreleased`.
 -
 ```
 
-## [0.1.0] - 2026-06-27
+## [0.1.0] - 2026-06-28
 
 ### Added
 - MCP-based athlete-data retrieval via `/api/athlete-data` using HTTP transport.
