@@ -28,7 +28,8 @@ public sealed class McpAthleteDataService(
                 "MCP endpoint is not configured. Set Mcp:AthleteData:Endpoint.");
         }
 
-        if (!Uri.TryCreate(endpointUrl, UriKind.Absolute, out var endpointUri))
+        if (!Uri.TryCreate(endpointUrl, UriKind.Absolute, out var endpointUri)
+            || (endpointUri.Scheme != Uri.UriSchemeHttp && endpointUri.Scheme != Uri.UriSchemeHttps))
         {
             throw new InvalidOperationException(
                 "MCP endpoint is invalid. Mcp:AthleteData:Endpoint must be an absolute HTTP/HTTPS URL.");
