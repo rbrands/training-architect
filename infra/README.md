@@ -10,9 +10,9 @@ Bicep templates for deploying Training Architect to Azure.
 |---|---|
 | App Service Plan | Existing shared plan (read-only in this deployment) |
 | Web App | Linux, .NET 10, System-Assigned Managed Identity, plus deployment slots `dev` and `staging` |
-| Cosmos DB Account | Existing shared account (read-only in this deployment) |
-| Cosmos DB Database | Existing shared database (managed by central infrastructure, not created here) |
-| Cosmos DB Container | Created via `cosmosContainerName` in the existing shared database; inherits shared DB RU/s |
+| Cosmos DB Account | Existing shared account selected by `cosmosAccountName` (read-only in this deployment) |
+| Cosmos DB Database | Existing shared database selected by `cosmosDatabaseId` (managed by central infrastructure, not created here) |
+| Cosmos DB Container | Container selected by `cosmosContainerName` inside the configured database; inherits shared DB RU/s |
 | Azure Key Vault | Existing shared vault (read-only in this deployment) |
 | Role Assignments | RBAC for Web App Managed Identity on central resources |
 
@@ -45,16 +45,21 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 
 | Placeholder | Description |
 |---|---|
+| `__CENTRAL_RESOURCE_GROUP__` | Resource group for shared central resources (Plan, Cosmos, Key Vault, Storage, App Insights) |
+| `__APP_RESOURCE_GROUP__` | Resource group for app-specific resources (Web App, slots, custom domain bindings) |
 | `__APP_NAME__` | Web App name (must be globally unique, e.g. `training-architect`) |
 | `__PLAN_NAME__` | App Service Plan name (e.g. `plan-training-architect`) |
-| `__COSMOS_ACCOUNT_NAME__` | Cosmos DB account name (globally unique) |
-| `__DATABASE_ID__` | Cosmos DB database name (e.g. `shared-content-db`) |
-| `__CONTAINER_NAME__` | Cosmos DB container name (e.g. `training-architect`) |
+| `__COSMOS_ACCOUNT_NAME__` | Existing Cosmos DB account name used by the deployment (globally unique) |
+| `__DATABASE_ID__` | Existing Cosmos DB database name selected by the deployment (e.g. `shared-content-db`) |
+| `__CONTAINER_NAME__` | Cosmos DB container name selected by the deployment (e.g. `training-architect`) |
 | `__KEY_VAULT_NAME__` | Key Vault name (must be globally unique, e.g. `kv-training-architect`) |
 | `__CERT_NAME__` | Certificate name as stored in Key Vault |
 | `__TENANT_ID__` | Entra ID Directory (tenant) ID |
 | `__CLIENT_ID__` | App Registration Application (client) ID |
-| `__SYNCFUSION_LICENSE_KEY__` | Syncfusion Community/Commercial license key (served to WASM client via `/api/config`) |
+| `__STORAGE_ACCOUNT_NAME__` | Existing Storage Account name used by the app |
+| `__APP_INSIGHTS_NAME__` | Existing Application Insights resource name |
+| `__SITE_URL__` | Public site URL (custom domain or `*.azurewebsites.net` URL) |
+| `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
 
 ---
 

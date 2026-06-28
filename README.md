@@ -168,15 +168,6 @@ To grant access: **Entra ID → Enterprise Applications → your app → Users a
 
 Important: the application authorization check uses the role **value** (`SiteAdmin`) in the token claim, not the display name.
 
-### Legal Content Management
-
-The legal page (`/legal`) is no longer populated from configuration values.
-Legal content is now managed as online content and edited in the admin UI at `/admin/legal`.
-
-- Source of truth: persisted content in Cosmos DB (about document)
-- Editing: protected admin workflow (`SiteAdmin` role required)
-- Not used for legal content: `config.ps1`, `appsettings*.json`, or Key Vault settings
-
 ### Observability
 
 Application Insights is configured with a Log Analytics workspace backend.
@@ -195,7 +186,7 @@ unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set in user-secrets.
 
 ### Data Model
 
-All content is stored in a single Cosmos DB container (`content`) with a `type` field as logical partition:
+All data is stored in the Cosmos DB container configured by the deployment (`cosmosContainerName`) with a `type` field as logical partition:
 
 | type | Description |
 |---|---|
