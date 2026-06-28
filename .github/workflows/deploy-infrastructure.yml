@@ -58,6 +58,33 @@ jobs:
         tenant-id: ${{ secrets.TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+    - name: Generate ARM parameter file
+      run: |
+        cat > infra/main.ci.parameters.json <<'JSON'
+        {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "centralResourceGroupName": { "value": ${{ toJson(secrets.CENTRAL_RESOURCE_GROUP) }} },
+            "appResourceGroupName": { "value": ${{ toJson(secrets.APP_RESOURCE_GROUP) }} },
+            "appName": { "value": ${{ toJson(secrets.APP_NAME) }} },
+            "planName": { "value": ${{ toJson(secrets.PLAN_NAME) }} },
+            "cosmosAccountName": { "value": ${{ toJson(secrets.COSMOS_ACCOUNT_NAME) }} },
+            "cosmosDatabaseId": { "value": ${{ toJson(secrets.COSMOS_DATABASE_ID) }} },
+            "cosmosContainerName": { "value": ${{ toJson(secrets.COSMOS_CONTAINER_NAME) }} },
+            "keyVaultName": { "value": ${{ toJson(secrets.KEY_VAULT_NAME) }} },
+            "keyVaultCertificateName": { "value": ${{ toJson(secrets.CERT_NAME) }} },
+            "tenantId": { "value": ${{ toJson(secrets.TENANT_ID) }} },
+            "clientId": { "value": ${{ toJson(secrets.CLIENT_ID) }} },
+            "storageAccountName": { "value": ${{ toJson(secrets.STORAGE_ACCOUNT_NAME) }} },
+            "appInsightsName": { "value": ${{ toJson(secrets.APP_INSIGHTS_NAME) }} },
+            "siteUrl": { "value": ${{ toJson(secrets.SITE_URL) }} },
+            "author": { "value": ${{ toJson(secrets.AUTHOR) }} },
+            "mcpAthleteDataEndpoint": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_ENDPOINT) }} }
+          }
+        }
+        JSON
+
     - name: Deploy Bicep template
       uses: azure/arm-deploy@v2
       with:
@@ -65,23 +92,7 @@ jobs:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         region: germanywestcentral
         template: infra/main.bicep
-        parameters: |
-          centralResourceGroupName=${{ secrets.CENTRAL_RESOURCE_GROUP }}
-          appResourceGroupName=${{ secrets.APP_RESOURCE_GROUP }}
-          appName=${{ secrets.APP_NAME }}
-          planName=${{ secrets.PLAN_NAME }}
-          cosmosAccountName=${{ secrets.COSMOS_ACCOUNT_NAME }}
-          cosmosDatabaseId=${{ secrets.COSMOS_DATABASE_ID }}
-          cosmosContainerName=${{ secrets.COSMOS_CONTAINER_NAME }}
-          keyVaultName=${{ secrets.KEY_VAULT_NAME }}
-          keyVaultCertificateName=${{ secrets.CERT_NAME }}
-          tenantId=${{ secrets.TENANT_ID }}
-          clientId=${{ secrets.CLIENT_ID }}
-          storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
-          appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
-          siteUrl=${{ secrets.SITE_URL }}
-          author=${{ secrets.AUTHOR }}
-          mcpAthleteDataEndpoint=${{ secrets.MCP_ATHLETE_DATA_ENDPOINT }}
+        parameters: infra/main.ci.parameters.json
         failOnStdErr: false
 
     - name: Azure Logout
