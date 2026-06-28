@@ -65,7 +65,7 @@ jobs:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         region: germanywestcentral
         template: infra/main.bicep
-        parameters: >
+        parameters: |
           centralResourceGroupName=${{ secrets.CENTRAL_RESOURCE_GROUP }}
           appResourceGroupName=${{ secrets.APP_RESOURCE_GROUP }}
           appName=${{ secrets.APP_NAME }}
@@ -80,7 +80,7 @@ jobs:
           storageAccountName=${{ secrets.STORAGE_ACCOUNT_NAME }}
           appInsightsName=${{ secrets.APP_INSIGHTS_NAME }}
           siteUrl=${{ secrets.SITE_URL }}
-          author='${{ secrets.AUTHOR }}'
+          author=${{ secrets.AUTHOR }}
           mcpAthleteDataEndpoint=${{ secrets.MCP_ATHLETE_DATA_ENDPOINT }}
         failOnStdErr: false
 
