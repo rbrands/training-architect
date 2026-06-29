@@ -58,9 +58,12 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | `__CLIENT_ID__` | App Registration Application (client) ID |
 | `__STORAGE_ACCOUNT_NAME__` | Existing Storage Account name used by the app |
 | `__APP_INSIGHTS_NAME__` | Existing Application Insights resource name |
+| `__FOUNDRY_ACCOUNT_NAME__` | Existing Foundry account name (Microsoft.CognitiveServices/accounts) in the app resource group |
 | `__SITE_URL__` | Public site URL used by the app for canonical/Open Graph metadata |
 | `__AUTHOR__` | Global author name used by the app for HTML metadata |
 | `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
+| `__FOUNDRY_PROJECT_ENDPOINT__` | Foundry project endpoint used for coaching agent invocation |
+| `__FOUNDRY_PROJECT_AGENT_NAME__` | Foundry agent name used for coaching agent invocation |
 
 ---
 

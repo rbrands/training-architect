@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="*" />
     <PackageReference Include="Markdig" Version="0.37.*" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.*" />
+    <PackageReference Include="Azure.AI.Projects" Version="1.*" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.*" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="3.*" />
     <PackageReference Include="ModelContextProtocol" Version="1.4.0" />

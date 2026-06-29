@@ -36,6 +36,9 @@ $config = @{
     AppInsightsName    = "__APP_INSIGHTS_NAME__"
     LogAnalyticsName   = "__LOG_ANALYTICS_NAME__"
 
+    # Foundry
+    FoundryAccountName = "__FOUNDRY_ACCOUNT_NAME__"
+
     # Syncfusion
     # Used for: dotnet user-secrets (local)
     #            Key Vault secret (production)
@@ -51,6 +54,11 @@ $config = @{
     # MCP
     # Public endpoint for the athlete-data MCP server.
     McpAthleteDataEndpoint = "__MCP_ATHLETE_DATA_ENDPOINT__"
+
+    # Foundry Agent
+    # Endpoint + agent name used for coaching agent invocation.
+    FoundryProjectEndpoint = "__FOUNDRY_PROJECT_ENDPOINT__"
+    FoundryProjectAgentName = "__FOUNDRY_PROJECT_AGENT_NAME__"
 
     # GitHub Actions OIDC
     AzureClientId        = "__AZURE_CLIENT_ID__"

@@ -82,6 +82,9 @@ param storageAccountName string
 @description('Name of the existing Application Insights resource.')
 param appInsightsName string
 
+@description('Name of the existing Foundry account (Microsoft.CognitiveServices/accounts) in the app resource group.')
+param foundryAccountName string
+
 @description('Public site URL, e.g. https://www.example.com. Used for canonical and Open Graph meta tags.')
 param siteUrl string
 
@@ -90,6 +93,12 @@ param author string
 
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
+
+@description('Microsoft Foundry project endpoint for coaching agent invocation.')
+param foundryProjectEndpoint string
+
+@description('Microsoft Foundry agent name for coaching agent invocation.')
+param foundryProjectAgentName string
 
 // ---------------------------------------------------------------------------
 // Existing central resources — read-only, never created or modified here
@@ -156,6 +165,8 @@ module appService 'modules/app-service.bicep' = {
     siteUrl: siteUrl
     author: author
     mcpAthleteDataEndpoint: mcpAthleteDataEndpoint
+    foundryProjectEndpoint: foundryProjectEndpoint
+    foundryProjectAgentName: foundryProjectAgentName
     tags: tags
   }
 }
@@ -232,6 +243,24 @@ module appInsightsRbacStaging 'modules/appinsights-rbac.bicep' = {
   }
 }
 
+module foundryRbacDev 'modules/foundry-rbac.bicep' = {
+  name: 'foundryRbacDev'
+  scope: resourceGroup(appResourceGroupName)
+  params: {
+    foundryAccountName: foundryAccountName
+    principalId: appService.outputs.devSlotPrincipalId
+  }
+}
+
+module foundryRbacStaging 'modules/foundry-rbac.bicep' = {
+  name: 'foundryRbacStaging'
+  scope: resourceGroup(appResourceGroupName)
+  params: {
+    foundryAccountName: foundryAccountName
+    principalId: appService.outputs.stagingSlotPrincipalId
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Module: Key Vault RBAC  →  central RG (where the KV lives)
 // Production web app identity
@@ -278,6 +307,15 @@ module appInsightsRbac 'modules/appinsights-rbac.bicep' = {
   scope: resourceGroup(centralResourceGroupName)
   params: {
     appInsightsName: appInsightsName
+    principalId: appService.outputs.principalId
+  }
+}
+
+module foundryRbac 'modules/foundry-rbac.bicep' = {
+  name: 'foundryRbac'
+  scope: resourceGroup(appResourceGroupName)
+  params: {
+    foundryAccountName: foundryAccountName
     principalId: appService.outputs.principalId
   }
 }
