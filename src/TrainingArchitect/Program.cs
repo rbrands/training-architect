@@ -1,5 +1,6 @@
 ﻿using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
+using Azure.AI.Projects;
 using TrainingArchitect.Components;
 using TrainingArchitect.Endpoints;
 using TrainingArchitect.Models;
@@ -16,6 +17,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Identity.Web;
 using Syncfusion.Blazor;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,6 +150,20 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
 
 builder.Services.AddAuthorization();
 
+// Rate linmiting for the /api/coach endpoint to prevent abuse and ensure fair usage.
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddSlidingWindowLimiter("coach", limiter =>
+    {
+        limiter.PermitLimit          = 10;
+        limiter.Window               = TimeSpan.FromMinutes(1);
+        limiter.SegmentsPerWindow    = 6;   // 10-Sekunden-Segmente
+        limiter.QueueLimit           = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+
 // Cosmos DB client (singleton, thread-safe)
 // Authentication via DefaultAzureCredential:
 //   - locally: Azure CLI credentials (az login)
@@ -167,6 +183,17 @@ builder.Services.AddSingleton(sp =>
         });
 });
 
+builder.Services.AddSingleton(sp =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var endpoint = cfg["FoundryProjectEndpoint"]
+        ?? throw new InvalidOperationException("Configuration key 'FoundryProjectEndpoint' is required.");
+
+    return new AIProjectClient(
+        endpoint: new Uri(endpoint),
+        tokenProvider: new DefaultAzureCredential());
+});
+
 // Repositories
 builder.Services.AddSingleton<IArticleRepository, ArticleRepository>();
 builder.Services.AddSingleton<IProjectRepository, ProjectRepository>();
@@ -174,6 +201,7 @@ builder.Services.AddSingleton<IAboutRepository, AboutRepository>();
 
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IAthleteDataService, McpAthleteDataService>();
+builder.Services.AddScoped<ICoachingAgent, FoundryCoachingAgent>();
 
 // Training Architect stubs — replace with real implementations once the
 // orchestration layer is connected.
@@ -276,6 +304,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.UseAntiforgery();
 
@@ -325,6 +354,7 @@ app.MapProjectEndpoints();
 app.MapArticleEndpoints();
 app.MapImageEndpoints();
 app.MapAthleteDataEndpoints();
+app.MapCoachEndpoints();
 
 // Client config endpoint (non-sensitive values for WASM startup)
 app.MapConfigEndpoints();
