@@ -3,8 +3,14 @@
 @inject IAthleteSession Session
 @inject ICredentialStore CredentialStore
 @inject IJSRuntime JS
+@inject HttpClient Http
+@using Markdig
 @using System.Globalization
+@using System.Net.Http.Json
 @using System.Text.Json
+@using System.Text.RegularExpressions
+@using TrainingArchitect.Core.Constants
+@using TrainingArchitect.Core.Models
 @implements IDisposable
 
 
@@ -179,28 +185,96 @@
     <section class="coach-section">
         <h2 class="coach-section-title">Standard Prompts</h2>
 
-        <div class="coach-prompt-grid">
-            @foreach (var prompt in PromptCards)
-            {
+        @if (_expandedCard is null)
+        {
+            <div class="coach-prompt-grid">
+                @foreach (var prompt in PromptCards)
+                {
+                    var cardState = GetAssessCardState(prompt.CardType);
+
+                    <SfCard CssClass="coach-prompt-card">
+                        <CardContent>
+                            <div class="coach-prompt-icon" aria-hidden="true">
+                                <i class="@prompt.IconClass"></i>
+                            </div>
+                            <h3 class="coach-prompt-title">@prompt.Title</h3>
+                            <p class="coach-prompt-description mb-0">@prompt.Description</p>
+
+                            @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
+                            {
+                                <p class="coach-assess-error" role="alert">@cardState.ErrorMessage</p>
+                            }
+                        </CardContent>
+                        <CardFooter>
+                            <CardFooterContent>
+                                <SfButton CssClass="e-btn coach-outline-button"
+                                          Disabled="@IsAssessButtonDisabled(prompt.CardType)"
+                                          @onclick="() => HandleAssessButtonAsync(prompt.CardType)">
+                                    @if (cardState.IsLoading)
+                                    {
+                                        <span class="coach-assess-spinner" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <span>@GetAssessButtonText(prompt.CardType)</span>
+                                        <span aria-hidden="true">→</span>
+                                    }
+                                </SfButton>
+                            </CardFooterContent>
+                        </CardFooter>
+                    </SfCard>
+                }
+            </div>
+        }
+        else
+        {
+            var expandedPrompt = GetPromptCard(_expandedCard.Value);
+            var expandedState = GetAssessCardState(expandedPrompt.CardType);
+
+            <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
                     <CardContent>
                         <div class="coach-prompt-icon" aria-hidden="true">
-                            <i class="@prompt.IconClass"></i>
+                            <i class="@expandedPrompt.IconClass"></i>
                         </div>
-                        <h3 class="coach-prompt-title">@prompt.Title</h3>
-                        <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                        <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
+                        <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>
-                            <SfButton CssClass="e-btn coach-outline-button" Disabled="@(!CanUseCoachActions)">
-                                <span>Assess</span>
+                            <SfButton CssClass="e-btn coach-outline-button"
+                                      Disabled="@IsAssessButtonDisabled(expandedPrompt.CardType)"
+                                      @onclick="() => HandleAssessButtonAsync(expandedPrompt.CardType)">
+                                <span>@GetAssessButtonText(expandedPrompt.CardType)</span>
                                 <span aria-hidden="true">→</span>
                             </SfButton>
                         </CardFooterContent>
                     </CardFooter>
                 </SfCard>
-            }
-        </div>
+
+                @if (!string.IsNullOrWhiteSpace(expandedState.ResultText))
+                {
+                    <div class="coach-assess-result-block">
+                        <div class="coach-assess-result-actions">
+                            <button type="button"
+                                    class="coach-assess-copy"
+                                    title="Copy Markdown"
+                                    aria-label="Copy Markdown"
+                                    @onclick="() => CopyAssessResultAsync(expandedPrompt.CardType)">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+
+                            @if (!string.IsNullOrWhiteSpace(expandedState.CopyFeedback))
+                            {
+                                <span class="coach-assess-copy-feedback">@expandedState.CopyFeedback</span>
+                            }
+                        </div>
+
+                        <div class="coach-assess-result-markdown">@RenderAssessMarkdown(expandedState.ResultText)</div>
+                    </div>
+                }
+            </div>
+        }
     </section>
 
     <SfCard CssClass="coach-plan-card">
@@ -360,6 +434,21 @@
 </div>
 
 @code {
+    private enum AssessCardType
+    {
+        MetricsWellness,
+        LastTraining,
+        Week
+    }
+
+    private sealed class AssessCardState
+    {
+        public string? ResultText { get; set; }
+        public bool IsLoading { get; set; }
+        public string? ErrorMessage { get; set; }
+        public string? CopyFeedback { get; set; }
+    }
+
     private string StatusText => Session.State switch
     {
         CoachConnectionState.Connected => "Connected",
@@ -403,9 +492,17 @@
     private CoachLanguage _language = CoachLanguage.English;
     private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
     private bool _remember;
+    private readonly Dictionary<AssessCardType, AssessCardState> _assessCardStates = new()
+    {
+        [AssessCardType.MetricsWellness] = new AssessCardState(),
+        [AssessCardType.LastTraining] = new AssessCardState(),
+        [AssessCardType.Week] = new AssessCardState()
+    };
+    private AssessCardType? _expandedCard;
+    private bool _isAnyRequestInFlight;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
-    private bool IsActionBusy => IsBusy || Session.IsRefreshing;
+    private bool IsActionBusy => IsBusy || Session.IsRefreshing || _isAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
 
     private bool CanSubmit => !IsActionBusy
@@ -416,14 +513,19 @@
 
     private static readonly IReadOnlyList<PromptCardModel> PromptCards =
     [
-        new("bi bi-speedometer2", "Metrics & Wellness", "Complete view of CTL/ATL/TSB and wellness data."),
-        new("bi bi-bicycle", "Last Training", "Assessment of the latest workout in context."),
-        new("bi bi-calendar3", "Week", "Training week summarized and put into context.")
+        new(AssessCardType.MetricsWellness, "bi bi-speedometer2", "Metrics & Wellness", "Complete view of CTL/ATL/TSB and wellness data."),
+        new(AssessCardType.LastTraining, "bi bi-bicycle", "Last Training", "Assessment of the latest workout in context."),
+        new(AssessCardType.Week, "bi bi-calendar3", "Week", "Training week summarized and put into context.")
     ];
 
-    private sealed record PromptCardModel(string IconClass, string Title, string Description);
+    private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
     private sealed record OverviewMetricRow(string Metric, string Value);
     private sealed record WellnessTrendRow(string Metric, string Current, string Avg7d, string AvgPrev7d, string Trend7d, string Unit);
+
+    private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
 
     private IReadOnlyList<OverviewMetricRow> OverviewMetricRows => BuildOverviewMetricRows();
     private IReadOnlyList<WellnessTrendRow> WellnessTrendRows => BuildWellnessTrendRows();
@@ -651,6 +753,39 @@
         };
     }
 
+    private static MarkupString RenderAssessMarkdown(string? markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var normalized = NormalizeSectionNumbering(markdown);
+        return new MarkupString(Markdown.ToHtml(normalized, AssessMarkdownPipeline));
+    }
+
+    private static string NormalizeSectionNumbering(string markdown)
+    {
+        var normalized = markdown.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var lines = normalized.Split('\n');
+        var sectionCounter = 0;
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+            var sectionMatch = Regex.Match(line, @"^\s*\d+\.\s+(.+:)\s*$");
+            if (!sectionMatch.Success)
+            {
+                continue;
+            }
+
+            sectionCounter++;
+            lines[index] = $"{sectionCounter}. {sectionMatch.Groups[1].Value}";
+        }
+
+        return string.Join("\n", lines);
+    }
+
     private string DataParsedPrettyJson
     {
         get
@@ -719,6 +854,7 @@
             return;
 
         await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _language, _profileGoal, _remember);
+        InvalidateAssessResults();
         await RefreshRememberedHintAsync();
     }
 
@@ -729,6 +865,7 @@
 
         await Session.DisconnectAsync();
         _showDataView = false;
+        InvalidateAssessResults();
         await RefreshRememberedHintAsync();
     }
 
@@ -738,6 +875,228 @@
             return;
 
         await Session.RefreshAsync();
+        InvalidateAssessResults();
+    }
+
+    private AssessCardState GetAssessCardState(AssessCardType cardType) => _assessCardStates[cardType];
+
+    private PromptCardModel GetPromptCard(AssessCardType cardType) =>
+        PromptCards.First(card => card.CardType == cardType);
+
+    private string GetAssessButtonText(AssessCardType cardType)
+    {
+        var state = GetAssessCardState(cardType);
+
+        if (state.ResultText is null)
+        {
+            return "Assess";
+        }
+
+        return _expandedCard == cardType ? "Close" : "Reopen";
+    }
+
+    private bool IsAssessButtonDisabled(AssessCardType cardType)
+    {
+        if (!CanUseCoachActions)
+        {
+            return true;
+        }
+
+        var state = GetAssessCardState(cardType);
+        if (state.IsLoading)
+        {
+            return true;
+        }
+
+        if (_isAnyRequestInFlight && state.ResultText is null)
+        {
+            return true;
+        }
+
+        if (_isAnyRequestInFlight && state.ResultText is not null && _expandedCard != cardType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task HandleAssessButtonAsync(AssessCardType cardType)
+    {
+        if (!CanUseCoachActions)
+        {
+            return;
+        }
+
+        var state = GetAssessCardState(cardType);
+
+        if (state.ResultText is null)
+        {
+            await ExecuteAssessRequestAsync(cardType);
+            return;
+        }
+
+        if (_expandedCard == cardType)
+        {
+            _expandedCard = null;
+            return;
+        }
+
+        if (_isAnyRequestInFlight)
+        {
+            return;
+        }
+
+        _expandedCard = cardType;
+    }
+
+    private async Task ExecuteAssessRequestAsync(AssessCardType cardType)
+    {
+        if (_isAnyRequestInFlight)
+        {
+            return;
+        }
+
+        var state = GetAssessCardState(cardType);
+        state.IsLoading = true;
+        state.ErrorMessage = null;
+        _isAnyRequestInFlight = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = BuildAssessRequest(cardType);
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/assess")
+            {
+                Content = JsonContent.Create(request)
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                state.ErrorMessage = string.IsNullOrWhiteSpace(errorBody)
+                    ? "Assess request failed. Please try again."
+                    : $"Assess request failed: {errorBody}";
+                return;
+            }
+
+            var assessResponse = await response.Content.ReadFromJsonAsync<AssessResponse>();
+            if (assessResponse is null)
+            {
+                state.ErrorMessage = "Assess request returned no content.";
+                return;
+            }
+
+            state.ResultText = assessResponse.Content;
+            state.ErrorMessage = null;
+            _expandedCard = cardType;
+        }
+        catch
+        {
+            state.ErrorMessage = "Assess request failed. Please try again.";
+        }
+        finally
+        {
+            state.IsLoading = false;
+            _isAnyRequestInFlight = _assessCardStates.Values.Any(card => card.IsLoading);
+        }
+    }
+
+    private AssessRequest BuildAssessRequest(AssessCardType cardType)
+    {
+        var weekDataJson = Session.AthleteDataJson;
+
+        return new AssessRequest(
+            weekDataJson ?? "{}",
+            GetDisciplineType(),
+            GetResponseLanguage(),
+            ToAssessmentType(cardType));
+    }
+
+    private string GetDisciplineType()
+    {
+        var source = Session.ProfileGoal ?? _profileGoal;
+        return source.ToString().ToLowerInvariant();
+    }
+
+    private string GetResponseLanguage()
+    {
+        var source = Session.Language ?? _language;
+        return source.ToString();
+    }
+
+    private static AssessmentType ToAssessmentType(AssessCardType cardType) => cardType switch
+    {
+        AssessCardType.MetricsWellness => AssessmentType.Metrics,
+        AssessCardType.LastTraining => AssessmentType.Activity,
+        AssessCardType.Week => AssessmentType.Week,
+        _ => AssessmentType.Metrics
+    };
+
+    private void AppendCredentialHeaders(HttpRequestMessage request)
+    {
+        var hasActiveCredentials = Session.TryGetActiveCredentials(out var activeAthleteId, out var activeApiKey);
+        var athleteId = hasActiveCredentials
+            ? activeAthleteId
+            : (string.IsNullOrWhiteSpace(Session.AthleteId) ? _athleteId : Session.AthleteId);
+        var apiKey = hasActiveCredentials ? activeApiKey : _apiKey;
+
+        if (!string.IsNullOrWhiteSpace(athleteId))
+        {
+            request.Headers.TryAddWithoutValidation(IntervalsHeaders.AthleteId, athleteId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            request.Headers.TryAddWithoutValidation(IntervalsHeaders.ApiKey, apiKey);
+        }
+    }
+
+    private void InvalidateAssessResults()
+    {
+        foreach (var cardState in _assessCardStates.Values)
+        {
+            cardState.ResultText = null;
+            cardState.IsLoading = false;
+            cardState.ErrorMessage = null;
+            cardState.CopyFeedback = null;
+        }
+
+        _expandedCard = null;
+        _isAnyRequestInFlight = false;
+    }
+
+    private async Task CopyAssessResultAsync(AssessCardType cardType)
+    {
+        var state = GetAssessCardState(cardType);
+        if (string.IsNullOrWhiteSpace(state.ResultText))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", state.ResultText);
+            state.CopyFeedback = "Copied";
+        }
+        catch
+        {
+            state.CopyFeedback = "Copy failed";
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(1800);
+        if (state.CopyFeedback is not null)
+        {
+            state.CopyFeedback = null;
+            StateHasChanged();
+        }
     }
 
     private void OpenDataView()

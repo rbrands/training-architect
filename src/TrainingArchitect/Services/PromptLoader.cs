@@ -10,7 +10,7 @@ public static class PromptLoader
     public static string Load(string promptName) =>
         _cache.GetOrAdd(promptName, name =>
         {
-            var resourceName = $"TrainingArchitect.Server.Prompts.{name}.md";
+            var resourceName = $"TrainingArchitect.Prompts.{name}.md";
             using var stream = _assembly.GetManifestResourceStream(resourceName)
                 ?? throw new InvalidOperationException($"Prompt '{name}' not found.");
             using var reader = new StreamReader(stream);

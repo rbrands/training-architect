@@ -59,6 +59,14 @@ public interface IAthleteSession
         CancellationToken ct = default);
     Task RefreshAsync(CancellationToken ct = default);
     Task DisconnectAsync(bool forget = true);   // Was void in the draft, async because localStorage must be cleared
+
+    /// <summary>
+    /// Tries to resolve the currently active credentials for authenticated coach API calls.
+    /// </summary>
+    /// <param name="athleteId">Resolved athlete id.</param>
+    /// <param name="apiKey">Resolved API key.</param>
+    /// <returns>True when valid credentials are available in the current connected session.</returns>
+    bool TryGetActiveCredentials(out string athleteId, out string apiKey);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +241,22 @@ public sealed class AthleteSession(
             await credentialStore.ClearAsync();
 
         Notify();
+    }
+
+    public bool TryGetActiveCredentials(out string athleteId, out string apiKey)
+    {
+        if (State == CoachConnectionState.Connected
+            && !string.IsNullOrWhiteSpace(AthleteId)
+            && !string.IsNullOrWhiteSpace(_apiKey))
+        {
+            athleteId = AthleteId;
+            apiKey = _apiKey;
+            return true;
+        }
+
+        athleteId = string.Empty;
+        apiKey = string.Empty;
+        return false;
     }
 
     private void ResetToDisconnected()
