@@ -54,6 +54,12 @@ param author string
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
 
+@description('Microsoft Foundry project endpoint for coaching agent invocation.')
+param foundryProjectEndpoint string
+
+@description('Microsoft Foundry agent name for coaching agent invocation.')
+param foundryProjectAgentName string
+
 @description('Tags to apply to the Web App resource.')
 param tags object = {}
 
@@ -133,6 +139,14 @@ var baseAppSettings = [
   {
     name: 'Mcp__AthleteData__Endpoint'
     value: mcpAthleteDataEndpoint
+  }
+  {
+    name: 'FoundryProjectEndpoint'
+    value: foundryProjectEndpoint
+  }
+  {
+    name: 'FoundryProjectAgentName'
+    value: foundryProjectAgentName
   }
 ]
 

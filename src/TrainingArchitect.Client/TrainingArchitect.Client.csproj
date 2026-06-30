@@ -16,6 +16,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.*" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.*" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.*" />
+    <PackageReference Include="Markdig" Version="0.37.*" />
     <PackageReference Include="Syncfusion.Blazor.Buttons" Version="*" />
     <PackageReference Include="Syncfusion.Blazor.Cards" Version="*" />
     <PackageReference Include="Syncfusion.Blazor.Grid" Version="*" />

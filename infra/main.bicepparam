@@ -37,6 +37,9 @@ param storageAccountName = '__STORAGE_ACCOUNT_NAME__'
 // Application Insights
 param appInsightsName = '__APP_INSIGHTS_NAME__'
 
+// Foundry
+param foundryAccountName = '__FOUNDRY_ACCOUNT_NAME__'
+
 // Site
 // Set to your custom domain (e.g. https://www.example.com) or the azurewebsites.net default URL.
 // This value is used by the app for canonical/Open Graph URLs only.
@@ -48,3 +51,8 @@ param author = '__AUTHOR__'
 // MCP
 // Public MCP endpoint used by the app for athlete-data tool calls.
 param mcpAthleteDataEndpoint = '__MCP_ATHLETE_DATA_ENDPOINT__'
+
+// Foundry
+// Foundry project endpoint and agent name used by the coaching agent integration.
+param foundryProjectEndpoint = '__FOUNDRY_PROJECT_ENDPOINT__'
+param foundryProjectAgentName = '__FOUNDRY_PROJECT_AGENT_NAME__'

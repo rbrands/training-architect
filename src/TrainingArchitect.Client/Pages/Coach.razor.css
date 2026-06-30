@@ -603,6 +603,145 @@
     gap: 1rem;
 }
 
+.coach-prompt-expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.coach-assess-result-block {
+    border: 1px solid var(--ba-border);
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 0.8rem;
+}
+
+.coach-assess-result-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+}
+
+.coach-assess-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid #d3dbe8;
+    border-radius: 8px;
+    background: #f8fafe;
+    color: #3b4f70;
+    cursor: pointer;
+}
+
+.coach-assess-copy:hover,
+.coach-assess-copy:focus-visible {
+    border-color: #9fb5d9;
+    background: #eef3fb;
+    color: #243754;
+}
+
+.coach-assess-copy-feedback {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #3b4f70;
+}
+
+.coach-assess-result-markdown {
+    color: #1f2328;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.coach-assess-result-markdown p,
+.coach-assess-result-markdown h1,
+.coach-assess-result-markdown h2,
+.coach-assess-result-markdown h3,
+.coach-assess-result-markdown h4,
+.coach-assess-result-markdown h5,
+.coach-assess-result-markdown h6,
+.coach-assess-result-markdown ul,
+.coach-assess-result-markdown ol,
+.coach-assess-result-markdown pre {
+    margin: 0 0 0.75rem 0;
+}
+
+.coach-assess-result-markdown p:last-child,
+.coach-assess-result-markdown h1:last-child,
+.coach-assess-result-markdown h2:last-child,
+.coach-assess-result-markdown h3:last-child,
+.coach-assess-result-markdown h4:last-child,
+.coach-assess-result-markdown h5:last-child,
+.coach-assess-result-markdown h6:last-child,
+.coach-assess-result-markdown ul:last-child,
+.coach-assess-result-markdown ol:last-child,
+.coach-assess-result-markdown pre:last-child {
+    margin-bottom: 0;
+}
+
+.coach-assess-result-markdown ul,
+.coach-assess-result-markdown ol {
+    padding-left: 1.25rem;
+}
+
+.coach-assess-result-markdown blockquote {
+    margin: 0 0 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    border-left: 4px solid #b8c7e6;
+    background: #f7f9fd;
+    color: #334155;
+}
+
+.coach-assess-result-markdown li input[type="checkbox"] {
+    margin-right: 0.45rem;
+    margin-top: 0.18rem;
+}
+
+.coach-assess-result-markdown code {
+    background: #f5f7fb;
+    border: 1px solid #dde4f0;
+    border-radius: 4px;
+    padding: 0.08rem 0.35rem;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.9em;
+}
+
+.coach-assess-result-markdown pre {
+    background: #f5f7fb;
+    border: 1px solid #dde4f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    overflow-x: auto;
+}
+
+.coach-assess-result-markdown pre code {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.coach-assess-error {
+    margin: 0.65rem 0 0 0;
+    color: #a64141;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.coach-assess-spinner {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 2px solid rgba(31, 35, 40, 0.25);
+    border-top-color: #1f2328;
+    border-radius: 50%;
+    animation: coach-spin 0.8s linear infinite;
+}
+
 .coach-page ::deep .coach-prompt-card .e-card-content {
     display: flex;
     flex-direction: column;

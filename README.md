@@ -360,6 +360,11 @@ Minimum SEO-related config values in `config.ps1`:
 - `SiteUrl = "https://www.example.com"`
 - `Author = "__AUTHOR__"`
 
+Foundry-related config values in `config.ps1`:
+
+- `FoundryProjectEndpoint = "__FOUNDRY_PROJECT_ENDPOINT__"`
+- `FoundryProjectAgentName = "__FOUNDRY_PROJECT_AGENT_NAME__"`
+
 ### 6. CI/CD flow (after first push)
 
 ```bash
@@ -527,8 +532,11 @@ The following secrets are set:
 | `STORAGE_ACCOUNT_NAME` | Azure Storage Account name |
 | `APP_INSIGHTS_NAME` | Application Insights resource name |
 | `LOG_ANALYTICS_NAME` | Log Analytics workspace name |
+| `FOUNDRY_ACCOUNT_NAME` | Foundry account name used for Managed Identity RBAC assignment (`Foundry User`) |
 | `SITE_URL` | Public site URL, e.g. `https://www.example.com` |
 | `AUTHOR` | Global author name used for HTML metadata |
+| `FOUNDRY_PROJECT_ENDPOINT` | Foundry project endpoint used by the coaching agent integration |
+| `FOUNDRY_PROJECT_AGENT_NAME` | Foundry agent name used by the coaching agent integration |
 
 > **Note:** `SYNCFUSION_LICENSE_KEY` is **not** a GitHub Secret. It is stored in Azure Key Vault and loaded at startup via `AddAzureKeyVault()`. Set it with `setup.ps1 -KeyVault`.
 

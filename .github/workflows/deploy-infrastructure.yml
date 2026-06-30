@@ -22,9 +22,12 @@
 # STORAGE_ACCOUNT_NAME       - Azure Storage Account name
 # APP_INSIGHTS_NAME          - Application Insights resource name
 # LOG_ANALYTICS_NAME         - Log Analytics workspace name
+# FOUNDRY_ACCOUNT_NAME       - Foundry account name (Microsoft.CognitiveServices/accounts)
 # SITE_URL                   - Public site URL, e.g. https://www.example.com
 # AUTHOR                     - Global author name used for HTML metadata
 # MCP_ATHLETE_DATA_ENDPOINT  - Public MCP endpoint, e.g. https://intervals-mcp.training-architect.com/mcp
+# FOUNDRY_PROJECT_ENDPOINT   - Foundry project endpoint for agent invocation
+# FOUNDRY_PROJECT_AGENT_NAME - Foundry agent name for coaching calls
 # Note: SYNCFUSION_LICENSE_KEY is stored in Key Vault, not passed as Bicep parameter
 #
 # Trigger: push to main when files in infra/ change
@@ -78,9 +81,12 @@ jobs:
             "clientId": { "value": ${{ toJson(secrets.CLIENT_ID) }} },
             "storageAccountName": { "value": ${{ toJson(secrets.STORAGE_ACCOUNT_NAME) }} },
             "appInsightsName": { "value": ${{ toJson(secrets.APP_INSIGHTS_NAME) }} },
+            "foundryAccountName": { "value": ${{ toJson(secrets['FOUNDRY_ACCOUNT_NAME']) }} },
             "siteUrl": { "value": ${{ toJson(secrets.SITE_URL) }} },
             "author": { "value": ${{ toJson(secrets.AUTHOR) }} },
-            "mcpAthleteDataEndpoint": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_ENDPOINT) }} }
+            "mcpAthleteDataEndpoint": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_ENDPOINT) }} },
+            "foundryProjectEndpoint": { "value": ${{ toJson(secrets['FOUNDRY_PROJECT_ENDPOINT']) }} },
+            "foundryProjectAgentName": { "value": ${{ toJson(secrets['FOUNDRY_PROJECT_AGENT_NAME']) }} }
           }
         }
         JSON
