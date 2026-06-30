@@ -40,6 +40,21 @@ Copy this section for each new release and place it below `Unreleased`.
 -
 ```
 
+## [0.2.0] - 2026-06-30
+
+### Added
+- Foundry Agent integration is now active in the Coach workflow for assessment requests.
+- Coach can now return actionable assessment responses directly from the Foundry Agent.
+
+### Changed
+- Coach assessment result rendering now uses Markdown (Markdig) in the client UI.
+
+### Fixed
+- Assessments now complete successfully in the Coach flow and no longer fail in normal usage.
+
+### Removed
+-
+
 ## [0.1.0] - 2026-06-28
 
 ### Added
