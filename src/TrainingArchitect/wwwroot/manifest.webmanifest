@@ -1,0 +1,22 @@
+{
+  "name": "Training Architect",
+  "short_name": "Training Architect",
+  "description": "AI-powered cycling coach backed by intervals.icu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f1e6",
+  "theme_color": "#1f2328",
+  "icons": [
+    {
+      "src": "/images/training-architect-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/training-architect-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
