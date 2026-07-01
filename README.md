@@ -15,6 +15,7 @@ It is the user interface for the data and coaching layer published in [intervals
 - **Azure-native** — Cosmos DB, Key Vault, Managed Identity, zero secrets stored anywhere
   - Key Vault for sensitive configuration — secrets loaded at startup via `AddAzureKeyVault()`, only in production
   - Application Insights for request tracking, dependency monitoring, and exception logging
+- **Installable PWA shell** — the app ships with a manifest and service worker, but intentionally does not cache content for offline use
 - **Infrastructure as Code** — Bicep templates for all Azure resources
 - **CI/CD with GitHub Actions** — automated deployment using OIDC Federated Credentials (no client secrets)
 

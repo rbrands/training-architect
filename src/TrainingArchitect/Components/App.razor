@@ -23,6 +23,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
     <link rel="apple-touch-icon" href="/images/training-architect-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1f2328" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <HeadOutlet />
 </head>
 
@@ -32,6 +35,12 @@
     <script src="_content/Syncfusion.Blazor.Core/scripts/syncfusion-blazor.min.js" type="text/javascript"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script>
+        window.addEventListener('load', function () {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js');
+            }
+        });
+
         // Patches the img src inside the Syncfusion RTE editor DOM.
         // Called after an image upload to correct the GUID blob URL that
         // Syncfusion would otherwise set to Path + originalFilename.
