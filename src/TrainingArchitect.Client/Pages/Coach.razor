@@ -135,7 +135,7 @@
                         <p class="error" role="alert">@Session.ErrorMessage</p>
                     }
 
-                    <button class="connect" disabled="@(!CanSubmit)" @onclick="ConnectAsync">
+                    <button class="connect coach-button-orange" disabled="@(!CanSubmit)" @onclick="ConnectAsync">
                         @if (IsBusy)
                         {
                             <span class="spinner" aria-hidden="true"></span>
@@ -207,7 +207,7 @@
                         </CardContent>
                         <CardFooter>
                             <CardFooterContent>
-                                <SfButton CssClass="e-btn coach-outline-button"
+                                <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
                                           Disabled="@IsAssessButtonDisabled(prompt.CardType)"
                                           @onclick="() => HandleAssessButtonAsync(prompt.CardType)">
                                     @if (cardState.IsLoading)
@@ -242,7 +242,7 @@
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>
-                            <SfButton CssClass="e-btn coach-outline-button"
+                            <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
                                       Disabled="@IsAssessButtonDisabled(expandedPrompt.CardType)"
                                       @onclick="() => HandleAssessButtonAsync(expandedPrompt.CardType)">
                                 <span>@GetAssessButtonText(expandedPrompt.CardType)</span>

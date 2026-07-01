@@ -315,19 +315,22 @@
     font-weight: 600;
 }
 
-.credential-form .connect {
+.coach-button-orange {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
     width: fit-content;
     min-width: 8rem;
-    border: 1px solid #2e67bf;
-    background-color: #2e67bf;
+    border: 1px solid #e76f34;
+    background-color: #e76f34;
     color: #ffffff;
     border-radius: 12px;
     padding: 0.65rem 1rem;
     font-weight: 700;
+    font-size: 1.08rem;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
 }
 
 .data-view-overlay {
@@ -556,20 +559,20 @@
     width: auto;
 }
 
-.credential-form .connect:hover,
-.credential-form .connect:focus-visible {
-    background-color: #28599f;
-    border-color: #28599f;
+.coach-button-orange:hover,
+.coach-button-orange:focus-visible {
+    background-color: #d9652f;
+    border-color: #d9652f;
 }
 
-.credential-form .connect:disabled {
-    background-color: #7f99c4;
-    border-color: #7f99c4;
-    color: #eaf0fb;
+.coach-button-orange:disabled {
+    background-color: #e9a27f;
+    border-color: #e9a27f;
+    color: #fff4ed;
     cursor: not-allowed;
 }
 
-.credential-form .spinner {
+.coach-button-orange .spinner {
     width: 0.85rem;
     height: 0.85rem;
     border: 2px solid rgba(255, 255, 255, 0.35);
@@ -796,6 +799,22 @@
     color: #1f2328;
 }
 
+.coach-page ::deep .coach-outline-button.coach-button-orange {
+    border: 1px solid #e76f34;
+    background-color: #e76f34;
+    color: #ffffff;
+    font-size: 1.08rem;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+}
+
+.coach-page ::deep .coach-outline-button.coach-button-orange:hover,
+.coach-page ::deep .coach-outline-button.coach-button-orange:focus-visible {
+    background-color: #d9652f;
+    border-color: #d9652f;
+    color: #ffffff;
+}
+
 .coach-page ::deep .coach-outline-button:disabled,
 .coach-page ::deep .coach-outline-button.e-disabled,
 .coach-page ::deep .coach-primary-button:disabled,
@@ -811,6 +830,13 @@
     background-color: #f3eee5;
     border-color: #d8c7ac;
     color: #7f776d;
+}
+
+.coach-page ::deep .coach-outline-button.coach-button-orange:disabled,
+.coach-page ::deep .coach-outline-button.coach-button-orange.e-disabled {
+    background-color: #e9a27f;
+    border-color: #e9a27f;
+    color: #fff4ed;
 }
 
 .coach-page ::deep .coach-plan-card {
