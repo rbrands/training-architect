@@ -182,7 +182,7 @@ public sealed class AthleteSession(
             logger.LogError(ex, "Connect for athlete {AthleteId} failed", athleteId);
             ClearData();
             _apiKey = null;
-            ErrorMessage = "Could not connect. Please check your Athlete ID and API key.";
+            ErrorMessage = FormatConnectErrorMessage(ex.Message);
             State = CoachConnectionState.Error;
         }
 
@@ -278,6 +278,112 @@ public sealed class AthleteSession(
         AthleteDataDeserialized = null;
         AthleteDataMethodName = null;
         LastSynced = null;
+    }
+
+    private static string FormatConnectErrorMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Could not connect. Please check your Athlete ID and API key.";
+        }
+
+        if (TryParseConnectError(message, out var conciseMessage))
+        {
+            return conciseMessage;
+        }
+
+        return message.Trim();
+    }
+
+    private static bool TryParseConnectError(string message, out string conciseMessage)
+    {
+        conciseMessage = string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(message);
+            var root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var errorText = GetStringProperty(root, "error")
+                ?? GetStringProperty(root, "detail")
+                ?? GetStringProperty(root, "title")
+                ?? GetStringProperty(root, "message");
+
+            if (string.IsNullOrWhiteSpace(errorText))
+            {
+                return false;
+            }
+
+            var hintText = GetHintFromJson(root);
+            conciseMessage = string.IsNullOrWhiteSpace(hintText)
+                ? errorText.Trim()
+                : $"{errorText.Trim()}\n{hintText.Trim()}";
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string? GetHintFromJson(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (value.TryGetProperty("hint", out var hintProperty) &&
+            hintProperty.ValueKind == JsonValueKind.String)
+        {
+            var hintText = hintProperty.GetString();
+            if (!string.IsNullOrWhiteSpace(hintText))
+            {
+                return hintText.Trim();
+            }
+        }
+
+        if (!value.TryGetProperty("log", out var logProperty) ||
+            logProperty.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var logText = logProperty.GetString();
+        if (string.IsNullOrWhiteSpace(logText))
+        {
+            return null;
+        }
+
+        var hintIndex = logText.IndexOf("Hint:", StringComparison.OrdinalIgnoreCase);
+        if (hintIndex < 0)
+        {
+            return null;
+        }
+
+        var hintTextFromLog = logText[(hintIndex + "Hint:".Length)..].Trim();
+        return string.IsNullOrWhiteSpace(hintTextFromLog) ? null : hintTextFromLog;
+    }
+
+    private static string? GetStringProperty(JsonElement value, string propertyName)
+    {
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!value.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var text = property.GetString();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 
     private void Notify() => Changed?.Invoke();

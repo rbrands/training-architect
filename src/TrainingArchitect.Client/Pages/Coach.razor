@@ -132,7 +132,7 @@
 
                     @if (Session.State == CoachConnectionState.Error && !string.IsNullOrEmpty(Session.ErrorMessage))
                     {
-                        <p class="error" role="alert">@Session.ErrorMessage</p>
+                        <p class="error" role="alert">@DisplayConnectionError</p>
                     }
 
                     <button class="connect coach-button-orange" disabled="@(!CanSubmit)" @onclick="ConnectAsync">
@@ -476,6 +476,8 @@
         CoachConnectionState.Error => "bi-exclamation-triangle",
         _ => "bi-dash-circle"
     };
+
+    private string DisplayConnectionError => FormatConnectionError(Session.ErrorMessage);
 
     private bool CanUseCoachActions => Session.State == CoachConnectionState.Connected;
     private bool CanViewData => CanUseCoachActions && (Session.AthleteDataParsed is not null || !string.IsNullOrWhiteSpace(Session.AthleteDataJson));
@@ -847,6 +849,136 @@
     private string DataMethodName => string.IsNullOrWhiteSpace(Session.AthleteDataMethodName)
         ? "n/a"
         : Session.AthleteDataMethodName;
+
+    private static string FormatConnectionError(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return string.Empty;
+        }
+
+        if (TryExtractConnectionError(message, out var conciseMessage))
+        {
+            return conciseMessage;
+        }
+
+        return message.Trim();
+    }
+
+    private static bool TryExtractConnectionError(string message, out string conciseMessage)
+    {
+        conciseMessage = string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(message);
+            if (!TryFindErrorPayload(document.RootElement, out var payload))
+            {
+                return false;
+            }
+
+            var errorText = GetStringProperty(payload, "error");
+            if (string.IsNullOrWhiteSpace(errorText))
+            {
+                return false;
+            }
+
+            var hintText = GetHintText(payload);
+            conciseMessage = string.IsNullOrWhiteSpace(hintText)
+                ? errorText.Trim()
+                : $"{errorText.Trim()} {hintText.Trim()}";
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryFindErrorPayload(JsonElement element, out JsonElement payload)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            if (!string.IsNullOrWhiteSpace(GetStringProperty(element, "error")))
+            {
+                payload = element;
+                return true;
+            }
+
+            foreach (var propertyName in new[] { "dataParsed", "dataDeserialized", "result" })
+            {
+                if (!element.TryGetProperty(propertyName, out var property))
+                {
+                    continue;
+                }
+
+                if (property.ValueKind == JsonValueKind.String)
+                {
+                    var text = property.GetString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        try
+                        {
+                            using var nested = JsonDocument.Parse(text);
+                            if (TryFindErrorPayload(nested.RootElement, out payload))
+                            {
+                                return true;
+                            }
+                        }
+                        catch (JsonException)
+                        {
+                            // Ignore non-JSON strings.
+                        }
+                    }
+                }
+
+                if (property.ValueKind == JsonValueKind.Object && TryFindErrorPayload(property, out payload))
+                {
+                    return true;
+                }
+            }
+        }
+
+        payload = default;
+        return false;
+    }
+
+    private static string? GetHintText(JsonElement element)
+    {
+        var directHint = GetStringProperty(element, "hint");
+        if (!string.IsNullOrWhiteSpace(directHint))
+        {
+            return directHint;
+        }
+
+        var logText = GetStringProperty(element, "log");
+        if (string.IsNullOrWhiteSpace(logText))
+        {
+            return null;
+        }
+
+        var hintIndex = logText.IndexOf("Hint:", StringComparison.OrdinalIgnoreCase);
+        if (hintIndex < 0)
+        {
+            return null;
+        }
+
+        var hintText = logText[(hintIndex + "Hint:".Length)..].Trim();
+        return string.IsNullOrWhiteSpace(hintText) ? null : hintText;
+    }
+
+    private static string? GetStringProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = property.GetString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
 
     private async Task ConnectAsync()
     {
