@@ -338,73 +338,27 @@
                     <TabItems>
                         <TabItem>
                             <ChildContent>
-                                <TabHeader Text="Overview Metrics"></TabHeader>
+                                <TabHeader Text="Overview"></TabHeader>
                             </ChildContent>
                             <ContentTemplate>
                                 <div class="coach-overview-metrics">
-                                    <h4 class="coach-overview-title">Overview Metrics</h4>
-
-                                    @if (OverviewMetricRows.Count == 0)
+                                    @if (OverviewSections.Count == 0)
                                     {
-                                        <p class="coach-overview-empty">No metrics available in the parsed JSON.</p>
+                                        <p class="coach-overview-empty">No parsed JSON data available.</p>
                                     }
                                     else
                                     {
-                                        <div class="coach-overview-table-wrap">
-                                            <table class="coach-overview-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th scope="col">Metric</th>
-                                                        <th scope="col">Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var row in OverviewMetricRows)
-                                                    {
-                                                        <tr>
-                                                            <th scope="row">@row.Metric</th>
-                                                            <td>@row.Value</td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    }
-
-                                    <h5 class="coach-overview-subtitle">Wellness Trends (simplified)</h5>
-
-                                    @if (WellnessTrendRows.Count == 0)
-                                    {
-                                        <p class="coach-overview-empty">No wellness trend data available.</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="coach-overview-table-wrap">
-                                            <table class="coach-overview-table coach-overview-trends-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th scope="col">Metric</th>
-                                                        <th scope="col">Current</th>
-                                                        <th scope="col">Avg 7d</th>
-                                                        <th scope="col">Avg prev 7d</th>
-                                                        <th scope="col">Trend 7d</th>
-                                                        <th scope="col">Unit</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var trend in WellnessTrendRows)
-                                                    {
-                                                        <tr>
-                                                            <th scope="row">@trend.Metric</th>
-                                                            <td>@trend.Current</td>
-                                                            <td>@trend.Avg7d</td>
-                                                            <td>@trend.AvgPrev7d</td>
-                                                            <td>@trend.Trend7d</td>
-                                                            <td>@trend.Unit</td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
+                                        <div class="coach-overview-sections">
+                                            @foreach (var section in OverviewSections)
+                                            {
+                                                <details class="coach-overview-section" open="@section.IsInitiallyOpen">
+                                                    <summary class="coach-overview-section-summary">
+                                                        <span class="coach-overview-section-title">@section.Title</span>
+                                                        <span class="coach-overview-section-meta">@section.Summary</span>
+                                                    </summary>
+                                                    <pre class="coach-overview-section-json">@section.PrettyJson</pre>
+                                                </details>
+                                            }
                                         </div>
                                     }
                                 </div>
@@ -521,131 +475,132 @@
     ];
 
     private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
-    private sealed record OverviewMetricRow(string Metric, string Value);
-    private sealed record WellnessTrendRow(string Metric, string Current, string Avg7d, string AvgPrev7d, string Trend7d, string Unit);
+    private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson, bool IsInitiallyOpen);
 
     private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .DisableHtml()
         .Build();
 
-    private IReadOnlyList<OverviewMetricRow> OverviewMetricRows => BuildOverviewMetricRows();
-    private IReadOnlyList<WellnessTrendRow> WellnessTrendRows => BuildWellnessTrendRows();
+    private IReadOnlyList<JsonOverviewSection> OverviewSections => BuildOverviewSections();
 
-    private IReadOnlyList<OverviewMetricRow> BuildOverviewMetricRows()
+    private IReadOnlyList<JsonOverviewSection> BuildOverviewSections()
     {
-        var metrics = GetObjectProperty(Session.AthleteDataParsed, "metrics");
-        if (metrics is null)
+        var root = GetOverviewRoot();
+        if (root is null)
         {
             return [];
         }
 
-        var powerProfile = GetObjectProperty(metrics, "power_profile");
-        var weight = GetNumericProperty(metrics, "weight") ?? 0d;
-
-        var rows = new List<OverviewMetricRow>();
-        AddMetric(rows, "Age", FormatNumber(GetNumericProperty(metrics, "age")));
-        AddMetric(rows, "Sex", FormatText(GetTextProperty(metrics, "sex")));
-        AddMetric(rows, "Weight (kg)", FormatNumber(weight));
-
-        var sleepSecs = GetNumericProperty(metrics, "sleep_secs");
-        double? sleepHours = sleepSecs is null ? null : Math.Round(sleepSecs.Value / 3600d, 2, MidpointRounding.AwayFromZero);
-        AddMetric(rows, "Sleep (h)", sleepHours is null ? "-" : FormatNumber(sleepHours, 2));
-
-        AddMetric(rows, "Sleep Quality", FormatText(GetTextProperty(metrics, "sleep_quality")));
-
-        var ftp = GetNumericProperty(metrics, "ftp");
-        var rollingFtp = GetNumericProperty(metrics, "rolling_ftp");
-        var eftp = GetNumericProperty(metrics, "eftp");
-
-        AddMetric(rows, "FTP (W)", FormatNumber(ftp));
-        AddMetric(rows, "FTP (W/kg)", FormatNumber(CalculateWattsPerKg(ftp, weight), 2));
-        AddMetric(rows, "Rolling FTP (W)", FormatNumber(rollingFtp));
-        AddMetric(rows, "Rolling FTP (W/kg)", FormatNumber(CalculateWattsPerKg(rollingFtp, weight), 2));
-        AddMetric(rows, "eFTP (W)", FormatNumber(eftp ?? 0d, 1, fixedDecimals: true));
-        AddMetric(rows, "eFTP (W/kg)", FormatNumber(CalculateWattsPerKg(eftp, weight), 2));
-
-        AddMetric(rows, "VO2Max (calc.)", FormatNumber(GetNumericProperty(metrics, "vo2max")));
-        AddMetric(rows, "W' (J)", FormatNumber(GetNumericProperty(metrics, "w_prime")));
-
-        var rollingWPrime = GetNumericProperty(metrics, "rolling_w_prime");
-        AddMetric(rows, "Rolling W' (J)", rollingWPrime is null ? "-" : FormatNumber(rollingWPrime, 1, fixedDecimals: true));
-
-        AddPowerRows(rows, powerProfile, "p15s", "Best 15s Power");
-        AddPowerRows(rows, powerProfile, "p30s", "Best 30s Power");
-        AddPowerRows(rows, powerProfile, "p1min", "Best 1-min Power");
-        AddPowerRows(rows, powerProfile, "p3min", "Best 3-min Power");
-        AddPowerRows(rows, powerProfile, "p5min", "Best 5-min Power");
-        AddPowerRows(rows, powerProfile, "p20min", "Best 20-min Power");
-
-        AddMetric(rows, "Power Curve Slope", FormatNumber(GetNumericProperty(powerProfile, "curve_slope"), 3));
-        AddMetric(rows, "Power Profile Period (days)", FormatNumber(GetNumericProperty(powerProfile, "period_days")));
-
-        AddMetric(rows, "CTL", FormatNumber(GetNumericProperty(metrics, "ctl"), 1, fixedDecimals: true));
-        AddMetric(rows, "ATL", FormatNumber(GetNumericProperty(metrics, "atl"), 1, fixedDecimals: true));
-        AddMetric(rows, "Resting HR (bpm)", FormatNumber(GetNumericProperty(metrics, "resting_hr")));
-        AddMetric(rows, "Threshold HR / LTHR (bpm)", FormatNumber(GetNumericProperty(metrics, "lthr")));
-        AddMetric(rows, "Max HR (bpm)", FormatNumber(GetNumericProperty(metrics, "max_hr")));
-        AddMetric(rows, "HRV", FormatNumber(GetNumericProperty(metrics, "hrv")));
-
-        return rows;
-    }
-
-    private IReadOnlyList<WellnessTrendRow> BuildWellnessTrendRows()
-    {
-        var metrics = GetObjectProperty(Session.AthleteDataParsed, "metrics");
-        if (metrics is null)
+        var sections = new List<JsonOverviewSection>();
+        var knownSectionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            return [];
+            "metrics",
+            "week_summary",
+            "activities",
+            "fueling_analysis",
+            "planned_workouts"
+        };
+
+        var headerProperties = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in root.Value.EnumerateObject())
+        {
+            if (knownSectionKeys.Contains(property.Name))
+            {
+                continue;
+            }
+
+            if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            headerProperties[property.Name] = property.Value;
         }
 
-        var wellnessTrends = GetObjectProperty(metrics, "wellness_trends");
-        if (wellnessTrends is null)
+        if (headerProperties.Count > 0)
         {
-            return [];
+            sections.Add(new JsonOverviewSection(
+                "Header Data",
+                $"{headerProperties.Count} fields",
+                SerializePretty(headerProperties),
+                IsInitiallyOpen: true));
         }
 
-        return
-        [
-            BuildWellnessTrendRow(wellnessTrends, "weight", "Weight", "kg"),
-            BuildWellnessTrendRow(wellnessTrends, "resting_hr", "Resting HR", "bpm"),
-            BuildWellnessTrendRow(wellnessTrends, "hrv", "HRV", "ms")
-        ];
+        AddOverviewSection(sections, root.Value, "metrics", "Metrics", isInitiallyOpen: true);
+        AddOverviewSection(sections, root.Value, "week_summary", "Week Summary", isInitiallyOpen: false);
+        AddOverviewSection(sections, root.Value, "activities", "Activities", isInitiallyOpen: false);
+        AddOverviewSection(sections, root.Value, "fueling_analysis", "Fueling Analysis", isInitiallyOpen: false);
+        AddOverviewSection(sections, root.Value, "planned_workouts", "Planned Workouts", isInitiallyOpen: false);
+
+        return sections;
     }
 
-    private static WellnessTrendRow BuildWellnessTrendRow(JsonElement? wellnessTrends, string key, string label, string unit)
+    private JsonElement? GetOverviewRoot()
     {
-        var trend = GetObjectProperty(wellnessTrends, key);
+        var parsed = Session.AthleteDataParsed;
+        if (parsed is not null && parsed.Value.ValueKind == JsonValueKind.Object)
+        {
+            return parsed;
+        }
 
-        return new WellnessTrendRow(
-            label,
-            FormatJsonValue(GetAnyProperty(trend, "current")),
-            FormatJsonValue(GetAnyProperty(trend, "avg_7d")),
-            FormatJsonValue(GetAnyProperty(trend, "avg_prev_7d")),
-            FormatJsonValue(GetAnyProperty(trend, "trend_7d")),
-            unit);
-    }
-
-    private static void AddPowerRows(List<OverviewMetricRow> rows, JsonElement? powerProfile, string key, string labelPrefix)
-    {
-        var segment = GetObjectProperty(powerProfile, key);
-        AddMetric(rows, $"{labelPrefix} (W)", FormatNumber(GetNumericProperty(segment, "watts")));
-        AddMetric(rows, $"{labelPrefix} (W/kg)", FormatNumber(GetNumericProperty(segment, "w_per_kg"), 2));
-    }
-
-    private static void AddMetric(List<OverviewMetricRow> rows, string metric, string value)
-    {
-        rows.Add(new OverviewMetricRow(metric, value));
-    }
-
-    private static double? CalculateWattsPerKg(double? watts, double weight)
-    {
-        if (!watts.HasValue || watts.Value <= 0d || weight <= 0d)
+        var fallbackJson = Session.AthleteDataJson;
+        if (string.IsNullOrWhiteSpace(fallbackJson))
         {
             return null;
         }
 
-        return Math.Round(watts.Value / weight, 2, MidpointRounding.AwayFromZero);
+        try
+        {
+            using var document = JsonDocument.Parse(fallbackJson);
+            var root = document.RootElement.Clone();
+            return root.ValueKind == JsonValueKind.Object ? root : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static void AddOverviewSection(
+        List<JsonOverviewSection> sections,
+        JsonElement root,
+        string key,
+        string title,
+        bool isInitiallyOpen)
+    {
+        if (!root.TryGetProperty(key, out var value))
+        {
+            return;
+        }
+
+        sections.Add(new JsonOverviewSection(
+            title,
+            BuildSectionSummary(value),
+            SerializePretty(value),
+            IsInitiallyOpen: isInitiallyOpen));
+    }
+
+    private static string BuildSectionSummary(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.Object => $"{value.EnumerateObject().Count()} fields",
+            JsonValueKind.Array => $"{value.GetArrayLength()} items",
+            JsonValueKind.String => "text value",
+            JsonValueKind.Number => "numeric value",
+            JsonValueKind.True or JsonValueKind.False => "boolean value",
+            JsonValueKind.Null => "null",
+            _ => "value"
+        };
+    }
+
+    private static string SerializePretty<TValue>(TValue value)
+    {
+        return JsonSerializer.Serialize(value, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
     }
 
     private static JsonElement? GetObjectProperty(JsonElement? parent, string propertyName)
@@ -669,90 +624,6 @@
         return parent.Value.TryGetProperty(propertyName, out var value)
             ? value
             : null;
-    }
-
-    private static double? GetNumericProperty(JsonElement? parent, string propertyName)
-    {
-        return ParseDouble(GetAnyProperty(parent, propertyName));
-    }
-
-    private static string? GetTextProperty(JsonElement? parent, string propertyName)
-    {
-        var value = GetAnyProperty(parent, propertyName);
-        if (value is null)
-        {
-            return null;
-        }
-
-        return value.Value.ValueKind == JsonValueKind.String
-            ? value.Value.GetString()
-            : value.Value.ToString();
-    }
-
-    private static double? ParseDouble(JsonElement? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value.Value.ValueKind == JsonValueKind.Number && value.Value.TryGetDouble(out var numericValue))
-        {
-            return numericValue;
-        }
-
-        if (value.Value.ValueKind == JsonValueKind.String
-            && double.TryParse(value.Value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedValue))
-        {
-            return parsedValue;
-        }
-
-        return null;
-    }
-
-    private static string FormatText(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "-" : value;
-    }
-
-    private static string FormatNumber(double? value, int decimals = 2, bool fixedDecimals = false)
-    {
-        if (!value.HasValue)
-        {
-            return "-";
-        }
-
-        var rounded = Math.Round(value.Value, decimals, MidpointRounding.AwayFromZero);
-        if (fixedDecimals)
-        {
-            return rounded.ToString($"F{decimals}", CultureInfo.InvariantCulture);
-        }
-
-        if (decimals <= 0)
-        {
-            return rounded.ToString("0", CultureInfo.InvariantCulture);
-        }
-
-        return rounded.ToString($"0.{new string('#', decimals)}", CultureInfo.InvariantCulture);
-    }
-
-    private static string FormatJsonValue(JsonElement? value)
-    {
-        if (value is null)
-        {
-            return "-";
-        }
-
-        return value.Value.ValueKind switch
-        {
-            JsonValueKind.Number => FormatNumber(ParseDouble(value)),
-            JsonValueKind.String => FormatText(value.Value.GetString()),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            JsonValueKind.Null => "-",
-            JsonValueKind.Undefined => "-",
-            _ => FormatText(value.Value.ToString())
-        };
     }
 
     private static MarkupString RenderAssessMarkdown(string? markdown)
@@ -830,22 +701,6 @@
         }
     }
 
-    private string DataDeserializedPrettyJson
-    {
-        get
-        {
-            if (Session.AthleteDataDeserialized is null)
-            {
-                return "{}";
-            }
-
-            return JsonSerializer.Serialize(Session.AthleteDataDeserialized, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-        }
-    }
-
     private string DataMethodName => string.IsNullOrWhiteSpace(Session.AthleteDataMethodName)
         ? "n/a"
         : Session.AthleteDataMethodName;
@@ -905,7 +760,7 @@
                 return true;
             }
 
-            foreach (var propertyName in new[] { "dataParsed", "dataDeserialized", "result" })
+            foreach (var propertyName in new[] { "dataParsed", "result" })
             {
                 if (!element.TryGetProperty(propertyName, out var property))
                 {

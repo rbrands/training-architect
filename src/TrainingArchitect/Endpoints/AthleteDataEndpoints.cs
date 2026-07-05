@@ -1,6 +1,5 @@
 using TrainingArchitect.Services;
 using TrainingArchitect.Core.Constants;
-using TrainingArchitect.Core.Models;
 using System.Text.Json;
 
 namespace TrainingArchitect.Endpoints;
@@ -108,5 +107,4 @@ public record AthleteDataResponse
     public string MethodName { get; init; } = string.Empty;
     public string DataRaw { get; init; } = string.Empty;
     public JsonElement DataParsed { get; init; }
-    public WeekDataDto? DataDeserialized { get; init; }
 }

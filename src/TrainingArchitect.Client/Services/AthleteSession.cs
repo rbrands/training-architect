@@ -45,7 +45,6 @@ public interface IAthleteSession
     string? AthleteDataJson { get; }
     string? AthleteDataRaw { get; }
     JsonElement? AthleteDataParsed { get; }
-    WeekDataDto? AthleteDataDeserialized { get; }
     string? AthleteDataMethodName { get; }
 
     event Action? Changed;
@@ -85,7 +84,6 @@ public sealed class AthleteDataResult
     public string MethodName { get; init; } = string.Empty;
     public string DataRaw { get; init; } = string.Empty;
     public JsonElement DataParsed { get; init; }
-    public WeekDataDto? DataDeserialized { get; init; }
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +106,6 @@ public sealed class AthleteSession(
     public string? AthleteDataJson { get; private set; }
     public string? AthleteDataRaw { get; private set; }
     public JsonElement? AthleteDataParsed { get; private set; }
-    public WeekDataDto? AthleteDataDeserialized { get; private set; }
     public string? AthleteDataMethodName { get; private set; }
 
     public event Action? Changed;
@@ -139,7 +136,6 @@ public sealed class AthleteSession(
             AthleteDataMethodName = result.MethodName;
             AthleteDataRaw = result.DataRaw;
             AthleteDataParsed = result.DataParsed;
-            AthleteDataDeserialized = result.DataDeserialized;
             AthleteDataJson = result.DataParsed.GetRawText();
             LastSynced = DateTimeOffset.Now;
             State = CoachConnectionState.Connected;
@@ -206,7 +202,6 @@ public sealed class AthleteSession(
             AthleteDataMethodName = result.MethodName;
             AthleteDataRaw = result.DataRaw;
             AthleteDataParsed = result.DataParsed;
-            AthleteDataDeserialized = result.DataDeserialized;
             AthleteDataJson = result.DataParsed.GetRawText();
             LastSynced = DateTimeOffset.Now;
             ErrorMessage = null;
@@ -275,7 +270,6 @@ public sealed class AthleteSession(
         AthleteDataJson = null;
         AthleteDataRaw = null;
         AthleteDataParsed = null;
-        AthleteDataDeserialized = null;
         AthleteDataMethodName = null;
         LastSynced = null;
     }

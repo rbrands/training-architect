@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using TrainingArchitect.Core.Constants;
-using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Client.Services;
 
@@ -59,8 +57,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = envelope.MethodName ?? string.Empty,
             DataRaw = raw,
-            DataParsed = parsed,
-            DataDeserialized = envelope.DataDeserialized
+            DataParsed = parsed
         };
     }
 
@@ -71,8 +68,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = string.Empty,
             DataRaw = empty.GetRawText(),
-            DataParsed = empty,
-            DataDeserialized = null
+            DataParsed = empty
         };
     }
 
@@ -81,9 +77,8 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         var noMethodName = string.IsNullOrWhiteSpace(envelope.MethodName);
         var noRawData = string.IsNullOrWhiteSpace(envelope.DataRaw);
         var noDataObject = envelope.DataParsed.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null;
-        var noDeserializedData = envelope.DataDeserialized is null;
 
-        return noMethodName && noRawData && noDataObject && noDeserializedData;
+        return noMethodName && noRawData && noDataObject;
     }
 
     private static string ExtractErrorMessage(string responseBody, string? reasonPhrase, string fallbackStatus)
@@ -103,8 +98,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
 
     private static bool TryBuildConciseErrorMessage(AthleteDataEnvelope envelope, out string message)
     {
-        var errorText = GetStringProperty(envelope.DataParsed, "error")
-            ?? GetStringProperty(envelope.DataDeserialized, "error");
+        var errorText = GetStringProperty(envelope.DataParsed, "error");
 
         if (string.IsNullOrWhiteSpace(errorText))
         {
@@ -112,8 +106,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
             return false;
         }
 
-        var hintText = GetHintText(envelope.DataParsed)
-            ?? GetHintText(envelope.DataDeserialized);
+        var hintText = GetHintText(envelope.DataParsed);
 
         message = string.IsNullOrWhiteSpace(hintText)
             ? errorText.Trim()
@@ -238,6 +231,5 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         public string? MethodName { get; init; }
         public string? DataRaw { get; init; }
         public JsonElement DataParsed { get; init; }
-        public WeekDataDto? DataDeserialized { get; init; }
     }
 }
