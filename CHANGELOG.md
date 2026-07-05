@@ -40,6 +40,21 @@ Copy this section for each new release and place it below `Unreleased`.
 -
 ```
 
+## [0.2.1] - 2026-07-05
+
+### Added
+- Expandable Overview sections in the Coach data modal for `Header Data`, `Metrics`, `Week Summary`, `Activities`, `Fueling Analysis`, and `Planned Workouts`.
+
+### Changed
+- Coach athlete-data flow now remains JSON-only end-to-end for parsed/raw payload handling.
+- Overview tab labeling and presentation were streamlined (`Overview` tab title only, redundant in-panel heading removed).
+
+### Fixed
+- Removed tight coupling to typed intervals sync payload models in the runtime data path.
+
+### Removed
+- Typed `DataDeserialized` contract usage and generated `WeekDataDto` model from the active coach data flow.
+
 ## [0.2.0] - 2026-06-30
 
 ### Added
