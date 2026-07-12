@@ -13,10 +13,17 @@ public static class ConfigEndpoints
         {
             var blobEndpoint = config["Storage:BlobEndpoint"] ?? string.Empty;
             var imageContainerUrl = blobEndpoint.TrimEnd('/') + "/images/";
+            var syncfusionLicenseKey = config["Syncfusion:LicenseKey"] ?? string.Empty;
+
+            if (syncfusionLicenseKey.StartsWith("__", StringComparison.Ordinal)
+                || syncfusionLicenseKey.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase))
+            {
+                syncfusionLicenseKey = string.Empty;
+            }
 
             return Results.Ok(new ClientConfig
             {
-                SyncfusionLicenseKey = config["Syncfusion:LicenseKey"] ?? string.Empty,
+                SyncfusionLicenseKey = syncfusionLicenseKey,
                 ImageContainerUrl = imageContainerUrl
             });
         })

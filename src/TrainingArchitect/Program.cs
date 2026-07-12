@@ -45,7 +45,9 @@ if (!builder.Environment.IsDevelopment())
 // Set via user-secrets locally: dotnet user-secrets set "Syncfusion:LicenseKey" "..."
 // Set via App Service Configuration in production: Syncfusion__LicenseKey
 var syncfusionKey = builder.Configuration["Syncfusion:LicenseKey"];
-if (!string.IsNullOrEmpty(syncfusionKey))
+if (!string.IsNullOrWhiteSpace(syncfusionKey)
+    && !syncfusionKey.StartsWith("__", StringComparison.Ordinal)
+    && !syncfusionKey.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase))
     Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(syncfusionKey);
 
 // Application Insights

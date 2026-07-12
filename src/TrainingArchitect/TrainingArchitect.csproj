@@ -28,9 +28,9 @@
     <PackageReference Include="ModelContextProtocol" Version="1.4.0" />
     <PackageReference Include="ModelContextProtocol.Core" Version="1.4.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="Syncfusion.Blazor.Grid" Version="*" />
-    <PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="*" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="*" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="34.1.30" />
+    <PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="34.1.30" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="34.1.30" />
   </ItemGroup>
 
   <ItemGroup>
