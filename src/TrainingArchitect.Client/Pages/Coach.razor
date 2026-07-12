@@ -230,6 +230,9 @@
         {
             var expandedPrompt = GetPromptCard(_expandedCard.Value);
             var expandedState = GetAssessCardState(expandedPrompt.CardType);
+            var metricsSnapshot = expandedPrompt.CardType == AssessCardType.MetricsWellness
+                ? BuildMetricsSnapshot()
+                : [];
 
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
@@ -255,6 +258,23 @@
                 @if (!string.IsNullOrWhiteSpace(expandedState.ResultText))
                 {
                     <div class="coach-assess-result-block">
+                        @if (expandedPrompt.CardType == AssessCardType.MetricsWellness)
+                        {
+                            <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
+                                <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
+
+                                <dl class="coach-metrics-snapshot-grid">
+                                    @foreach (var item in metricsSnapshot)
+                                    {
+                                        <div class="coach-metrics-snapshot-item">
+                                            <dt>@item.Label</dt>
+                                            <dd>@item.Value</dd>
+                                        </div>
+                                    }
+                                </dl>
+                            </div>
+                        }
+
                         <div class="coach-assess-result-actions">
                             <button type="button"
                                     class="coach-assess-copy"
@@ -288,6 +308,7 @@
                     <p class="coach-plan-description mb-0">
                         Structured plan based on Friel/Coggan. Confirmation before upload.
                     </p>
+                    <span class="coach-coming-soon-label">Coming Soon</span>
                 </div>
 
                 <SfButton CssClass="e-btn coach-primary-button" Disabled="@(!CanUseCoachActions)">
@@ -476,6 +497,7 @@
 
     private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
     private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson, bool IsInitiallyOpen);
+    private sealed record MetricSnapshotItem(string Label, string Value);
 
     private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -624,6 +646,82 @@
         return parent.Value.TryGetProperty(propertyName, out var value)
             ? value
             : null;
+    }
+
+    private static JsonElement? GetNestedProperty(JsonElement? parent, params string[] path)
+    {
+        var current = parent;
+
+        foreach (var segment in path)
+        {
+            current = GetAnyProperty(current, segment);
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
+    }
+
+    private IReadOnlyList<MetricSnapshotItem> BuildMetricsSnapshot()
+    {
+        var root = GetOverviewRoot();
+        var metrics = GetObjectProperty(root, "metrics");
+
+        return
+        [
+            new("FTP", FormatMetricValue(GetAnyProperty(metrics, "ftp"), "W")),
+            new("eFTP", FormatMetricValue(GetAnyProperty(metrics, "eftp"), "W")),
+            new("FTP w/kg", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "w_per_kg"))),
+            new("FTP Category", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "category"))),
+            new("Power Profile Type", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "type"))),
+            new("VO2max ml/kg/min", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "ml_per_kg_min"))),
+            new("VO2max Age Group", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
+            new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category")))
+        ];
+    }
+
+    private static string FormatMetricValue(JsonElement? value, string? unit = null)
+    {
+        if (value is null)
+        {
+            return "n/a";
+        }
+
+        var element = value.Value;
+        var text = element.ValueKind switch
+        {
+            JsonValueKind.Number => FormatNumber(element),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => null
+        };
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "n/a";
+        }
+
+        return string.IsNullOrWhiteSpace(unit)
+            ? text
+            : $"{text} {unit}";
+    }
+
+    private static string FormatNumber(JsonElement numberElement)
+    {
+        if (numberElement.TryGetInt64(out var integerValue))
+        {
+            return integerValue.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (numberElement.TryGetDouble(out var doubleValue))
+        {
+            return doubleValue.ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        return numberElement.GetRawText();
     }
 
     private static MarkupString RenderAssessMarkdown(string? markdown)

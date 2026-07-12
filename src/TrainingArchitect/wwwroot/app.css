@@ -29,6 +29,20 @@ body {
     overflow: hidden;
 }
 
+.article-card-image-link {
+    display: block;
+    background: linear-gradient(180deg, #101725 0%, #182338 100%);
+}
+
+.article-card-image {
+    display: block;
+    width: 100%;
+    height: 160px;
+    object-fit: contain;
+    object-position: center;
+    background-color: transparent;
+}
+
 .tag-pill {
     background-color: #f0dfc5;
     color: #1f2328;

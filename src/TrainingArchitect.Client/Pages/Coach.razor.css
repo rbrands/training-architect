@@ -672,6 +672,47 @@
     padding: 0.8rem;
 }
 
+.coach-metrics-snapshot {
+    margin-bottom: 0.7rem;
+    padding: 0.75rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: #f8fbff;
+}
+
+.coach-metrics-snapshot-title {
+    margin: 0 0 0.6rem 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #314b73;
+}
+
+.coach-metrics-snapshot-grid {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.7rem;
+}
+
+.coach-metrics-snapshot-item {
+    margin: 0;
+}
+
+.coach-metrics-snapshot-item dt {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #5a6780;
+}
+
+.coach-metrics-snapshot-item dd {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: #1f2d42;
+    word-break: break-word;
+}
+
 .coach-assess-result-actions {
     display: flex;
     justify-content: flex-end;
@@ -931,6 +972,21 @@
     font-weight: 500;
 }
 
+.coach-coming-soon-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid #7f99c4;
+    background: #eaf0fb;
+    color: #2e5ea5;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
 .coach-page ::deep .coach-primary-button {
     background-color: #386dbc;
     border: 1px solid #386dbc;
@@ -955,6 +1011,10 @@
 
 @media (max-width: 991.98px) {
     .coach-prompt-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-metrics-snapshot-grid {
         grid-template-columns: 1fr;
     }
 

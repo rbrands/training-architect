@@ -59,10 +59,9 @@ else
 
                     @if (!string.IsNullOrEmpty(article.TitleImageUrl))
                     {
-                        <a href="@GetArticleUrl(article)">
+                        <a href="@GetArticleUrl(article)" class="article-card-image-link">
                             <img src="@article.TitleImageUrl"
-                                 class="card-img-top rounded-top"
-                                 style="height: 160px; object-fit: cover;"
+                                 class="card-img-top rounded-top article-card-image"
                                  alt="@article.Title" />
                         </a>
                     }
@@ -126,10 +125,9 @@ else
                         <div class="card h-100 card-dark position-relative border-warning-subtle">
                             @if (!string.IsNullOrEmpty(article.TitleImageUrl))
                             {
-                                <a href="@GetArticleUrl(article)">
+                                <a href="@GetArticleUrl(article)" class="article-card-image-link">
                                     <img src="@article.TitleImageUrl"
-                                         class="card-img-top rounded-top"
-                                         style="height: 160px; object-fit: cover;"
+                                         class="card-img-top rounded-top article-card-image"
                                          alt="@article.Title" />
                                 </a>
                             }

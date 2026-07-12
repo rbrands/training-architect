@@ -40,7 +40,9 @@ Copy this section for each new release and place it below `Unreleased`.
 -
 ```
 
-## [0.2.1] - 2026-07-05
+-
+
+## [0.2.3] - 2026-07-12
 
 ### Added
 - Expandable Overview sections in the Coach data modal for `Header Data`, `Metrics`, `Week Summary`, `Activities`, `Fueling Analysis`, and `Planned Workouts`.
@@ -51,6 +53,7 @@ Copy this section for each new release and place it below `Unreleased`.
 
 ### Fixed
 - Removed tight coupling to typed intervals sync payload models in the runtime data path.
+- Blog overview card header images now preserve the full image composition instead of cropping the sides aggressively.
 
 ### Removed
 - Typed `DataDeserialized` contract usage and generated `WeekDataDto` model from the active coach data flow.
