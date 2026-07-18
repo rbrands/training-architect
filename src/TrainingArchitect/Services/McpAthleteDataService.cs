@@ -84,6 +84,113 @@ public sealed class McpAthleteDataService(
         };
     }
 
+    public async Task UploadWeekPlanAsync(string athleteId, string apiKey, string weekPlanJson, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(weekPlanJson))
+        {
+            throw new ArgumentException("Week plan JSON must not be empty.", nameof(weekPlanJson));
+        }
+
+        var endpointUri = ResolveEndpointUri();
+        var stopwatch = Stopwatch.StartNew();
+        var toolArguments = BuildUploadArguments(weekPlanJson);
+
+        logger.LogInformation(
+            "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix}.",
+            McpToolNames.UploadWeekPlan,
+            endpointUri.Host,
+            GetAthleteIdSuffix(athleteId));
+
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Endpoint = endpointUri,
+            TransportMode = HttpTransportMode.AutoDetect,
+            AdditionalHeaders = new Dictionary<string, string>
+            {
+                [IntervalsHeaders.AthleteId] = athleteId,
+                [IntervalsHeaders.ApiKey] = apiKey
+            }
+        });
+
+        await using var client = await McpClient.CreateAsync(transport, new McpClientOptions(), null, ct);
+
+        var toolResult = await client.CallToolAsync(
+            McpToolNames.UploadWeekPlan,
+            toolArguments,
+            progress: null,
+            options: new RequestOptions(),
+            cancellationToken: ct);
+
+        if (toolResult.IsError == true)
+        {
+            throw new McpToolExecutionException(
+                $"MCP tool '{McpToolNames.UploadWeekPlan}' returned an error: {ExtractTextContent(toolResult)}");
+        }
+
+        logger.LogInformation(
+            "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
+            McpToolNames.UploadWeekPlan,
+            stopwatch.ElapsedMilliseconds,
+            GetAthleteIdSuffix(athleteId));
+    }
+
+    private static Dictionary<string, object?> BuildUploadArguments(string weekPlanJson)
+    {
+        try
+        {
+            using var json = JsonDocument.Parse(weekPlanJson);
+            if (json.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new McpToolExecutionException("Week plan JSON must be a JSON object.");
+            }
+
+            // The MCP tool contract requires a top-level argument named "plan_json".
+            if (json.RootElement.TryGetProperty("plan_json", out var existingPlanJson))
+            {
+                if (existingPlanJson.ValueKind == JsonValueKind.String)
+                {
+                    return new Dictionary<string, object?>
+                    {
+                        ["plan_json"] = existingPlanJson.GetString()
+                    };
+                }
+
+                return new Dictionary<string, object?>
+                {
+                    ["plan_json"] = existingPlanJson.GetRawText()
+                };
+            }
+
+            return new Dictionary<string, object?>
+            {
+                ["plan_json"] = json.RootElement.GetRawText()
+            };
+        }
+        catch (JsonException ex)
+        {
+            throw new McpToolExecutionException("Week plan JSON is invalid.", ex);
+        }
+    }
+
+    private Uri ResolveEndpointUri()
+    {
+        var endpointUrl = configuration["Mcp:AthleteData:Endpoint"];
+        if (string.IsNullOrWhiteSpace(endpointUrl))
+        {
+            throw new InvalidOperationException(
+                "MCP endpoint is not configured. Set Mcp:AthleteData:Endpoint.");
+        }
+
+        if (!Uri.TryCreate(endpointUrl, UriKind.Absolute, out var endpointUri)
+            || (endpointUri.Scheme != Uri.UriSchemeHttp && endpointUri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException(
+                "MCP endpoint is invalid. Mcp:AthleteData:Endpoint must be an absolute HTTP/HTTPS URL.");
+        }
+
+        return endpointUri;
+    }
+
     private static JsonElement ExtractDataJson(CallToolResult result)
     {
         if (result.StructuredContent is JsonElement structuredJson)

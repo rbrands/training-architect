@@ -315,23 +315,51 @@
                     </p>
                 </div>
 
-                <SfButton CssClass="e-btn coach-primary-button"
-                          Disabled="@(!CanUsePlanButton)"
-                          @onclick="HandlePlanButtonAsync">
-                    @if (_isPlanRequestInFlight)
+                <div class="d-flex gap-2 align-items-center">
+                    @if (HasPlanResult && !string.IsNullOrWhiteSpace(_planUploadJson))
                     {
-                        <span class="coach-assess-spinner" aria-hidden="true"></span>
-                        <span>Creating...</span>
+                        <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
+                                  Disabled="@(!CanUploadPlan)"
+                                  @onclick="UploadPlanAsync">
+                            @if (_isPlanUploadInFlight)
+                            {
+                                <span class="coach-assess-spinner" aria-hidden="true"></span>
+                                <span>Uploading...</span>
+                            }
+                            else if (_planUploaded)
+                            {
+                                <span>Uploaded</span>
+                            }
+                            else
+                            {
+                                <span>Upload Plan</span>
+                            }
+                        </SfButton>
                     }
-                    else
-                    {
-                        <span>@GetPlanButtonText()</span>
-                        <span aria-hidden="true">→</span>
-                    }
-                </SfButton>
+
+                    <SfButton CssClass="e-btn coach-primary-button"
+                              Disabled="@(!CanUsePlanButton)"
+                              @onclick="HandlePlanButtonAsync">
+                        @if (_isPlanRequestInFlight)
+                        {
+                            <span class="coach-assess-spinner" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>@GetPlanButtonText()</span>
+                            <span aria-hidden="true">→</span>
+                        }
+                    </SfButton>
+                </div>
             </div>
         </CardContent>
     </SfCard>
+
+    @if (!string.IsNullOrWhiteSpace(_planUploadFeedback))
+    {
+        <p class="coach-overview-empty mt-2">@_planUploadFeedback</p>
+    }
 
     @if (_isPlanExpanded &&
          (!string.IsNullOrWhiteSpace(_planErrorMessage) ||
@@ -561,17 +589,21 @@
     private AssessCardType? _expandedCard;
     private bool _isAssessRequestInFlight;
     private bool _isPlanRequestInFlight;
+    private bool _isPlanUploadInFlight;
     private bool _isPlanExpanded;
     private string? _planReadableText;
     private string? _planUploadJson;
     private string? _planErrorMessage;
     private string? _planCopyFeedback;
+    private string? _planUploadFeedback;
+    private bool _planUploaded;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
-    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight;
+    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight;
     private bool IsActionBusy => IsBusy || Session.IsRefreshing || IsAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
     private bool CanUsePlanButton => CanUseCoachActions && !_isPlanRequestInFlight && !_isAssessRequestInFlight;
+    private bool CanUploadPlan => CanUseCoachActions && !_isPlanRequestInFlight && !_isPlanUploadInFlight && !string.IsNullOrWhiteSpace(_planUploadJson);
 
     private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
@@ -1229,6 +1261,8 @@
         }
 
         _isPlanRequestInFlight = true;
+        _planUploaded = false;
+        _planUploadFeedback = null;
         _planErrorMessage = null;
         _planReadableText = null;
         _planUploadJson = null;
@@ -1280,6 +1314,59 @@
         finally
         {
             _isPlanRequestInFlight = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UploadPlanAsync()
+    {
+        if (!CanUploadPlan || string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return;
+        }
+
+        _isPlanUploadInFlight = true;
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        StateHasChanged();
+
+        try
+        {
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan/upload")
+            {
+                Content = JsonContent.Create(new { weekPlanJson = _planUploadJson })
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _planUploadFeedback = string.IsNullOrWhiteSpace(errorBody)
+                    ? "Plan upload failed. Please try again."
+                    : $"Plan upload failed: {errorBody}";
+                return;
+            }
+
+            _planUploaded = true;
+            _planUploadFeedback = "Plan uploaded successfully.";
+
+            _isPlanUploadInFlight = false;
+            StateHasChanged();
+
+            await Task.Delay(1800);
+            _planUploaded = false;
+        }
+        catch
+        {
+            _planUploaded = false;
+            _planUploadFeedback = "Plan upload failed. Please try again.";
+        }
+        finally
+        {
+            _isPlanUploadInFlight = false;
             StateHasChanged();
         }
     }
@@ -1462,11 +1549,14 @@
         _expandedCard = null;
         _isAssessRequestInFlight = false;
         _isPlanRequestInFlight = false;
+        _isPlanUploadInFlight = false;
         _isPlanExpanded = false;
+        _planUploaded = false;
         _planReadableText = null;
         _planUploadJson = null;
         _planErrorMessage = null;
         _planCopyFeedback = null;
+        _planUploadFeedback = null;
     }
 
     private void HidePlanResult()
