@@ -338,7 +338,7 @@ Configure Redirect URIs in Entra ID:
 
 - Azure Portal: Entra ID → App registrations → your app → Authentication → Add a platform → Web
 - Add each environment URI that can receive sign-in callbacks:
-  - `https://localhost:7000/signin-oidc`
+  - `https://localhost:7001/signin-oidc`
   - `https://app-training-architect-dev.azurewebsites.net/signin-oidc`
   - `https://app-training-architect-staging.azurewebsites.net/signin-oidc`
   - `https://app-training-architect.azurewebsites.net/signin-oidc`
@@ -716,7 +716,7 @@ Without this, the OIDC callback over HTTPS will fail with "Correlation failed" i
 In the Azure Portal → **App registrations** → your app → **Authentication** → add:
 
 ```
-https://localhost:7000/signin-oidc
+https://localhost:7001/signin-oidc
 ```
 
 **3. Log in with the Azure CLI** (once per session, needed for Key Vault certificate loading and Cosmos DB access via `DefaultAzureCredential`):
@@ -765,17 +765,17 @@ Copy-Item config.example.ps1 config.ps1
 Always use the `https` profile — the OIDC flow requires HTTPS for cookies to work correctly:
 
 ```bash
-dotnet run --project src/TrainingArchitect --launch-profile https
+dotnet run --project src/TrainingArchitect --launch-profile https --urls https://localhost:7001
 ```
 
 or
 ```bash
-dotnet watch --project src/TrainingArchitect run --launch-profile https --no-restore
+dotnet watch --project src/TrainingArchitect run --launch-profile https --urls https://localhost:7001
 ```
 
 The host project in `src/TrainingArchitect` is the only supported startup target. The client project is loaded by the host and should not be started directly.
 
-The app starts at `https://localhost:7000`.
+The app starts at `https://localhost:7001`.
 
 > **Note:** Running with `--launch-profile http` (plain HTTP) will cause "Correlation failed" on the login callback because secure cookies cannot be set over HTTP.
 

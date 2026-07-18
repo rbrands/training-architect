@@ -9,6 +9,7 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using System.Text.RegularExpressions
+@using System.Linq
 @using TrainingArchitect.Core.Constants
 @using TrainingArchitect.Core.Models
 @implements IDisposable
@@ -306,18 +307,84 @@
                         <span>Create Plan</span>
                     </div>
                     <p class="coach-plan-description mb-0">
-                        Structured plan based on Friel/Coggan. Confirmation before upload.
+                        Structured plan according to
+                        <a href="https://github.com/rbrands/intervals-icu-sync/tree/main/coach-logic"
+                           target="_blank"
+                           rel="noopener noreferrer">coach logic</a>.
+                        Confirmation before upload.
                     </p>
-                    <span class="coach-coming-soon-label">Coming Soon</span>
                 </div>
 
-                <SfButton CssClass="e-btn coach-primary-button" Disabled="@(!CanUseCoachActions)">
-                    <span>Create Plan</span>
-                    <span aria-hidden="true">→</span>
+                <SfButton CssClass="e-btn coach-primary-button"
+                          Disabled="@(!CanUsePlanButton)"
+                          @onclick="HandlePlanButtonAsync">
+                    @if (_isPlanRequestInFlight)
+                    {
+                        <span class="coach-assess-spinner" aria-hidden="true"></span>
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span>@GetPlanButtonText()</span>
+                        <span aria-hidden="true">→</span>
+                    }
                 </SfButton>
             </div>
         </CardContent>
     </SfCard>
+
+    @if (_isPlanExpanded &&
+         (!string.IsNullOrWhiteSpace(_planErrorMessage) ||
+          !string.IsNullOrWhiteSpace(_planReadableText) ||
+          !string.IsNullOrWhiteSpace(_planUploadJson)))
+    {
+        <section class="coach-section">
+            <h2 class="coach-section-title">Plan Result</h2>
+
+            <SfCard CssClass="coach-prompt-card">
+                <CardContent>
+                    @if (!string.IsNullOrWhiteSpace(_planErrorMessage))
+                    {
+                        <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                    {
+                        <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_planUploadJson))
+                    {
+                        <div class="coach-assess-result-actions">
+                            <button type="button"
+                                    class="coach-assess-copy"
+                                    title="Copy Upload JSON"
+                                    aria-label="Copy Upload JSON"
+                                    @onclick="CopyPlanUploadJsonAsync">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+
+                            @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
+                            {
+                                <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
+                            }
+                        </div>
+
+                        <button type="button"
+                                class="coach-inline-link"
+                                @onclick="TogglePlanJsonVisibility">
+                            @(_isPlanJsonExpanded ? "Hide Upload JSON" : "Show Upload JSON")
+                        </button>
+
+                        @if (_isPlanJsonExpanded)
+                        {
+                            <pre class="data-view-json">@_planUploadJson</pre>
+                        }
+                    }
+                </CardContent>
+            </SfCard>
+        </section>
+    }
 
     @if (_showDataView)
     {
@@ -476,11 +543,20 @@
         [AssessCardType.Week] = new AssessCardState()
     };
     private AssessCardType? _expandedCard;
-    private bool _isAnyRequestInFlight;
+    private bool _isAssessRequestInFlight;
+    private bool _isPlanRequestInFlight;
+    private bool _isPlanExpanded;
+    private bool _isPlanJsonExpanded;
+    private string? _planReadableText;
+    private string? _planUploadJson;
+    private string? _planErrorMessage;
+    private string? _planCopyFeedback;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
-    private bool IsActionBusy => IsBusy || Session.IsRefreshing || _isAnyRequestInFlight;
+    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight;
+    private bool IsActionBusy => IsBusy || Session.IsRefreshing || IsAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
+    private bool CanUsePlanButton => CanUseCoachActions && !_isPlanRequestInFlight && !_isAssessRequestInFlight;
 
     private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
@@ -993,12 +1069,12 @@
             return true;
         }
 
-        if (_isAnyRequestInFlight && state.ResultText is null)
+        if (IsAnyRequestInFlight && state.ResultText is null)
         {
             return true;
         }
 
-        if (_isAnyRequestInFlight && state.ResultText is not null && _expandedCard != cardType)
+        if (IsAnyRequestInFlight && state.ResultText is not null && _expandedCard != cardType)
         {
             return true;
         }
@@ -1012,6 +1088,8 @@
         {
             return;
         }
+
+        HidePlanResult();
 
         var state = GetAssessCardState(cardType);
 
@@ -1027,7 +1105,7 @@
             return;
         }
 
-        if (_isAnyRequestInFlight)
+        if (IsAnyRequestInFlight)
         {
             return;
         }
@@ -1035,9 +1113,45 @@
         _expandedCard = cardType;
     }
 
+    private string GetPlanButtonText()
+    {
+        if (_isPlanRequestInFlight)
+        {
+            return "Creating...";
+        }
+
+        if (!HasPlanResult)
+        {
+            return "Create Plan";
+        }
+
+        return _isPlanExpanded ? "Close" : "Reopen";
+    }
+
+    private bool HasPlanResult =>
+        !string.IsNullOrWhiteSpace(_planReadableText) ||
+        !string.IsNullOrWhiteSpace(_planUploadJson) ||
+        !string.IsNullOrWhiteSpace(_planErrorMessage);
+
+    private async Task HandlePlanButtonAsync()
+    {
+        if (!CanUsePlanButton)
+        {
+            return;
+        }
+
+        if (!HasPlanResult)
+        {
+            await CreatePlanAsync();
+            return;
+        }
+
+        _isPlanExpanded = !_isPlanExpanded;
+    }
+
     private async Task ExecuteAssessRequestAsync(AssessCardType cardType)
     {
-        if (_isAnyRequestInFlight)
+        if (IsAnyRequestInFlight)
         {
             return;
         }
@@ -1045,7 +1159,7 @@
         var state = GetAssessCardState(cardType);
         state.IsLoading = true;
         state.ErrorMessage = null;
-        _isAnyRequestInFlight = true;
+        _isAssessRequestInFlight = true;
         StateHasChanged();
 
         try
@@ -1088,7 +1202,186 @@
         finally
         {
             state.IsLoading = false;
-            _isAnyRequestInFlight = _assessCardStates.Values.Any(card => card.IsLoading);
+            _isAssessRequestInFlight = _assessCardStates.Values.Any(card => card.IsLoading);
+        }
+    }
+
+    private async Task CreatePlanAsync()
+    {
+        if (!CanUsePlanButton)
+        {
+            return;
+        }
+
+        _isPlanRequestInFlight = true;
+        _planErrorMessage = null;
+        _planReadableText = null;
+        _planUploadJson = null;
+        _isPlanJsonExpanded = false;
+        _planCopyFeedback = null;
+        StateHasChanged();
+
+        try
+        {
+            var request = BuildPlanRequest();
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan")
+            {
+                Content = JsonContent.Create(request)
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _planErrorMessage = string.IsNullOrWhiteSpace(errorBody)
+                    ? "Plan request failed. Please try again."
+                    : $"Plan request failed: {errorBody}";
+                return;
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var coachResponse = NormalizeCoachResponse(responseBody);
+
+            var (planText, uploadJson) = SplitPlanAndUploadJson(coachResponse);
+
+            _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
+            _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
+
+            if (_planReadableText is null && _planUploadJson is null)
+            {
+                _planErrorMessage = "Plan request returned no usable content.";
+            }
+
+            _isPlanExpanded = true;
+        }
+        catch
+        {
+            _planErrorMessage = "Plan request failed. Please try again.";
+            _isPlanExpanded = true;
+        }
+        finally
+        {
+            _isPlanRequestInFlight = false;
+            StateHasChanged();
+        }
+    }
+
+    private PlanRequest BuildPlanRequest()
+    {
+        var weekDataJson = Session.AthleteDataJson;
+
+        return new PlanRequest(
+            weekDataJson ?? "{}",
+            GetDisciplineType(),
+            GetResponseLanguage(),
+            PlanningScope.NextWeek,
+            new PlanConstraints(null, Array.Empty<DayConstraint>()));
+    }
+
+    private static string NormalizeCoachResponse(string rawBody)
+    {
+        if (string.IsNullOrWhiteSpace(rawBody))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawBody);
+            if (document.RootElement.ValueKind == JsonValueKind.String)
+            {
+                return document.RootElement.GetString() ?? string.Empty;
+            }
+        }
+        catch (JsonException)
+        {
+            // Keep original response body if it's not JSON-encoded text.
+        }
+
+        return rawBody;
+    }
+
+    private static (string PlanText, string UploadJson) SplitPlanAndUploadJson(string responseText)
+    {
+        const string beginMarker = "BEGIN_UPLOAD_JSON";
+        const string endMarker = "END_UPLOAD_JSON";
+
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var beginIndex = responseText.IndexOf(beginMarker, StringComparison.Ordinal);
+        var endIndex = responseText.IndexOf(endMarker, StringComparison.Ordinal);
+
+        if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex)
+        {
+            return (responseText.Trim(), string.Empty);
+        }
+
+        var planText = responseText[..beginIndex].Trim();
+        var markedSection = responseText[(beginIndex + beginMarker.Length)..endIndex].Trim();
+        var uploadJson = ExtractJsonFromMarkedSection(markedSection);
+
+        return (planText, uploadJson);
+    }
+
+    private static string ExtractJsonFromMarkedSection(string markedSection)
+    {
+        if (string.IsNullOrWhiteSpace(markedSection))
+        {
+            return string.Empty;
+        }
+
+        var fencedMatch = Regex.Match(
+            markedSection,
+            @"```json\s*(?<json>\{[\s\S]*\})\s*```",
+            RegexOptions.IgnoreCase);
+
+        if (fencedMatch.Success)
+        {
+            return fencedMatch.Groups["json"].Value.Trim();
+        }
+
+        var startBrace = markedSection.IndexOf('{');
+        var endBrace = markedSection.LastIndexOf('}');
+
+        if (startBrace >= 0 && endBrace > startBrace)
+        {
+            return markedSection[startBrace..(endBrace + 1)].Trim();
+        }
+
+        return markedSection.Trim();
+    }
+
+    private async Task CopyPlanUploadJsonAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", _planUploadJson);
+            _planCopyFeedback = "Copied";
+        }
+        catch
+        {
+            _planCopyFeedback = "Copy failed";
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(1800);
+        if (_planCopyFeedback is not null)
+        {
+            _planCopyFeedback = null;
+            StateHasChanged();
         }
     }
 
@@ -1153,7 +1446,24 @@
         }
 
         _expandedCard = null;
-        _isAnyRequestInFlight = false;
+        _isAssessRequestInFlight = false;
+        _isPlanRequestInFlight = false;
+        _isPlanExpanded = false;
+        _isPlanJsonExpanded = false;
+        _planReadableText = null;
+        _planUploadJson = null;
+        _planErrorMessage = null;
+        _planCopyFeedback = null;
+    }
+
+    private void HidePlanResult()
+    {
+        _isPlanExpanded = false;
+    }
+
+    private void TogglePlanJsonVisibility()
+    {
+        _isPlanJsonExpanded = !_isPlanJsonExpanded;
     }
 
     private async Task CopyAssessResultAsync(AssessCardType cardType)
