@@ -6,4 +6,5 @@ namespace TrainingArchitect.Core.Constants;
 public static class McpToolNames
 {
     public const string PrepareWeekData = "prepare_week_data";
+    public const string UploadWeekPlan = "upload_week_plan";
 }

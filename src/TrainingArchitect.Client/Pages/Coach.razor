@@ -348,39 +348,55 @@
                         <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
                     }
 
-                    @if (!string.IsNullOrWhiteSpace(_planReadableText))
-                    {
-                        <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
-                    }
+                    <SfTab CssClass="coach-data-tabs coach-plan-tabs">
+                        <TabItems>
+                            <TabItem>
+                                <ChildContent>
+                                    <TabHeader Text="Text"></TabHeader>
+                                </ChildContent>
+                                <ContentTemplate>
+                                    @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                                    {
+                                        <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
+                                    }
+                                    else
+                                    {
+                                        <p class="coach-overview-empty">No text available.</p>
+                                    }
+                                </ContentTemplate>
+                            </TabItem>
+                            <TabItem>
+                                <ChildContent>
+                                    <TabHeader Text="JSON"></TabHeader>
+                                </ChildContent>
+                                <ContentTemplate>
+                                    @if (!string.IsNullOrWhiteSpace(_planUploadJson))
+                                    {
+                                        <div class="coach-assess-result-actions">
+                                            <button type="button"
+                                                    class="coach-assess-copy"
+                                                    title="Copy Upload JSON"
+                                                    aria-label="Copy Upload JSON"
+                                                    @onclick="CopyPlanUploadJsonAsync">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
 
-                    @if (!string.IsNullOrWhiteSpace(_planUploadJson))
-                    {
-                        <div class="coach-assess-result-actions">
-                            <button type="button"
-                                    class="coach-assess-copy"
-                                    title="Copy Upload JSON"
-                                    aria-label="Copy Upload JSON"
-                                    @onclick="CopyPlanUploadJsonAsync">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
+                                            @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
+                                            {
+                                                <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
+                                            }
+                                        </div>
 
-                            @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
-                            {
-                                <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
-                            }
-                        </div>
-
-                        <button type="button"
-                                class="coach-inline-link"
-                                @onclick="TogglePlanJsonVisibility">
-                            @(_isPlanJsonExpanded ? "Hide Upload JSON" : "Show Upload JSON")
-                        </button>
-
-                        @if (_isPlanJsonExpanded)
-                        {
-                            <pre class="data-view-json">@_planUploadJson</pre>
-                        }
-                    }
+                                        <pre class="data-view-json">@_planUploadJson</pre>
+                                    }
+                                    else
+                                    {
+                                        <p class="coach-overview-empty">No JSON available.</p>
+                                    }
+                                </ContentTemplate>
+                            </TabItem>
+                        </TabItems>
+                    </SfTab>
                 </CardContent>
             </SfCard>
         </section>
@@ -546,7 +562,6 @@
     private bool _isAssessRequestInFlight;
     private bool _isPlanRequestInFlight;
     private bool _isPlanExpanded;
-    private bool _isPlanJsonExpanded;
     private string? _planReadableText;
     private string? _planUploadJson;
     private string? _planErrorMessage;
@@ -1217,7 +1232,6 @@
         _planErrorMessage = null;
         _planReadableText = null;
         _planUploadJson = null;
-        _isPlanJsonExpanded = false;
         _planCopyFeedback = null;
         StateHasChanged();
 
@@ -1449,7 +1463,6 @@
         _isAssessRequestInFlight = false;
         _isPlanRequestInFlight = false;
         _isPlanExpanded = false;
-        _isPlanJsonExpanded = false;
         _planReadableText = null;
         _planUploadJson = null;
         _planErrorMessage = null;
@@ -1459,11 +1472,6 @@
     private void HidePlanResult()
     {
         _isPlanExpanded = false;
-    }
-
-    private void TogglePlanJsonVisibility()
-    {
-        _isPlanJsonExpanded = !_isPlanJsonExpanded;
     }
 
     private async Task CopyAssessResultAsync(AssessCardType cardType)
