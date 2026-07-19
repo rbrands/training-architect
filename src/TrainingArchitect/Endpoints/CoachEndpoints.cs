@@ -13,7 +13,8 @@ public static class CoachEndpoints
     public static void MapCoachEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/coach")
-            .RequireRateLimiting("coach");
+            .RequireRateLimiting("coach")
+            .RequireCors("CoachApi");
 
         group.MapPost("/assess", AssessAsync);
         group.MapPost("/plan", PlanAsync);

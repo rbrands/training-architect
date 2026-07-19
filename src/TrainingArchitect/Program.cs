@@ -5,6 +5,7 @@ using TrainingArchitect.Components;
 using TrainingArchitect.Endpoints;
 using TrainingArchitect.Models;
 using TrainingArchitect.Services;
+using TrainingArchitect.Core.Constants;
 using Microsoft.AspNetCore.DataProtection;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Services;
@@ -151,6 +152,22 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CoachApi", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://localhost:7000",
+                "https://localhost:7001",
+                "https://127.0.0.1:7000",
+                "https://127.0.0.1:7001")
+            .WithMethods("POST")
+            .WithHeaders("Content-Type", IntervalsHeaders.AthleteId, IntervalsHeaders.ApiKey)
+            .AllowCredentials();
+    });
+});
 
 // Rate linmiting for the /api/coach endpoint to prevent abuse and ensure fair usage.
 builder.Services.AddRateLimiter(options =>
@@ -306,6 +323,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors();
 app.UseRateLimiter();
 
 app.UseAntiforgery();
