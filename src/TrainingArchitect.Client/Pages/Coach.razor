@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IAthleteSession Session
 @inject ICredentialStore CredentialStore
+@inject CoachPageState CoachPageState
 @inject IJSRuntime JS
 @inject HttpClient Http
 @using Markdig
@@ -2244,6 +2245,7 @@
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnSessionChanged;
+        RestoreCoachViewState();
 
         try
         {
@@ -2313,6 +2315,67 @@
 
     public void Dispose()
     {
+        PersistCoachViewState();
         Session.Changed -= OnSessionChanged;
+    }
+
+    private void RestoreCoachViewState()
+    {
+        _planSchedulingPreference = CoachPageState.PlanSchedulingPreference;
+        _openOverviewSectionTitle = CoachPageState.OpenOverviewSectionTitle;
+
+        _assessCardStates[AssessCardType.MetricsWellness].ResultText = CoachPageState.MetricsResultText;
+        _assessCardStates[AssessCardType.LastTraining].ResultText = CoachPageState.LastTrainingResultText;
+        _assessCardStates[AssessCardType.Week].ResultText = CoachPageState.WeekResultText;
+
+        _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage = CoachPageState.MetricsErrorMessage;
+        _assessCardStates[AssessCardType.LastTraining].ErrorMessage = CoachPageState.LastTrainingErrorMessage;
+        _assessCardStates[AssessCardType.Week].ErrorMessage = CoachPageState.WeekErrorMessage;
+
+        _expandedCard = ParseAssessCardType(CoachPageState.ExpandedAssessCard);
+
+        _isPlanExpanded = CoachPageState.IsPlanExpanded;
+        _planReadableText = CoachPageState.PlanReadableText;
+        _planUploadJson = CoachPageState.PlanUploadJson;
+        _planErrorMessage = CoachPageState.PlanErrorMessage;
+        _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
+
+        if (!string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            LoadPlanWorkoutEditor();
+        }
+    }
+
+    private void PersistCoachViewState()
+    {
+        CoachPageState.PlanSchedulingPreference = _planSchedulingPreference;
+        CoachPageState.OpenOverviewSectionTitle = _openOverviewSectionTitle;
+        CoachPageState.ExpandedAssessCard = _expandedCard?.ToString();
+
+        CoachPageState.MetricsResultText = _assessCardStates[AssessCardType.MetricsWellness].ResultText;
+        CoachPageState.LastTrainingResultText = _assessCardStates[AssessCardType.LastTraining].ResultText;
+        CoachPageState.WeekResultText = _assessCardStates[AssessCardType.Week].ResultText;
+
+        CoachPageState.MetricsErrorMessage = _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage;
+        CoachPageState.LastTrainingErrorMessage = _assessCardStates[AssessCardType.LastTraining].ErrorMessage;
+        CoachPageState.WeekErrorMessage = _assessCardStates[AssessCardType.Week].ErrorMessage;
+
+        CoachPageState.IsPlanExpanded = _isPlanExpanded;
+        CoachPageState.PlanReadableText = _planReadableText;
+        CoachPageState.PlanUploadJson = _planUploadJson;
+        CoachPageState.PlanErrorMessage = _planErrorMessage;
+        CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
+    }
+
+    private static AssessCardType? ParseAssessCardType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<AssessCardType>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
     }
 }

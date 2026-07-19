@@ -40,6 +40,7 @@ builder.Services.AddScoped<IArticleRepository, HttpArticleRepository>();
 builder.Services.AddScoped<ICredentialStore, CredentialStore>(); // ersetzt NullCredentialStore
 // Coach-Session-State: Scoped = one instance per user (in WASM effectively singleton)
 builder.Services.AddScoped<IAthleteSession, AthleteSession>();
+builder.Services.AddScoped<CoachPageState>();
 builder.Services.AddScoped<IAthleteDataClient, HttpAthleteDataClient>();
 
 // OwnerService: same logic as server-side — checks user.IsInRole("SiteAdmin")
