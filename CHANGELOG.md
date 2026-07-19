@@ -40,7 +40,29 @@ Copy this section for each new release and place it below `Unreleased`.
 -
 ```
 
--
+## [0.3.0] - 2026-07-19
+
+### Added
+- Full coaching planning workflow is now available as a major feature block.
+- Weekly plan generation from the Coach page was added.
+- Upload of generated plan workouts to intervals.icu was added.
+- Editing planned workout days before upload was added.
+- Athlete scheduling preference text is now used for plan generation.
+- Automatic planning scope selection (`CurrentWeek` vs `NextWeek`) based on current weekday was added.
+- New planning prompt for next-week plan generation was added.
+- Coach page now persists Assess and Plan UI state across in-app navigation.
+
+### Changed
+- Coach plan UI was extended with tabbed plan output handling and better plan adaptation flow.
+- Coach API hardening was improved with scoped CORS policy and stricter request validation (HTTPS, JSON-only, payload size bound).
+- Coach API rate limiting now uses a proxy-aware client key strategy instead of a simple IP-only limiter.
+
+### Fixed
+- Plan-related tab layout and interaction behavior in the Coach page were improved.
+- Navigating away from the Coach page (for example to Blog) and back no longer drops existing Assess and Plan results.
+
+### Removed
+- Simple IP-only partitioning for coach endpoint rate limiting.
 
 ## [0.2.3] - 2026-07-12
 
