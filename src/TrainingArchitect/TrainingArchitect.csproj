@@ -19,7 +19,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.*" />
     <PackageReference Include="Microsoft.Identity.Web" Version="*" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="*" />
-    <PackageReference Include="Markdig" Version="0.37.*" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.*" />
     <PackageReference Include="Azure.AI.Extensions.OpenAI" Version="1.*" />
     <PackageReference Include="Azure.AI.Projects" Version="2.*" />
