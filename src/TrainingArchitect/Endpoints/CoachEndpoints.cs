@@ -16,9 +16,93 @@ public static class CoachEndpoints
             .RequireRateLimiting("coach")
             .RequireCors("CoachApi");
 
+        group.AddEndpointFilter(async (context, next) =>
+        {
+            var request = context.HttpContext.Request;
+
+            if (!request.IsHttps)
+            {
+                return Results.Problem(
+                    title: "HTTPS required.",
+                    detail: "Coach API only accepts HTTPS requests.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            if (!request.HasJsonContentType())
+            {
+                return Results.Problem(
+                    title: "Unsupported media type.",
+                    detail: "Coach API only accepts application/json payloads.",
+                    statusCode: StatusCodes.Status415UnsupportedMediaType);
+            }
+
+            // Keep payload size bounded to reduce abuse potential.
+            if (request.ContentLength is > 128_000)
+            {
+                return Results.Problem(
+                    title: "Payload too large.",
+                    detail: "Coach API payload exceeds the 128 KB limit.",
+                    statusCode: StatusCodes.Status413PayloadTooLarge);
+            }
+
+            if (!IsTrustedBrowserRequest(request))
+            {
+                return Results.Problem(
+                    title: "Forbidden.",
+                    detail: "Cross-site requests are not allowed for this endpoint.",
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            return await next(context);
+        });
+
         group.MapPost("/assess", AssessAsync);
         group.MapPost("/plan", PlanAsync);
         group.MapPost("/plan/upload", UploadPlanAsync);
+    }
+
+    private static bool IsTrustedBrowserRequest(HttpRequest request)
+    {
+        var secFetchSite = request.Headers["Sec-Fetch-Site"].ToString();
+        if (string.Equals(secFetchSite, "cross-site", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var originHeader = request.Headers.Origin.ToString();
+        if (!string.IsNullOrWhiteSpace(originHeader))
+        {
+            return IsSameOrigin(originHeader, request);
+        }
+
+        var refererHeader = request.Headers.Referer.ToString();
+        if (!string.IsNullOrWhiteSpace(refererHeader))
+        {
+            return IsSameOrigin(refererHeader, request);
+        }
+
+        // Block requests without browser context headers.
+        return false;
+    }
+
+    private static bool IsSameOrigin(string originOrReferer, HttpRequest request)
+    {
+        if (!Uri.TryCreate(originOrReferer, UriKind.Absolute, out var sourceUri))
+        {
+            return false;
+        }
+
+        var targetHost = request.Host.Host;
+        var targetScheme = request.Scheme;
+        var targetPort = request.Host.Port ?? (string.Equals(targetScheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80);
+
+        var sourcePort = sourceUri.IsDefaultPort
+            ? (string.Equals(sourceUri.Scheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80)
+            : sourceUri.Port;
+
+        return string.Equals(sourceUri.Scheme, targetScheme, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(sourceUri.Host, targetHost, StringComparison.OrdinalIgnoreCase)
+            && sourcePort == targetPort;
     }
 
     private static async Task<IResult> AssessAsync(

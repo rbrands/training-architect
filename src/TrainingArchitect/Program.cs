@@ -18,6 +18,8 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Identity.Web;
 using Syncfusion.Blazor;
 using System.Security.Claims;
+using System.Net;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,15 +78,20 @@ builder.Services.AddSyncfusionBlazor();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 
-// Required for GitHub Codespaces and other reverse proxy environments:
-// Trust X-Forwarded-Proto and X-Forwarded-Host so ASP.NET Core knows
-// the request is HTTPS, which is needed for Secure cookies to work.
+// Required for GitHub Codespaces and reverse proxy environments:
+// Trust only X-Forwarded-Proto and X-Forwarded-Host so ASP.NET Core knows
+// the request is HTTPS and the original host. We intentionally do not trust
+// X-Forwarded-For here to avoid spoofable client IP handling at app level.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
-        | ForwardedHeaders.XForwardedProto
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto
         | ForwardedHeaders.XForwardedHost;
-    // Clear default restrictions so the Codespaces proxy IP is trusted
+
+    // Keep this limited to one proxy hop to reduce header spoofing risk.
+    options.ForwardLimit = 1;
+
+    // Clear default restrictions so the Codespaces proxy host is trusted.
+    // For production, prefer restricting origin access to Cloudflare only.
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -169,18 +176,53 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Rate linmiting for the /api/coach endpoint to prevent abuse and ensure fair usage.
+// Rate limiting for the /api/coach endpoint to prevent abuse and ensure fair usage.
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddSlidingWindowLimiter("coach", limiter =>
-    {
-        limiter.PermitLimit          = 10;
-        limiter.Window               = TimeSpan.FromMinutes(1);
-        limiter.SegmentsPerWindow    = 6;   // 10-Sekunden-Segmente
-        limiter.QueueLimit           = 0;
-    });
+    options.AddPolicy("coach", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: ResolveCoachRateLimitKey(httpContext),
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
+
+static string ResolveCoachRateLimitKey(HttpContext context)
+{
+    var clientIp = ResolveClientIp(context) ?? "unknown-ip";
+    var athleteId = context.Request.Headers[IntervalsHeaders.AthleteId].ToString();
+
+    if (string.IsNullOrWhiteSpace(athleteId))
+    {
+        athleteId = "unknown-athlete";
+    }
+    else
+    {
+        athleteId = athleteId.Trim();
+    }
+
+    return $"{clientIp}|{athleteId}";
+}
+
+static string? ResolveClientIp(HttpContext context)
+{
+    var cfConnectingIp = context.Request.Headers["CF-Connecting-IP"].ToString();
+    if (!string.IsNullOrWhiteSpace(cfConnectingIp)
+        && !string.IsNullOrWhiteSpace(context.Request.Headers["CF-Ray"].ToString())
+        && IPAddress.TryParse(cfConnectingIp, out _))
+    {
+        return cfConnectingIp.Trim();
+    }
+
+    return context.Connection.RemoteIpAddress?.ToString();
+}
 
 
 // Cosmos DB client (singleton, thread-safe)
