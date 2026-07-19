@@ -1178,6 +1178,11 @@
     .coach-plan-layout {
         flex-direction: column;
         align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .coach-plan-copy {
+        flex: 0 0 auto;
     }
 
     .coach-primary-button {

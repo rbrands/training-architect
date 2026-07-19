@@ -318,7 +318,7 @@
                         <a href="https://github.com/rbrands/intervals-icu-sync/tree/main/coach-logic"
                            target="_blank"
                            rel="noopener noreferrer">coach logic</a>.
-                        Confirmation before upload.
+                        Automatic scope: Monday to Wednesday creates the plan for the current week, Thursday to Sunday creates the plan for the next week.
                     </p>
                 </div>
 
@@ -1841,15 +1841,26 @@
     {
         var weekDataJson = Session.AthleteDataJson;
         var schedulingPreference = _planSchedulingPreference.Trim();
+        var planningScope = ResolvePlanningScope();
 
-        // NOTE: PlanRequest (or PlanConstraints) needs a dedicated scheduling-preference member to carry this value.
         return new PlanRequest(
             weekDataJson ?? "{}",
             GetDisciplineType(),
             GetResponseLanguage(),
-            PlanningScope.NextWeek,
+            planningScope,
             new PlanConstraints(null, Array.Empty<DayConstraint>()),
             schedulingPreference);
+    }
+
+    private static PlanningScope ResolvePlanningScope()
+    {
+        return DateTime.Now.DayOfWeek switch
+        {
+            DayOfWeek.Monday => PlanningScope.CurrentWeek,
+            DayOfWeek.Tuesday => PlanningScope.CurrentWeek,
+            DayOfWeek.Wednesday => PlanningScope.CurrentWeek,
+            _ => PlanningScope.NextWeek
+        };
     }
 
     private static string NormalizeCoachResponse(string rawBody)

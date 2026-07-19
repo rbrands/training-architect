@@ -22,10 +22,12 @@ public static class PromptBuilder
 
     public static string BuildPlanPrompt(PlanRequest request)
     {
-        var template = request.Scope switch
+        var template = PromptLoader.Load("plan_week");
+
+        var planningScopeInstruction = request.Scope switch
         {
-            PlanningScope.CurrentWeek => PromptLoader.Load("plan_current_week"),
-            PlanningScope.NextWeek => PromptLoader.Load("plan_next_week"),
+            PlanningScope.CurrentWeek => "Plan target: current week (remaining days in this week).",
+            PlanningScope.NextWeek => "Plan target: next week (full next calendar week).",
             _ => throw new ArgumentOutOfRangeException(nameof(request.Scope))
         };
 
@@ -33,19 +35,9 @@ public static class PromptBuilder
             ? string.Empty
             : request.SchedulingPreference.Trim();
 
-        var tssLine = request.Constraints.WeeklyTssTarget.HasValue
-            ? $"Weekly TSS target: {request.Constraints.WeeklyTssTarget.Value}"
-            : "Weekly TSS target: use value from data";
-
-        var dayLines = request.Constraints.DayConstraints.Count > 0
-            ? string.Join("\n", request.Constraints.DayConstraints
-                .Select(d => $"- {d.Day}: {d.Availability}"))
-            : "- use availability from data";
-
         return template
+            .Replace("{{planning_scope_instruction}}", planningScopeInstruction)
             .Replace("{{scheduling_preference}}", schedulingPreference)
-            .Replace("{{weekly_tss_target}}", tssLine)
-            .Replace("{{day_availability}}", dayLines)
             .Replace("{{athlete_data}}", string.IsNullOrWhiteSpace(request.WeekDataJson)
                 ? "{}"
                 : request.WeekDataJson);

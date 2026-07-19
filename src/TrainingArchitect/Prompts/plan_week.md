@@ -1,4 +1,6 @@
-Based on the attached intervals.icu data, create a training plan for the coming week.
+Based on the attached intervals.icu data, create a training plan for the target week.
+
+{{planning_scope_instruction}}
 
 First infer the current weekly training context from the attached data:
 - Recent training load and intensity distribution
@@ -9,9 +11,10 @@ First infer the current weekly training context from the attached data:
 
 Derive the planning parameters directly from the attached data:
 - Training phase and week type: from `next_week_active_phases` and `next_week_load_targets.week_type` (NORMAL / RECOVERY / RACE)
-- Weekly target: from `next_week_load_targets.load_target` (TSS). If `time_target_hours` is also present, treat it as an upper time cap. Only if `load_target` is `null`, use `time_target_hours` as the weekly target.- Available days: from `next_week_day_constraints`
-  - days with `training_allowed: false` are unavailable
-  - days with `training_allowed: true` and type LIMITED only get short, easy sessions
+- Weekly target: from `next_week_load_targets.load_target` (TSS). If `time_target_hours` is also present, treat it as an upper time cap. Only if `load_target` is `null`, use `time_target_hours` as the weekly target.
+- Available days: from `next_week_day_constraints`
+	- days with `training_allowed: false` are unavailable
+	- days with `training_allowed: true` and type LIMITED only get short, easy sessions
 - Already planned sessions: from `planned_workouts` for next week - treat them as fixed anchors and do not replace them
 - Current form and fatigue: consider TSB and ATL
 - Recently completed key sessions: use them as context and avoid duplicating the same key stimulus too soon
