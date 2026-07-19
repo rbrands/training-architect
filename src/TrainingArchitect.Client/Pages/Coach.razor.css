@@ -461,7 +461,7 @@
     background: #eef3fb;
     border-color: #b7c9e8;
     color: #234f91;
-    outline: none;
+    outline: 2px solid #7c9fe6;
 }
 
 .coach-custom-tab.is-active {
