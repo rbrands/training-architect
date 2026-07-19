@@ -433,7 +433,7 @@ article img {
 
 .coach-json-line {
     display: grid;
-    grid-template-columns: 3ch 1fr;
+    grid-template-columns: 4ch 1fr;
     gap: 0.85rem;
     padding: 0 0.9rem;
     font-family: Consolas, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", monospace;
