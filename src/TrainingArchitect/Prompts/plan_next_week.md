@@ -9,8 +9,7 @@ First infer the current weekly training context from the attached data:
 
 Derive the planning parameters directly from the attached data:
 - Training phase and week type: from `next_week_active_phases` and `next_week_load_targets.week_type` (NORMAL / RECOVERY / RACE)
-- Weekly load target: from `next_week_load_targets.load_target` (TSS)
-- Available days: from `next_week_day_constraints`
+- Weekly target: from `next_week_load_targets.load_target` (TSS). If `time_target_hours` is also present, treat it as an upper time cap. Only if `load_target` is `null`, use `time_target_hours` as the weekly target.- Available days: from `next_week_day_constraints`
   - days with `training_allowed: false` are unavailable
   - days with `training_allowed: true` and type LIMITED only get short, easy sessions
 - Already planned sessions: from `planned_workouts` for next week - treat them as fixed anchors and do not replace them

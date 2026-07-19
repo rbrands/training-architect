@@ -972,6 +972,113 @@
     font-weight: 500;
 }
 
+.coach-plan-week-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.coach-plan-week-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem;
+    border: 1px solid #e5d9c4;
+    border-radius: 14px;
+    background: #fffaf2;
+}
+
+.coach-plan-week-row.is-conflict {
+    border-color: #efc26b;
+    background: #fff4dc;
+}
+
+.coach-plan-week-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.coach-plan-week-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.coach-plan-week-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2f2b24;
+}
+
+.coach-plan-week-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.coach-plan-week-duration,
+.coach-plan-week-tag,
+.coach-plan-week-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.85rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.coach-plan-week-duration {
+    background: #eef4ff;
+    color: #2d5ea7;
+}
+
+.coach-plan-week-tag {
+    background: #f4ebdc;
+    color: #715533;
+}
+
+.coach-plan-week-warning {
+    background: #fff0cc;
+    color: #8b5e12;
+}
+
+.coach-plan-week-select-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 10.5rem;
+}
+
+.coach-plan-week-select-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #5d5548;
+}
+
+.coach-plan-week-select {
+    border: 1px solid #cdb892;
+    border-radius: 10px;
+    background: #fffdf8;
+    color: #2f2b24;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.coach-plan-week-select:focus-visible {
+    outline: 2px solid rgba(231, 111, 52, 0.2);
+    border-color: #e76f34;
+}
+
 .coach-coming-soon-label {
     display: inline-flex;
     align-items: center;
@@ -1026,5 +1133,13 @@
     .coach-primary-button {
         justify-content: center;
         width: 100%;
+    }
+
+    .coach-plan-week-row {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-plan-week-select-wrap {
+        min-width: 0;
     }
 }

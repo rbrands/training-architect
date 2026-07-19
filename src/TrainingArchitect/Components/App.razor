@@ -36,9 +36,26 @@
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script>
         window.addEventListener('load', function () {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/service-worker.js');
+            if (!('serviceWorker' in navigator)) {
+                return;
             }
+
+            const isLocalhost =
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+
+            if (isLocalhost) {
+                // Avoid stale-cache issues during local development.
+                navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                    registrations.forEach(function (registration) {
+                        registration.unregister();
+                    });
+                });
+
+                return;
+            }
+
+            navigator.serviceWorker.register('/service-worker.js');
         });
 
         // Patches the img src inside the Syncfusion RTE editor DOM.
