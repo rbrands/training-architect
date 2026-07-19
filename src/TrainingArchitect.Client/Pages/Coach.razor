@@ -322,7 +322,21 @@
                     </p>
                 </div>
 
-                <div class="d-flex gap-2 align-items-center">
+                <label class="field coach-plan-preference">
+                    <span>Scheduling preference (optional)</span>
+                    <input type="text"
+                           autocomplete="off"
+                           maxlength="150"
+                           placeholder='e.g. "VO2max session on Tuesday"'
+                           disabled="@(IsActionBusy || HasCreatedPlanResult)"
+                           @bind="_planSchedulingPreference"
+                           @bind:event="oninput" />
+                    <div class="d-flex justify-content-end mt-1">
+                        <small class="text-muted">@($"{_planSchedulingPreference.Length}/150")</small>
+                    </div>
+                </label>
+
+                <div class="coach-plan-actions">
                     @if (HasPlanResult && !string.IsNullOrWhiteSpace(_planUploadJson))
                     {
                         <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
@@ -677,6 +691,7 @@
 
     private string _athleteId = string.Empty;
     private string _apiKey = string.Empty;
+    private string _planSchedulingPreference = string.Empty;
     private CoachLanguage _language = CoachLanguage.English;
     private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
     private bool _remember;
@@ -1312,6 +1327,10 @@
         !string.IsNullOrWhiteSpace(_planUploadJson) ||
         !string.IsNullOrWhiteSpace(_planErrorMessage);
 
+    private bool HasCreatedPlanResult =>
+        !string.IsNullOrWhiteSpace(_planReadableText) ||
+        !string.IsNullOrWhiteSpace(_planUploadJson);
+
     private static string FormatPlanWorkoutDateValue(DateOnly date)
     {
         return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -1739,13 +1758,16 @@
     private PlanRequest BuildPlanRequest()
     {
         var weekDataJson = Session.AthleteDataJson;
+        var schedulingPreference = _planSchedulingPreference.Trim();
 
+        // NOTE: PlanRequest (or PlanConstraints) needs a dedicated scheduling-preference member to carry this value.
         return new PlanRequest(
             weekDataJson ?? "{}",
             GetDisciplineType(),
             GetResponseLanguage(),
             PlanningScope.NextWeek,
-            new PlanConstraints(null, Array.Empty<DayConstraint>()));
+            new PlanConstraints(null, Array.Empty<DayConstraint>()),
+            schedulingPreference);
     }
 
     private static string NormalizeCoachResponse(string rawBody)

@@ -17,5 +17,6 @@ public record PlanRequest(
     string          DisciplineType,
     string          Language,
     PlanningScope   Scope,
-    PlanConstraints Constraints
+    PlanConstraints Constraints,
+    string?         SchedulingPreference = null
 );
