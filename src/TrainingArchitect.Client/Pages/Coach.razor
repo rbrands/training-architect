@@ -397,117 +397,149 @@
                         <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
                     }
 
-                    <SfTab CssClass="coach-data-tabs coach-plan-tabs">
-                        <TabItems>
-                            <TabItem>
-                                <ChildContent>
-                                    <TabHeader Text="Text"></TabHeader>
-                                </ChildContent>
-                                <ContentTemplate>
-                                    @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                    <div class="coach-custom-tabs">
+                        <div class="coach-custom-tabs-header" role="tablist" aria-label="Plan result tabs">
+                            <button type="button"
+                                    id="coach-plan-tab-0"
+                                    class="coach-custom-tab @(IsPlanTabSelected(0) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(0)"
+                                    aria-controls="coach-plan-panel-0"
+                                    tabindex="@(IsPlanTabSelected(0) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(0)">
+                                Text
+                            </button>
+
+                            <button type="button"
+                                    id="coach-plan-tab-1"
+                                    class="coach-custom-tab @(IsPlanTabSelected(1) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(1)"
+                                    aria-controls="coach-plan-panel-1"
+                                    tabindex="@(IsPlanTabSelected(1) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(1)">
+                                Weekly Plan
+                            </button>
+
+                            <button type="button"
+                                    id="coach-plan-tab-2"
+                                    class="coach-custom-tab @(IsPlanTabSelected(2) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(2)"
+                                    aria-controls="coach-plan-panel-2"
+                                    tabindex="@(IsPlanTabSelected(2) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(2)">
+                                JSON
+                            </button>
+                        </div>
+
+                        <div id="coach-plan-panel-0"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-0"
+                             hidden="@(!IsPlanTabSelected(0))">
+                            @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                            {
+                                <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No text available.</p>
+                            }
+                        </div>
+
+                        <div id="coach-plan-panel-1"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-1"
+                             hidden="@(!IsPlanTabSelected(1))">
+                            @if (_planWorkouts.Count > 0)
+                            {
+                                <div class="coach-plan-week-editor">
+                                    @foreach (var workout in _planWorkouts)
                                     {
-                                        <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
-                                    }
-                                    else
-                                    {
-                                        <p class="coach-overview-empty">No text available.</p>
-                                    }
-                                </ContentTemplate>
-                            </TabItem>
-                            <TabItem>
-                                <ChildContent>
-                                    <TabHeader Text="Weekly Plan"></TabHeader>
-                                </ChildContent>
-                                <ContentTemplate>
-                                    @if (_planWorkouts.Count > 0)
-                                    {
-                                        <div class="coach-plan-week-editor">
-                                            @foreach (var workout in _planWorkouts)
-                                            {
-                                                var hasConflict = HasPlanWorkoutDateConflict(workout);
+                                        var hasConflict = HasPlanWorkoutDateConflict(workout);
 
-                                                <div class="coach-plan-week-row @(hasConflict ? "is-conflict" : string.Empty)">
-                                                    <div class="coach-plan-week-main">
-                                                        <div class="coach-plan-week-title-row">
-                                                            <h3 class="coach-plan-week-name">@workout.Name</h3>
+                                        <div class="coach-plan-week-row @(hasConflict ? "is-conflict" : string.Empty)">
+                                            <div class="coach-plan-week-main">
+                                                <div class="coach-plan-week-title-row">
+                                                    <h3 class="coach-plan-week-name">@workout.Name</h3>
 
-                                                            @if (hasConflict)
-                                                            {
-                                                                <span class="coach-plan-week-warning" title="Multiple workouts are assigned to this day.">
-                                                                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                                                                    <span>Same day</span>
-                                                                </span>
-                                                            }
-                                                        </div>
-
-                                                        <div class="coach-plan-week-meta">
-                                                            @if (workout.DurationMinutes is not null)
-                                                            {
-                                                                <span class="coach-plan-week-duration">@workout.DurationMinutes min</span>
-                                                            }
-
-                                                            @foreach (var tag in workout.Tags)
-                                                            {
-                                                                <span class="coach-plan-week-tag">@tag</span>
-                                                            }
-                                                        </div>
-                                                    </div>
-
-                                                    <label class="coach-plan-week-select-wrap">
-                                                        <span class="coach-plan-week-select-label">Day</span>
-                                                        <select class="coach-plan-week-select"
-                                                                value="@FormatPlanWorkoutDateValue(workout.Date)"
-                                                                @onchange="args => OnPlanWorkoutDateChanged(args, workout.Id)">
-                                                            @foreach (var option in _planWeekDayOptions)
-                                                            {
-                                                                <option value="@option.Value">@option.Label</option>
-                                                            }
-                                                        </select>
-                                                    </label>
+                                                    @if (hasConflict)
+                                                    {
+                                                        <span class="coach-plan-week-warning" title="Multiple workouts are assigned to this day.">
+                                                            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                                                            <span>Same day</span>
+                                                        </span>
+                                                    }
                                                 </div>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <p class="coach-overview-empty">No weekly plan available.</p>
-                                    }
-                                </ContentTemplate>
-                            </TabItem>
-                            <TabItem>
-                                <ChildContent>
-                                    <TabHeader Text="JSON"></TabHeader>
-                                </ChildContent>
-                                <ContentTemplate>
-                                    @if (!string.IsNullOrWhiteSpace(_planUploadJson))
-                                    {
-                                        <div class="coach-assess-result-actions">
-                                            <button type="button"
-                                                    class="coach-assess-copy"
-                                                    title="Copy Upload JSON"
-                                                    aria-label="Copy Upload JSON"
-                                                    @onclick="CopyPlanUploadJsonAsync">
-                                                <i class="bi bi-clipboard"></i>
-                                            </button>
 
-                                            @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
-                                            {
-                                                <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
-                                            }
-                                        </div>
+                                                <div class="coach-plan-week-meta">
+                                                    @if (workout.DurationMinutes is not null)
+                                                    {
+                                                        <span class="coach-plan-week-duration">@workout.DurationMinutes min</span>
+                                                    }
 
-                                        <div class="coach-json-viewer">
-                                            @RenderFormattedJson(_planUploadJson)
+                                                    @foreach (var tag in workout.Tags)
+                                                    {
+                                                        <span class="coach-plan-week-tag">@tag</span>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <label class="coach-plan-week-select-wrap">
+                                                <span class="coach-plan-week-select-label">Day</span>
+                                                <select class="coach-plan-week-select"
+                                                        value="@FormatPlanWorkoutDateValue(workout.Date)"
+                                                        @onchange="args => OnPlanWorkoutDateChanged(args, workout.Id)">
+                                                    @foreach (var option in _planWeekDayOptions)
+                                                    {
+                                                        <option value="@option.Value">@option.Label</option>
+                                                    }
+                                                </select>
+                                            </label>
                                         </div>
                                     }
-                                    else
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No weekly plan available.</p>
+                            }
+                        </div>
+
+                        <div id="coach-plan-panel-2"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-2"
+                             hidden="@(!IsPlanTabSelected(2))">
+                            @if (!string.IsNullOrWhiteSpace(_planUploadJson))
+                            {
+                                <div class="coach-assess-result-actions">
+                                    <button type="button"
+                                            class="coach-assess-copy"
+                                            title="Copy Upload JSON"
+                                            aria-label="Copy Upload JSON"
+                                            @onclick="CopyPlanUploadJsonAsync">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+
+                                    @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
                                     {
-                                        <p class="coach-overview-empty">No JSON available.</p>
+                                        <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
                                     }
-                                </ContentTemplate>
-                            </TabItem>
-                        </TabItems>
-                    </SfTab>
+                                </div>
+
+                                <div class="coach-json-viewer">
+                                    @RenderFormattedJson(_planUploadJson)
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No JSON available.</p>
+                            }
+                        </div>
+                    </div>
                 </CardContent>
             </SfCard>
         </section>
@@ -549,72 +581,104 @@
                     <button type="button" class="coach-inline-link" @onclick="DownloadJsonAsync">Download JSON</button>
                 </div>
 
-                <SfTab CssClass="coach-data-tabs">
-                    <TabItems>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Overview"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <div class="coach-overview-metrics">
-                                    @if (OverviewSections.Count == 0)
+                <div class="coach-custom-tabs coach-custom-tabs--compact">
+                    <div class="coach-custom-tabs-header" role="tablist" aria-label="Athlete data tabs">
+                        <button type="button"
+                                id="coach-data-tab-0"
+                                class="coach-custom-tab @(IsDataViewTabSelected(0) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(0)"
+                                aria-controls="coach-data-panel-0"
+                                tabindex="@(IsDataViewTabSelected(0) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(0)">
+                            Overview
+                        </button>
+
+                        <button type="button"
+                                id="coach-data-tab-1"
+                                class="coach-custom-tab @(IsDataViewTabSelected(1) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(1)"
+                                aria-controls="coach-data-panel-1"
+                                tabindex="@(IsDataViewTabSelected(1) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(1)">
+                            Parsed JSON
+                        </button>
+
+                        <button type="button"
+                                id="coach-data-tab-2"
+                                class="coach-custom-tab @(IsDataViewTabSelected(2) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(2)"
+                                aria-controls="coach-data-panel-2"
+                                tabindex="@(IsDataViewTabSelected(2) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(2)">
+                            Raw JSON
+                        </button>
+                    </div>
+
+                    <div id="coach-data-panel-0"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-0"
+                         hidden="@(!IsDataViewTabSelected(0))">
+                        <div class="coach-overview-metrics">
+                            @if (OverviewSections.Count == 0)
+                            {
+                                <p class="coach-overview-empty">No parsed JSON data available.</p>
+                            }
+                            else
+                            {
+                                <div class="coach-overview-sections">
+                                    @foreach (var section in OverviewSections)
                                     {
-                                        <p class="coach-overview-empty">No parsed JSON data available.</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="coach-overview-sections">
-                                            @foreach (var section in OverviewSections)
+                                        var isOpen = IsOverviewSectionOpen(section);
+
+                                        <div class="coach-overview-section @(isOpen ? "is-open" : string.Empty)">
+                                            <button type="button"
+                                                    class="coach-overview-section-summary"
+                                                    aria-expanded="@isOpen"
+                                                    @onclick="() => ToggleOverviewSection(section)">
+                                                <span class="coach-overview-section-summary-main">
+                                                    <span class="coach-overview-section-title">@section.Title</span>
+                                                    <span class="coach-overview-section-meta">@section.Summary</span>
+                                                </span>
+                                                <span class="coach-overview-section-chevron" aria-hidden="true">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </span>
+                                            </button>
+
+                                            @if (isOpen)
                                             {
-                                                var isOpen = IsOverviewSectionOpen(section);
-
-                                                <div class="coach-overview-section @(isOpen ? "is-open" : string.Empty)">
-                                                    <button type="button"
-                                                            class="coach-overview-section-summary"
-                                                            aria-expanded="@isOpen"
-                                                            @onclick="() => ToggleOverviewSection(section)">
-                                                        <span class="coach-overview-section-summary-main">
-                                                            <span class="coach-overview-section-title">@section.Title</span>
-                                                            <span class="coach-overview-section-meta">@section.Summary</span>
-                                                        </span>
-                                                        <span class="coach-overview-section-chevron" aria-hidden="true">
-                                                            <i class="bi bi-chevron-down"></i>
-                                                        </span>
-                                                    </button>
-
-                                                    @if (isOpen)
-                                                    {
-                                                        <div class="coach-overview-section-panel">
-                                                            <div class="coach-json-viewer coach-json-viewer--compact">
-                                                                @RenderFormattedJson(section.PrettyJson, includeLineNumbers: false)
-                                                            </div>
-                                                        </div>
-                                                    }
+                                                <div class="coach-overview-section-panel">
+                                                    <div class="coach-json-viewer coach-json-viewer--compact">
+                                                        @RenderFormattedJson(section.PrettyJson, includeLineNumbers: false)
+                                                    </div>
                                                 </div>
                                             }
                                         </div>
                                     }
                                 </div>
-                            </ContentTemplate>
-                        </TabItem>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Parsed JSON"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <pre class="data-view-json">@DataParsedPrettyJson</pre>
-                            </ContentTemplate>
-                        </TabItem>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Raw JSON"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <pre class="data-view-json">@DataRawPrettyJson</pre>
-                            </ContentTemplate>
-                        </TabItem>
-                    </TabItems>
-                </SfTab>
+                            }
+                        </div>
+                    </div>
+
+                    <div id="coach-data-panel-1"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-1"
+                         hidden="@(!IsDataViewTabSelected(1))">
+                        <pre class="data-view-json">@DataParsedPrettyJson</pre>
+                    </div>
+
+                    <div id="coach-data-panel-2"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-2"
+                         hidden="@(!IsDataViewTabSelected(2))">
+                        <pre class="data-view-json">@DataRawPrettyJson</pre>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -712,6 +776,8 @@
     private string? _planCopyFeedback;
     private string? _planUploadFeedback;
     private bool _planUploaded;
+    private int _selectedPlanTabIndex;
+    private int _selectedDataViewTabIndex;
     private JsonElement? _planUploadRoot;
     private readonly List<PlanWorkoutViewModel> _planWorkouts = [];
     private IReadOnlyList<PlanWeekDayOption> _planWeekDayOptions = [];
@@ -1331,6 +1397,20 @@
         !string.IsNullOrWhiteSpace(_planReadableText) ||
         !string.IsNullOrWhiteSpace(_planUploadJson);
 
+    private bool IsPlanTabSelected(int index) => _selectedPlanTabIndex == index;
+
+    private void SelectPlanTab(int index)
+    {
+        _selectedPlanTabIndex = index;
+    }
+
+    private bool IsDataViewTabSelected(int index) => _selectedDataViewTabIndex == index;
+
+    private void SelectDataViewTab(int index)
+    {
+        _selectedDataViewTabIndex = index;
+    }
+
     private static string FormatPlanWorkoutDateValue(DateOnly date)
     {
         return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -1644,6 +1724,7 @@
         _planReadableText = null;
         _planUploadJson = null;
         _planCopyFeedback = null;
+        _selectedPlanTabIndex = 0;
         ClearPlanWorkoutEditor();
         StateHasChanged();
 
@@ -1677,6 +1758,7 @@
             _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
             _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
             LoadPlanWorkoutEditor();
+            _selectedPlanTabIndex = 0;
 
             if (_planReadableText is null && _planUploadJson is null)
             {
@@ -2099,6 +2181,7 @@
             return;
 
         _dataViewFeedback = string.Empty;
+        _selectedDataViewTabIndex = 0;
         _showDataView = true;
     }
 
