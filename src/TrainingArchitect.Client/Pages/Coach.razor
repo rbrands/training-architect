@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IAthleteSession Session
 @inject ICredentialStore CredentialStore
+@inject CoachPageState CoachPageState
 @inject IJSRuntime JS
 @inject HttpClient Http
 @using Markdig
@@ -9,6 +10,7 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using System.Text.RegularExpressions
+@using System.Linq
 @using TrainingArchitect.Core.Constants
 @using TrainingArchitect.Core.Models
 @implements IDisposable
@@ -17,6 +19,13 @@
 <PageTitle>AI Coach · Training Architect</PageTitle>
 
 <div class="coach-page">
+    @if (!string.IsNullOrWhiteSpace(_initializationError))
+    {
+        <div class="alert alert-warning" role="alert">
+            @_initializationError
+        </div>
+    }
+
     <header class="coach-page-header">
         <h1 class="fw-bold mb-2">AI Coach</h1>
         <p class="coach-page-subtitle mb-0">
@@ -306,18 +315,236 @@
                         <span>Create Plan</span>
                     </div>
                     <p class="coach-plan-description mb-0">
-                        Structured plan based on Friel/Coggan. Confirmation before upload.
+                        Structured plan according to
+                        <a href="https://github.com/rbrands/intervals-icu-sync/tree/main/coach-logic"
+                           target="_blank"
+                           rel="noopener noreferrer">coach logic</a>.
+                        Automatic scope: Monday to Wednesday creates the plan for the current week, Thursday to Sunday creates the plan for the next week.
                     </p>
-                    <span class="coach-coming-soon-label">Coming Soon</span>
                 </div>
 
-                <SfButton CssClass="e-btn coach-primary-button" Disabled="@(!CanUseCoachActions)">
-                    <span>Create Plan</span>
-                    <span aria-hidden="true">→</span>
-                </SfButton>
+                <label class="field coach-plan-preference">
+                    <span>Scheduling preference (optional)</span>
+                    <input type="text"
+                           autocomplete="off"
+                           maxlength="150"
+                           placeholder='e.g. "VO2max session on Tuesday"'
+                           disabled="@(IsActionBusy || HasCreatedPlanResult)"
+                           @bind="_planSchedulingPreference"
+                           @bind:event="oninput" />
+                    <div class="d-flex justify-content-end mt-1">
+                        <small class="text-muted">@($"{_planSchedulingPreference.Length}/150")</small>
+                    </div>
+                </label>
+
+                <div class="coach-plan-actions">
+                    @if (HasPlanResult && !string.IsNullOrWhiteSpace(_planUploadJson))
+                    {
+                        <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
+                                  Disabled="@(!CanUploadPlan)"
+                                  @onclick="UploadPlanAsync">
+                            @if (_isPlanUploadInFlight)
+                            {
+                                <span class="coach-assess-spinner" aria-hidden="true"></span>
+                                <span>Uploading...</span>
+                            }
+                            else if (_planUploaded)
+                            {
+                                <span>Uploaded</span>
+                            }
+                            else
+                            {
+                                <span>Upload Plan</span>
+                            }
+                        </SfButton>
+                    }
+
+                    <SfButton CssClass="e-btn coach-primary-button"
+                              Disabled="@(!CanUsePlanButton)"
+                              @onclick="HandlePlanButtonAsync">
+                        @if (_isPlanRequestInFlight)
+                        {
+                            <span class="coach-assess-spinner" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>@GetPlanButtonText()</span>
+                            <span aria-hidden="true">→</span>
+                        }
+                    </SfButton>
+                </div>
             </div>
         </CardContent>
     </SfCard>
+
+    @if (!string.IsNullOrWhiteSpace(_planUploadFeedback))
+    {
+        <p class="coach-overview-empty mt-2">@_planUploadFeedback</p>
+    }
+
+    @if (_isPlanExpanded &&
+         (!string.IsNullOrWhiteSpace(_planErrorMessage) ||
+          !string.IsNullOrWhiteSpace(_planReadableText) ||
+          !string.IsNullOrWhiteSpace(_planUploadJson)))
+    {
+        <section class="coach-section">
+            <h2 class="coach-section-title">Plan Result</h2>
+
+            <SfCard CssClass="coach-prompt-card">
+                <CardContent>
+                    @if (!string.IsNullOrWhiteSpace(_planErrorMessage))
+                    {
+                        <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
+                    }
+
+                    <div class="coach-custom-tabs">
+                        <div class="coach-custom-tabs-header" role="tablist" aria-label="Plan result tabs">
+                            <button type="button"
+                                    id="coach-plan-tab-0"
+                                    class="coach-custom-tab @(IsPlanTabSelected(0) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(0)"
+                                    aria-controls="coach-plan-panel-0"
+                                    tabindex="@(IsPlanTabSelected(0) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(0)">
+                                Text
+                            </button>
+
+                            <button type="button"
+                                    id="coach-plan-tab-1"
+                                    class="coach-custom-tab @(IsPlanTabSelected(1) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(1)"
+                                    aria-controls="coach-plan-panel-1"
+                                    tabindex="@(IsPlanTabSelected(1) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(1)">
+                                Weekly Plan
+                            </button>
+
+                            <button type="button"
+                                    id="coach-plan-tab-2"
+                                    class="coach-custom-tab @(IsPlanTabSelected(2) ? "is-active" : string.Empty)"
+                                    role="tab"
+                                    aria-selected="@IsPlanTabSelected(2)"
+                                    aria-controls="coach-plan-panel-2"
+                                    tabindex="@(IsPlanTabSelected(2) ? 0 : -1)"
+                                    @onclick="() => SelectPlanTab(2)">
+                                JSON
+                            </button>
+                        </div>
+
+                        <div id="coach-plan-panel-0"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-0"
+                             hidden="@(!IsPlanTabSelected(0))">
+                            @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                            {
+                                <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No text available.</p>
+                            }
+                        </div>
+
+                        <div id="coach-plan-panel-1"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-1"
+                             hidden="@(!IsPlanTabSelected(1))">
+                            @if (_planWorkouts.Count > 0)
+                            {
+                                <div class="coach-plan-week-editor">
+                                    @foreach (var workout in _planWorkouts)
+                                    {
+                                        var hasConflict = HasPlanWorkoutDateConflict(workout);
+
+                                        <div class="coach-plan-week-row @(hasConflict ? "is-conflict" : string.Empty)">
+                                            <div class="coach-plan-week-main">
+                                                <div class="coach-plan-week-title-row">
+                                                    <h3 class="coach-plan-week-name">@workout.Name</h3>
+
+                                                    @if (hasConflict)
+                                                    {
+                                                        <span class="coach-plan-week-warning" title="Multiple workouts are assigned to this day.">
+                                                            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                                                            <span>Same day</span>
+                                                        </span>
+                                                    }
+                                                </div>
+
+                                                <div class="coach-plan-week-meta">
+                                                    @if (workout.DurationMinutes is not null)
+                                                    {
+                                                        <span class="coach-plan-week-duration">@workout.DurationMinutes min</span>
+                                                    }
+
+                                                    @foreach (var tag in workout.Tags)
+                                                    {
+                                                        <span class="coach-plan-week-tag">@tag</span>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <label class="coach-plan-week-select-wrap">
+                                                <span class="coach-plan-week-select-label">Day</span>
+                                                <select class="coach-plan-week-select"
+                                                        value="@FormatPlanWorkoutDateValue(workout.Date)"
+                                                        @onchange="args => OnPlanWorkoutDateChanged(args, workout.Id)">
+                                                    @foreach (var option in _planWeekDayOptions)
+                                                    {
+                                                        <option value="@option.Value">@option.Label</option>
+                                                    }
+                                                </select>
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No weekly plan available.</p>
+                            }
+                        </div>
+
+                        <div id="coach-plan-panel-2"
+                             class="coach-custom-tab-panel"
+                             role="tabpanel"
+                             aria-labelledby="coach-plan-tab-2"
+                             hidden="@(!IsPlanTabSelected(2))">
+                            @if (!string.IsNullOrWhiteSpace(_planUploadJson))
+                            {
+                                <div class="coach-assess-result-actions">
+                                    <button type="button"
+                                            class="coach-assess-copy"
+                                            title="Copy Upload JSON"
+                                            aria-label="Copy Upload JSON"
+                                            @onclick="CopyPlanUploadJsonAsync">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+
+                                    @if (!string.IsNullOrWhiteSpace(_planCopyFeedback))
+                                    {
+                                        <span class="coach-assess-copy-feedback">@_planCopyFeedback</span>
+                                    }
+                                </div>
+
+                                <div class="coach-json-viewer">
+                                    @RenderFormattedJson(_planUploadJson)
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="coach-overview-empty">No JSON available.</p>
+                            }
+                        </div>
+                    </div>
+                </CardContent>
+            </SfCard>
+        </section>
+    }
 
     @if (_showDataView)
     {
@@ -355,54 +582,104 @@
                     <button type="button" class="coach-inline-link" @onclick="DownloadJsonAsync">Download JSON</button>
                 </div>
 
-                <SfTab CssClass="coach-data-tabs">
-                    <TabItems>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Overview"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <div class="coach-overview-metrics">
-                                    @if (OverviewSections.Count == 0)
+                <div class="coach-custom-tabs coach-custom-tabs--compact">
+                    <div class="coach-custom-tabs-header" role="tablist" aria-label="Athlete data tabs">
+                        <button type="button"
+                                id="coach-data-tab-0"
+                                class="coach-custom-tab @(IsDataViewTabSelected(0) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(0)"
+                                aria-controls="coach-data-panel-0"
+                                tabindex="@(IsDataViewTabSelected(0) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(0)">
+                            Overview
+                        </button>
+
+                        <button type="button"
+                                id="coach-data-tab-1"
+                                class="coach-custom-tab @(IsDataViewTabSelected(1) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(1)"
+                                aria-controls="coach-data-panel-1"
+                                tabindex="@(IsDataViewTabSelected(1) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(1)">
+                            Parsed JSON
+                        </button>
+
+                        <button type="button"
+                                id="coach-data-tab-2"
+                                class="coach-custom-tab @(IsDataViewTabSelected(2) ? "is-active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@IsDataViewTabSelected(2)"
+                                aria-controls="coach-data-panel-2"
+                                tabindex="@(IsDataViewTabSelected(2) ? 0 : -1)"
+                                @onclick="() => SelectDataViewTab(2)">
+                            Raw JSON
+                        </button>
+                    </div>
+
+                    <div id="coach-data-panel-0"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-0"
+                         hidden="@(!IsDataViewTabSelected(0))">
+                        <div class="coach-overview-metrics">
+                            @if (OverviewSections.Count == 0)
+                            {
+                                <p class="coach-overview-empty">No parsed JSON data available.</p>
+                            }
+                            else
+                            {
+                                <div class="coach-overview-sections">
+                                    @foreach (var section in OverviewSections)
                                     {
-                                        <p class="coach-overview-empty">No parsed JSON data available.</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="coach-overview-sections">
-                                            @foreach (var section in OverviewSections)
+                                        var isOpen = IsOverviewSectionOpen(section);
+
+                                        <div class="coach-overview-section @(isOpen ? "is-open" : string.Empty)">
+                                            <button type="button"
+                                                    class="coach-overview-section-summary"
+                                                    aria-expanded="@isOpen"
+                                                    @onclick="() => ToggleOverviewSection(section)">
+                                                <span class="coach-overview-section-summary-main">
+                                                    <span class="coach-overview-section-title">@section.Title</span>
+                                                    <span class="coach-overview-section-meta">@section.Summary</span>
+                                                </span>
+                                                <span class="coach-overview-section-chevron" aria-hidden="true">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </span>
+                                            </button>
+
+                                            @if (isOpen)
                                             {
-                                                <details class="coach-overview-section" open="@section.IsInitiallyOpen">
-                                                    <summary class="coach-overview-section-summary">
-                                                        <span class="coach-overview-section-title">@section.Title</span>
-                                                        <span class="coach-overview-section-meta">@section.Summary</span>
-                                                    </summary>
-                                                    <pre class="coach-overview-section-json">@section.PrettyJson</pre>
-                                                </details>
+                                                <div class="coach-overview-section-panel">
+                                                    <div class="coach-json-viewer coach-json-viewer--compact">
+                                                        @RenderFormattedJson(section.PrettyJson, includeLineNumbers: false)
+                                                    </div>
+                                                </div>
                                             }
                                         </div>
                                     }
                                 </div>
-                            </ContentTemplate>
-                        </TabItem>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Parsed JSON"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <pre class="data-view-json">@DataParsedPrettyJson</pre>
-                            </ContentTemplate>
-                        </TabItem>
-                        <TabItem>
-                            <ChildContent>
-                                <TabHeader Text="Raw JSON"></TabHeader>
-                            </ChildContent>
-                            <ContentTemplate>
-                                <pre class="data-view-json">@DataRawPrettyJson</pre>
-                            </ContentTemplate>
-                        </TabItem>
-                    </TabItems>
-                </SfTab>
+                            }
+                        </div>
+                    </div>
+
+                    <div id="coach-data-panel-1"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-1"
+                         hidden="@(!IsDataViewTabSelected(1))">
+                        <pre class="data-view-json">@DataParsedPrettyJson</pre>
+                    </div>
+
+                    <div id="coach-data-panel-2"
+                         class="coach-custom-tab-panel"
+                         role="tabpanel"
+                         aria-labelledby="coach-data-tab-2"
+                         hidden="@(!IsDataViewTabSelected(2))">
+                        <pre class="data-view-json">@DataRawPrettyJson</pre>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -423,6 +700,18 @@
         public string? ErrorMessage { get; set; }
         public string? CopyFeedback { get; set; }
     }
+
+    private sealed class PlanWorkoutViewModel
+    {
+        public required string Id { get; init; }
+        public required DateOnly Date { get; set; }
+        public required string Name { get; init; }
+        public int? DurationMinutes { get; init; }
+        public IReadOnlyList<string> Tags { get; init; } = [];
+        public required JsonElement OriginalWorkout { get; init; }
+    }
+
+    private sealed record PlanWeekDayOption(string Value, string Label, DateOnly Date);
 
     private string StatusText => Session.State switch
     {
@@ -461,11 +750,13 @@
     private bool _showCredentialHelp;
     private bool _showDataView;
     private string _dataViewFeedback = string.Empty;
+    private string? _initializationError;
 
     private bool ShowRememberedNote => _showRememberedHint;
 
     private string _athleteId = string.Empty;
     private string _apiKey = string.Empty;
+    private string _planSchedulingPreference = string.Empty;
     private CoachLanguage _language = CoachLanguage.English;
     private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
     private bool _remember;
@@ -476,11 +767,28 @@
         [AssessCardType.Week] = new AssessCardState()
     };
     private AssessCardType? _expandedCard;
-    private bool _isAnyRequestInFlight;
+    private bool _isAssessRequestInFlight;
+    private bool _isPlanRequestInFlight;
+    private bool _isPlanUploadInFlight;
+    private bool _isPlanExpanded;
+    private string? _planReadableText;
+    private string? _planUploadJson;
+    private string? _planErrorMessage;
+    private string? _planCopyFeedback;
+    private string? _planUploadFeedback;
+    private bool _planUploaded;
+    private int _selectedPlanTabIndex;
+    private int _selectedDataViewTabIndex;
+    private JsonElement? _planUploadRoot;
+    private readonly List<PlanWorkoutViewModel> _planWorkouts = [];
+    private IReadOnlyList<PlanWeekDayOption> _planWeekDayOptions = [];
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
-    private bool IsActionBusy => IsBusy || Session.IsRefreshing || _isAnyRequestInFlight;
+    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight;
+    private bool IsActionBusy => IsBusy || Session.IsRefreshing || IsAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
+    private bool CanUsePlanButton => CanUseCoachActions && !_isPlanRequestInFlight && !_isAssessRequestInFlight;
+    private bool CanUploadPlan => CanUseCoachActions && !_isPlanRequestInFlight && !_isPlanUploadInFlight && !string.IsNullOrWhiteSpace(_planUploadJson);
 
     private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
@@ -496,7 +804,7 @@
     ];
 
     private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
-    private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson, bool IsInitiallyOpen);
+    private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson);
     private sealed record MetricSnapshotItem(string Label, string Value);
 
     private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
@@ -504,7 +812,10 @@
         .DisableHtml()
         .Build();
 
+    private static readonly CultureInfo PlanWeekCulture = CultureInfo.GetCultureInfo("en-GB");
+
     private IReadOnlyList<JsonOverviewSection> OverviewSections => BuildOverviewSections();
+    private string? _openOverviewSectionTitle;
 
     private IReadOnlyList<JsonOverviewSection> BuildOverviewSections()
     {
@@ -545,15 +856,14 @@
             sections.Add(new JsonOverviewSection(
                 "Header Data",
                 $"{headerProperties.Count} fields",
-                SerializePretty(headerProperties),
-                IsInitiallyOpen: true));
+                SerializePretty(headerProperties)));
         }
 
-        AddOverviewSection(sections, root.Value, "metrics", "Metrics", isInitiallyOpen: true);
-        AddOverviewSection(sections, root.Value, "week_summary", "Week Summary", isInitiallyOpen: false);
-        AddOverviewSection(sections, root.Value, "activities", "Activities", isInitiallyOpen: false);
-        AddOverviewSection(sections, root.Value, "fueling_analysis", "Fueling Analysis", isInitiallyOpen: false);
-        AddOverviewSection(sections, root.Value, "planned_workouts", "Planned Workouts", isInitiallyOpen: false);
+        AddOverviewSection(sections, root.Value, "metrics", "Metrics");
+        AddOverviewSection(sections, root.Value, "week_summary", "Week Summary");
+        AddOverviewSection(sections, root.Value, "activities", "Activities");
+        AddOverviewSection(sections, root.Value, "fueling_analysis", "Fueling Analysis");
+        AddOverviewSection(sections, root.Value, "planned_workouts", "Planned Workouts");
 
         return sections;
     }
@@ -588,8 +898,7 @@
         List<JsonOverviewSection> sections,
         JsonElement root,
         string key,
-        string title,
-        bool isInitiallyOpen)
+        string title)
     {
         if (!root.TryGetProperty(key, out var value))
         {
@@ -599,8 +908,7 @@
         sections.Add(new JsonOverviewSection(
             title,
             BuildSectionSummary(value),
-            SerializePretty(value),
-            IsInitiallyOpen: isInitiallyOpen));
+            SerializePretty(value)));
     }
 
     private static string BuildSectionSummary(JsonElement value)
@@ -623,6 +931,23 @@
         {
             WriteIndented = true
         });
+    }
+
+    private bool IsOverviewSectionOpen(JsonOverviewSection section)
+    {
+        return !string.IsNullOrWhiteSpace(_openOverviewSectionTitle)
+            && string.Equals(_openOverviewSectionTitle, section.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleOverviewSection(JsonOverviewSection section)
+    {
+        if (IsOverviewSectionOpen(section))
+        {
+            _openOverviewSectionTitle = null;
+            return;
+        }
+
+        _openOverviewSectionTitle = section.Title;
     }
 
     private static JsonElement? GetObjectProperty(JsonElement? parent, string propertyName)
@@ -933,6 +1258,18 @@
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
+    private static int? GetIntProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind != JsonValueKind.Number)
+        {
+            return null;
+        }
+
+        return property.TryGetInt32(out var value) ? value : null;
+    }
+
     private async Task ConnectAsync()
     {
         if (!CanSubmit)
@@ -993,12 +1330,12 @@
             return true;
         }
 
-        if (_isAnyRequestInFlight && state.ResultText is null)
+        if (IsAnyRequestInFlight && state.ResultText is null)
         {
             return true;
         }
 
-        if (_isAnyRequestInFlight && state.ResultText is not null && _expandedCard != cardType)
+        if (IsAnyRequestInFlight && state.ResultText is not null && _expandedCard != cardType)
         {
             return true;
         }
@@ -1012,6 +1349,8 @@
         {
             return;
         }
+
+        HidePlanResult();
 
         var state = GetAssessCardState(cardType);
 
@@ -1027,7 +1366,7 @@
             return;
         }
 
-        if (_isAnyRequestInFlight)
+        if (IsAnyRequestInFlight)
         {
             return;
         }
@@ -1035,9 +1374,289 @@
         _expandedCard = cardType;
     }
 
+    private string GetPlanButtonText()
+    {
+        if (_isPlanRequestInFlight)
+        {
+            return "Creating...";
+        }
+
+        if (!HasPlanResult)
+        {
+            return "Create Plan";
+        }
+
+        return _isPlanExpanded ? "Close" : "Reopen";
+    }
+
+    private bool HasPlanResult =>
+        !string.IsNullOrWhiteSpace(_planReadableText) ||
+        !string.IsNullOrWhiteSpace(_planUploadJson) ||
+        !string.IsNullOrWhiteSpace(_planErrorMessage);
+
+    private bool HasCreatedPlanResult =>
+        !string.IsNullOrWhiteSpace(_planReadableText) ||
+        !string.IsNullOrWhiteSpace(_planUploadJson);
+
+    private bool IsPlanTabSelected(int index) => _selectedPlanTabIndex == index;
+
+    private void SelectPlanTab(int index)
+    {
+        _selectedPlanTabIndex = index;
+    }
+
+    private bool IsDataViewTabSelected(int index) => _selectedDataViewTabIndex == index;
+
+    private void SelectDataViewTab(int index)
+    {
+        _selectedDataViewTabIndex = index;
+    }
+
+    private static string FormatPlanWorkoutDateValue(DateOnly date)
+    {
+        return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
+
+    private bool HasPlanWorkoutDateConflict(PlanWorkoutViewModel workout)
+    {
+        return _planWorkouts.Count(item => item.Date == workout.Date) > 1;
+    }
+
+    private void ClearPlanWorkoutEditor()
+    {
+        _planUploadRoot = null;
+        _planWorkouts.Clear();
+        _planWeekDayOptions = [];
+    }
+
+    private void LoadPlanWorkoutEditor()
+    {
+        ClearPlanWorkoutEditor();
+
+        if (string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(_planUploadJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+
+            _planUploadRoot = root.Clone();
+
+            if (!root.TryGetProperty("workouts", out var workoutsElement) || workoutsElement.ValueKind != JsonValueKind.Array)
+            {
+                return;
+            }
+
+            foreach (var item in workoutsElement.EnumerateArray().Select((workout, index) => new { workout, index }))
+            {
+                if (item.workout.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var parsedWorkout = CreatePlanWorkoutViewModel(item.workout, item.index);
+                if (parsedWorkout is null)
+                {
+                    continue;
+                }
+
+                _planWorkouts.Add(parsedWorkout);
+            }
+
+            _planWeekDayOptions = BuildPlanWeekDayOptions(_planWorkouts);
+        }
+        catch (JsonException)
+        {
+            ClearPlanWorkoutEditor();
+        }
+    }
+
+    private static PlanWorkoutViewModel? CreatePlanWorkoutViewModel(JsonElement workout, int index)
+    {
+        var dateText = GetStringProperty(workout, "date");
+        if (string.IsNullOrWhiteSpace(dateText) || !DateOnly.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            return null;
+        }
+
+        var tags = workout.TryGetProperty("tags", out var tagsElement) && tagsElement.ValueKind == JsonValueKind.Array
+            ? tagsElement
+                .EnumerateArray()
+                .Where(tag => tag.ValueKind == JsonValueKind.String)
+                .Select(tag => tag.GetString())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag!)
+                .ToArray()
+            : [];
+
+        return new PlanWorkoutViewModel
+        {
+            Id = $"workout-{index}",
+            Date = date,
+            Name = GetStringProperty(workout, "name") ?? $"Workout {index + 1}",
+            DurationMinutes = GetIntProperty(workout, "duration_minutes"),
+            Tags = tags,
+            OriginalWorkout = workout.Clone()
+        };
+    }
+
+    private static IReadOnlyList<PlanWeekDayOption> BuildPlanWeekDayOptions(IEnumerable<PlanWorkoutViewModel> workouts)
+    {
+        var workoutDates = workouts.Select(workout => workout.Date).ToArray();
+        if (workoutDates.Length == 0)
+        {
+            return [];
+        }
+
+        var earliest = workoutDates.Min();
+        var mondayOffset = earliest.DayOfWeek switch
+        {
+            DayOfWeek.Sunday => 6,
+            _ => (int)earliest.DayOfWeek - 1
+        };
+
+        var weekStart = earliest.AddDays(-mondayOffset);
+
+        return Enumerable.Range(0, 7)
+            .Select(offset => weekStart.AddDays(offset))
+            .Select(date => new PlanWeekDayOption(
+                FormatPlanWorkoutDateValue(date),
+                date.ToDateTime(TimeOnly.MinValue).ToString("ddd dd MMM", PlanWeekCulture),
+                date))
+            .ToArray();
+    }
+
+    private void OnPlanWorkoutDateChanged(Microsoft.AspNetCore.Components.ChangeEventArgs args, string workoutId)
+    {
+        if (args.Value is not string selectedDate
+            || !DateOnly.TryParse(selectedDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
+        {
+            return;
+        }
+
+        var workout = _planWorkouts.FirstOrDefault(item => string.Equals(item.Id, workoutId, StringComparison.Ordinal));
+        if (workout is null || workout.Date == parsedDate)
+        {
+            return;
+        }
+
+        workout.Date = parsedDate;
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        _planCopyFeedback = null;
+        SyncPlanWorkoutsToUploadJson();
+        StateHasChanged();
+    }
+
+    private void SyncPlanWorkoutsToUploadJson()
+    {
+        if (_planUploadRoot is null)
+        {
+            return;
+        }
+
+        _planUploadJson = SerializePlanUploadJson(_planUploadRoot.Value, _planWorkouts);
+    }
+
+    private static string SerializePlanUploadJson(JsonElement root, IReadOnlyList<PlanWorkoutViewModel> workouts)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+        {
+            Indented = true
+        });
+
+        writer.WriteStartObject();
+        var wroteWorkouts = false;
+
+        foreach (var property in root.EnumerateObject())
+        {
+            if (property.NameEquals("workouts"))
+            {
+                writer.WritePropertyName("workouts");
+                WritePlanWorkouts(writer, workouts);
+                wroteWorkouts = true;
+                continue;
+            }
+
+            property.WriteTo(writer);
+        }
+
+        if (!wroteWorkouts)
+        {
+            writer.WritePropertyName("workouts");
+            WritePlanWorkouts(writer, workouts);
+        }
+
+        writer.WriteEndObject();
+        writer.Flush();
+
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    private static void WritePlanWorkouts(Utf8JsonWriter writer, IReadOnlyList<PlanWorkoutViewModel> workouts)
+    {
+        writer.WriteStartArray();
+
+        foreach (var workout in workouts)
+        {
+            WritePlanWorkout(writer, workout);
+        }
+
+        writer.WriteEndArray();
+    }
+
+    private static void WritePlanWorkout(Utf8JsonWriter writer, PlanWorkoutViewModel workout)
+    {
+        writer.WriteStartObject();
+
+        var wroteDate = false;
+        foreach (var property in workout.OriginalWorkout.EnumerateObject())
+        {
+            if (property.NameEquals("date"))
+            {
+                writer.WriteString("date", FormatPlanWorkoutDateValue(workout.Date));
+                wroteDate = true;
+                continue;
+            }
+
+            property.WriteTo(writer);
+        }
+
+        if (!wroteDate)
+        {
+            writer.WriteString("date", FormatPlanWorkoutDateValue(workout.Date));
+        }
+
+        writer.WriteEndObject();
+    }
+
+    private async Task HandlePlanButtonAsync()
+    {
+        if (!CanUsePlanButton)
+        {
+            return;
+        }
+
+        if (!HasPlanResult)
+        {
+            await CreatePlanAsync();
+            return;
+        }
+
+        _isPlanExpanded = !_isPlanExpanded;
+    }
+
     private async Task ExecuteAssessRequestAsync(AssessCardType cardType)
     {
-        if (_isAnyRequestInFlight)
+        if (IsAnyRequestInFlight)
         {
             return;
         }
@@ -1045,7 +1664,7 @@
         var state = GetAssessCardState(cardType);
         state.IsLoading = true;
         state.ErrorMessage = null;
-        _isAnyRequestInFlight = true;
+        _isAssessRequestInFlight = true;
         StateHasChanged();
 
         try
@@ -1088,7 +1707,376 @@
         finally
         {
             state.IsLoading = false;
-            _isAnyRequestInFlight = _assessCardStates.Values.Any(card => card.IsLoading);
+            _isAssessRequestInFlight = _assessCardStates.Values.Any(card => card.IsLoading);
+        }
+    }
+
+    private async Task CreatePlanAsync()
+    {
+        if (!CanUsePlanButton)
+        {
+            return;
+        }
+
+        _isPlanRequestInFlight = true;
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        _planErrorMessage = null;
+        _planReadableText = null;
+        _planUploadJson = null;
+        _planCopyFeedback = null;
+        _selectedPlanTabIndex = 0;
+        ClearPlanWorkoutEditor();
+        StateHasChanged();
+
+        try
+        {
+            var request = BuildPlanRequest();
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan")
+            {
+                Content = JsonContent.Create(request)
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _planErrorMessage = string.IsNullOrWhiteSpace(errorBody)
+                    ? "Plan request failed. Please try again."
+                    : $"Plan request failed: {errorBody}";
+                return;
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var coachResponse = NormalizeCoachResponse(responseBody);
+
+            var (planText, uploadJson) = SplitPlanAndUploadJson(coachResponse);
+
+            _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
+            _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
+            LoadPlanWorkoutEditor();
+            _selectedPlanTabIndex = 0;
+
+            if (_planReadableText is null && _planUploadJson is null)
+            {
+                _planErrorMessage = "Plan request returned no usable content.";
+            }
+
+            _isPlanExpanded = true;
+        }
+        catch
+        {
+            _planErrorMessage = "Plan request failed. Please try again.";
+            _isPlanExpanded = true;
+        }
+        finally
+        {
+            _isPlanRequestInFlight = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UploadPlanAsync()
+    {
+        if (_planWorkouts.Count > 0)
+        {
+            SyncPlanWorkoutsToUploadJson();
+        }
+
+        if (!CanUploadPlan || string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return;
+        }
+
+        _isPlanUploadInFlight = true;
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        StateHasChanged();
+
+        try
+        {
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan/upload")
+            {
+                Content = JsonContent.Create(new { weekPlanJson = _planUploadJson })
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _planUploadFeedback = string.IsNullOrWhiteSpace(errorBody)
+                    ? "Plan upload failed. Please try again."
+                    : $"Plan upload failed: {errorBody}";
+                return;
+            }
+
+            _planUploaded = true;
+            _planUploadFeedback = "Plan uploaded successfully.";
+
+            _isPlanUploadInFlight = false;
+            StateHasChanged();
+
+            await Task.Delay(1800);
+            _planUploaded = false;
+        }
+        catch
+        {
+            _planUploaded = false;
+            _planUploadFeedback = "Plan upload failed. Please try again.";
+        }
+        finally
+        {
+            _isPlanUploadInFlight = false;
+            StateHasChanged();
+        }
+    }
+
+    private PlanRequest BuildPlanRequest()
+    {
+        var weekDataJson = Session.AthleteDataJson;
+        var schedulingPreference = _planSchedulingPreference.Trim();
+        var planningScope = ResolvePlanningScope();
+
+        return new PlanRequest(
+            weekDataJson ?? "{}",
+            GetDisciplineType(),
+            GetResponseLanguage(),
+            planningScope,
+            new PlanConstraints(null, Array.Empty<DayConstraint>()),
+            schedulingPreference);
+    }
+
+    private static PlanningScope ResolvePlanningScope()
+    {
+        return DateTime.Now.DayOfWeek switch
+        {
+            DayOfWeek.Monday => PlanningScope.CurrentWeek,
+            DayOfWeek.Tuesday => PlanningScope.CurrentWeek,
+            DayOfWeek.Wednesday => PlanningScope.CurrentWeek,
+            _ => PlanningScope.NextWeek
+        };
+    }
+
+    private static string NormalizeCoachResponse(string rawBody)
+    {
+        if (string.IsNullOrWhiteSpace(rawBody))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawBody);
+            if (document.RootElement.ValueKind == JsonValueKind.String)
+            {
+                return document.RootElement.GetString() ?? string.Empty;
+            }
+        }
+        catch (JsonException)
+        {
+            // Keep original response body if it's not JSON-encoded text.
+        }
+
+        return rawBody;
+    }
+
+    private static (string PlanText, string UploadJson) SplitPlanAndUploadJson(string responseText)
+    {
+        const string beginMarker = "BEGIN_UPLOAD_JSON";
+        const string endMarker = "END_UPLOAD_JSON";
+
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var beginIndex = responseText.IndexOf(beginMarker, StringComparison.Ordinal);
+        var endIndex = responseText.IndexOf(endMarker, StringComparison.Ordinal);
+
+        if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex)
+        {
+            return (responseText.Trim(), string.Empty);
+        }
+
+        var planText = responseText[..beginIndex].Trim();
+        var markedSection = responseText[(beginIndex + beginMarker.Length)..endIndex].Trim();
+        var uploadJson = ExtractJsonFromMarkedSection(markedSection);
+
+        return (planText, uploadJson);
+    }
+
+    private static string ExtractJsonFromMarkedSection(string markedSection)
+    {
+        if (string.IsNullOrWhiteSpace(markedSection))
+        {
+            return string.Empty;
+        }
+
+        var fencedMatch = Regex.Match(
+            markedSection,
+            @"```json\s*(?<json>\{[\s\S]*\})\s*```",
+            RegexOptions.IgnoreCase);
+
+        if (fencedMatch.Success)
+        {
+            return fencedMatch.Groups["json"].Value.Trim();
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(markedSection);
+            return document.RootElement.GetRawText();
+        }
+        catch (JsonException)
+        {
+            // Fall through to brace-based extraction for mixed text responses.
+        }
+
+        var startBrace = markedSection.IndexOf('{');
+        var endBrace = markedSection.LastIndexOf('}');
+
+        if (startBrace >= 0 && endBrace > startBrace)
+        {
+            return markedSection[startBrace..(endBrace + 1)].Trim();
+        }
+
+        return markedSection.Trim();
+    }
+
+    private static MarkupString RenderFormattedJson(string? json, bool includeLineNumbers = true)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var formattedJson = JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            return new MarkupString(RenderJsonWithLineNumbers(formattedJson, includeLineNumbers));
+        }
+        catch (JsonException)
+        {
+            return new MarkupString($"<div class=\"coach-json-line coach-json-line--error\">{System.Net.WebUtility.HtmlEncode(json)}</div>");
+        }
+    }
+
+    private static string RenderJsonWithLineNumbers(string json, bool includeLineNumbers)
+    {
+        var lines = json.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var builder = new System.Text.StringBuilder();
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            builder.Append(includeLineNumbers
+                ? "<div class=\"coach-json-line\"><span class=\"coach-json-line-number\">"
+                : "<div class=\"coach-json-line coach-json-line--compact\"><span class=\"coach-json-line-text\">");
+
+            if (includeLineNumbers)
+            {
+                builder.Append((index + 1).ToString("D2"));
+                builder.Append("</span><span class=\"coach-json-line-text\">");
+            }
+
+            builder.Append(HighlightJsonLine(lines[index]));
+            builder.Append("</span></div>");
+        }
+
+        return builder.ToString();
+    }
+
+    private static string HighlightJsonLine(string line)
+    {
+        var encodedLine = System.Net.WebUtility.HtmlEncode(line);
+
+        if (string.IsNullOrWhiteSpace(encodedLine))
+        {
+            return string.Empty;
+        }
+
+        var keyMatch = Regex.Match(encodedLine, @"^(\s*)(\&quot;.*?\&quot;)(\s*:\s*)(.*)$");
+        if (keyMatch.Success)
+        {
+            return string.Concat(
+                keyMatch.Groups[1].Value,
+                "<span class=\"coach-json-key\">",
+                keyMatch.Groups[2].Value,
+                "</span>",
+                keyMatch.Groups[3].Value,
+                HighlightJsonValue(keyMatch.Groups[4].Value));
+        }
+
+        return HighlightJsonValue(encodedLine);
+    }
+
+    private static string HighlightJsonValue(string encodedText)
+    {
+        if (string.IsNullOrWhiteSpace(encodedText))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = encodedText.Trim();
+
+        if (Regex.IsMatch(trimmed, @"^&quot;.*&quot;[,]?$"))
+        {
+            return $"<span class=\"coach-json-string\">{encodedText}</span>";
+        }
+
+        if (Regex.IsMatch(trimmed, @"^(true|false)$", RegexOptions.IgnoreCase))
+        {
+            return $"<span class=\"coach-json-boolean\">{encodedText}</span>";
+        }
+
+        if (trimmed.Equals("null", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"<span class=\"coach-json-null\">{encodedText}</span>";
+        }
+
+        if (Regex.IsMatch(trimmed, @"^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[,]?$"))
+        {
+            return $"<span class=\"coach-json-number\">{encodedText}</span>";
+        }
+
+        return encodedText;
+    }
+
+    private async Task CopyPlanUploadJsonAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", _planUploadJson);
+            _planCopyFeedback = "Copied";
+        }
+        catch
+        {
+            _planCopyFeedback = "Copy failed";
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(1800);
+        if (_planCopyFeedback is not null)
+        {
+            _planCopyFeedback = null;
+            StateHasChanged();
         }
     }
 
@@ -1153,7 +2141,22 @@
         }
 
         _expandedCard = null;
-        _isAnyRequestInFlight = false;
+        _isAssessRequestInFlight = false;
+        _isPlanRequestInFlight = false;
+        _isPlanUploadInFlight = false;
+        _isPlanExpanded = false;
+        _planUploaded = false;
+        _planReadableText = null;
+        _planUploadJson = null;
+        _planErrorMessage = null;
+        _planCopyFeedback = null;
+        _planUploadFeedback = null;
+        ClearPlanWorkoutEditor();
+    }
+
+    private void HidePlanResult()
+    {
+        _isPlanExpanded = false;
     }
 
     private async Task CopyAssessResultAsync(AssessCardType cardType)
@@ -1190,6 +2193,7 @@
             return;
 
         _dataViewFeedback = string.Empty;
+        _selectedDataViewTabIndex = 0;
         _showDataView = true;
     }
 
@@ -1241,25 +2245,48 @@
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnSessionChanged;
+        RestoreCoachViewState();
 
-        var loaded = await CredentialStore.LoadAsync();
-        if (loaded is not null)
+        try
         {
-            _athleteId = loaded.Credential.AthleteId;
-            _apiKey = loaded.Credential.ApiKey;
-            _language = loaded.Credential.Language;
-            _profileGoal = loaded.Credential.ProfileGoal;
-            _remember = loaded.Durability == CredentialDurability.Persistent;
+            var loaded = await CredentialStore.LoadAsync();
+            if (loaded is not null)
+            {
+                _athleteId = loaded.Credential.AthleteId;
+                _apiKey = loaded.Credential.ApiKey;
+                _language = loaded.Credential.Language;
+                _profileGoal = loaded.Credential.ProfileGoal;
+                _remember = loaded.Durability == CredentialDurability.Persistent;
+            }
+        }
+        catch
+        {
+            _initializationError = "Saved credentials could not be loaded. You can still enter credentials manually.";
         }
 
-        await RefreshRememberedHintAsync();
+        try
+        {
+            await RefreshRememberedHintAsync();
+        }
+        catch
+        {
+            _showRememberedHint = false;
+        }
     }
 
     private void OnSessionChanged()
     {
         _ = InvokeAsync(async () =>
         {
-            await RefreshRememberedHintAsync();
+            try
+            {
+                await RefreshRememberedHintAsync();
+            }
+            catch
+            {
+                _showRememberedHint = false;
+            }
+
             StateHasChanged();
         });
     }
@@ -1288,6 +2315,67 @@
 
     public void Dispose()
     {
+        PersistCoachViewState();
         Session.Changed -= OnSessionChanged;
+    }
+
+    private void RestoreCoachViewState()
+    {
+        _planSchedulingPreference = CoachPageState.PlanSchedulingPreference;
+        _openOverviewSectionTitle = CoachPageState.OpenOverviewSectionTitle;
+
+        _assessCardStates[AssessCardType.MetricsWellness].ResultText = CoachPageState.MetricsResultText;
+        _assessCardStates[AssessCardType.LastTraining].ResultText = CoachPageState.LastTrainingResultText;
+        _assessCardStates[AssessCardType.Week].ResultText = CoachPageState.WeekResultText;
+
+        _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage = CoachPageState.MetricsErrorMessage;
+        _assessCardStates[AssessCardType.LastTraining].ErrorMessage = CoachPageState.LastTrainingErrorMessage;
+        _assessCardStates[AssessCardType.Week].ErrorMessage = CoachPageState.WeekErrorMessage;
+
+        _expandedCard = ParseAssessCardType(CoachPageState.ExpandedAssessCard);
+
+        _isPlanExpanded = CoachPageState.IsPlanExpanded;
+        _planReadableText = CoachPageState.PlanReadableText;
+        _planUploadJson = CoachPageState.PlanUploadJson;
+        _planErrorMessage = CoachPageState.PlanErrorMessage;
+        _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
+
+        if (!string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            LoadPlanWorkoutEditor();
+        }
+    }
+
+    private void PersistCoachViewState()
+    {
+        CoachPageState.PlanSchedulingPreference = _planSchedulingPreference;
+        CoachPageState.OpenOverviewSectionTitle = _openOverviewSectionTitle;
+        CoachPageState.ExpandedAssessCard = _expandedCard?.ToString();
+
+        CoachPageState.MetricsResultText = _assessCardStates[AssessCardType.MetricsWellness].ResultText;
+        CoachPageState.LastTrainingResultText = _assessCardStates[AssessCardType.LastTraining].ResultText;
+        CoachPageState.WeekResultText = _assessCardStates[AssessCardType.Week].ResultText;
+
+        CoachPageState.MetricsErrorMessage = _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage;
+        CoachPageState.LastTrainingErrorMessage = _assessCardStates[AssessCardType.LastTraining].ErrorMessage;
+        CoachPageState.WeekErrorMessage = _assessCardStates[AssessCardType.Week].ErrorMessage;
+
+        CoachPageState.IsPlanExpanded = _isPlanExpanded;
+        CoachPageState.PlanReadableText = _planReadableText;
+        CoachPageState.PlanUploadJson = _planUploadJson;
+        CoachPageState.PlanErrorMessage = _planErrorMessage;
+        CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
+    }
+
+    private static AssessCardType? ParseAssessCardType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<AssessCardType>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
     }
 }

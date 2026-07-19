@@ -408,67 +408,117 @@
     font-weight: 600;
 }
 
-.coach-data-tabs {
-    margin-top: 0.35rem;
+.coach-custom-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
-::deep .coach-data-tabs.e-tab .e-tab-header {
-    border-bottom: 0 !important;
-    background: transparent !important;
+.coach-custom-tabs-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.28rem;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--ba-border);
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-items {
-    gap: 0.45rem;
+.coach-custom-tabs-header::-webkit-scrollbar {
+    height: 6px;
 }
 
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap {
-    border: 1px solid #cfd7e6 !important;
-    border-radius: 10px 10px 0 0 !important;
-    background: #f5f8ff !important;
-    color: #365a9b !important;
-    min-height: 2.35rem;
+.coach-custom-tabs-header::-webkit-scrollbar-thumb {
+    background: rgba(108, 122, 150, 0.35);
+    border-radius: 999px;
+}
+
+.coach-custom-tabs-header::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.coach-custom-tab {
+    appearance: none;
+    border: 1px solid #cfd7e6;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #f7f9fc;
+    color: #365a9b;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.62rem 0.82rem 0.68rem;
+    position: relative;
+    top: 1px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
     transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap:hover,
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap:focus-visible {
-    background: #eaf1ff !important;
-    border-color: #9fb8ea !important;
-    color: #254b8c !important;
+.coach-custom-tab:hover,
+.coach-custom-tab:focus-visible {
+    background: #eef3fb;
+    border-color: #b7c9e8;
+    color: #234f91;
+    outline: 2px solid #7c9fe6;
 }
 
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap .e-tab-text {
-    color: inherit !important;
-    font-weight: 600;
-}
-
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap {
-    background: #2e67bf !important;
-    border-color: #2e67bf !important;
-    color: #ffffff !important;
-}
-
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap .e-tab-text,
-::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-text-wrap {
-    color: #ffffff !important;
-}
-
-::deep .coach-data-tabs.e-tab .e-indicator {
-    display: none !important;
-}
-
-::deep .coach-data-tabs.e-tab .e-content {
-    margin-top: 0.55rem;
-    padding: 0.8rem;
-    border: 1px solid var(--ba-border);
-    border-radius: 10px;
+.coach-custom-tab.is-active {
     background: #ffffff;
+    color: #2458ad;
+    border-color: #b9cae8;
+    border-bottom-color: #ffffff;
+    z-index: 1;
+}
+
+.coach-custom-tab-panel {
+    border: 1px solid var(--ba-border);
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    background: #ffffff;
+    padding: 0.9rem;
+}
+
+.coach-custom-tabs--compact .coach-custom-tabs-header {
+    gap: 0.2rem;
+}
+
+.coach-custom-tabs--compact .coach-custom-tab {
+    padding: 0.52rem 0.68rem 0.58rem;
+    font-size: 0.94rem;
+    border-radius: 9px 9px 0 0;
+}
+
+.coach-custom-tabs--compact .coach-custom-tab-panel {
+    padding: 0.72rem;
 }
 
 @media (max-width: 768px) {
-    ::deep .coach-data-tabs.e-tab .e-tab-header .e-toolbar-items {
-        overflow-x: auto;
-        scrollbar-width: thin;
+    .coach-custom-tabs-header {
+        gap: 0.22rem;
+        padding-inline: 0.1rem;
+    }
+
+    .coach-custom-tab {
+        padding: 0.58rem 0.72rem 0.64rem;
+    }
+
+    .coach-custom-tab-panel {
+        padding: 0.8rem;
+    }
+
+    .coach-custom-tabs--compact .coach-custom-tabs-header {
+        gap: 0.16rem;
+    }
+
+    .coach-custom-tabs--compact .coach-custom-tab {
+        padding: 0.46rem 0.6rem 0.52rem;
+        font-size: 0.9rem;
+    }
+
+    .coach-custom-tabs--compact .coach-custom-tab-panel {
+        padding: 0.66rem;
     }
 }
 
@@ -972,6 +1022,113 @@
     font-weight: 500;
 }
 
+.coach-plan-week-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.coach-plan-week-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem;
+    border: 1px solid #e5d9c4;
+    border-radius: 14px;
+    background: #fffaf2;
+}
+
+.coach-plan-week-row.is-conflict {
+    border-color: #efc26b;
+    background: #fff4dc;
+}
+
+.coach-plan-week-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.coach-plan-week-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.coach-plan-week-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2f2b24;
+}
+
+.coach-plan-week-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.coach-plan-week-duration,
+.coach-plan-week-tag,
+.coach-plan-week-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.85rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.coach-plan-week-duration {
+    background: #eef4ff;
+    color: #2d5ea7;
+}
+
+.coach-plan-week-tag {
+    background: #f4ebdc;
+    color: #715533;
+}
+
+.coach-plan-week-warning {
+    background: #fff0cc;
+    color: #8b5e12;
+}
+
+.coach-plan-week-select-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 10.5rem;
+}
+
+.coach-plan-week-select-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #5d5548;
+}
+
+.coach-plan-week-select {
+    border: 1px solid #cdb892;
+    border-radius: 10px;
+    background: #fffdf8;
+    color: #2f2b24;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.coach-plan-week-select:focus-visible {
+    outline: 2px solid rgba(231, 111, 52, 0.2);
+    border-color: #e76f34;
+}
+
 .coach-coming-soon-label {
     display: inline-flex;
     align-items: center;
@@ -1021,10 +1178,23 @@
     .coach-plan-layout {
         flex-direction: column;
         align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .coach-plan-copy {
+        flex: 0 0 auto;
     }
 
     .coach-primary-button {
         justify-content: center;
         width: 100%;
+    }
+
+    .coach-plan-week-row {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-plan-week-select-wrap {
+        min-width: 0;
     }
 }
