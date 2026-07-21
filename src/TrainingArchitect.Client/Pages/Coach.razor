@@ -209,6 +209,11 @@
                             <h3 class="coach-prompt-title">@prompt.Title</h3>
                             <p class="coach-prompt-description mb-0">@prompt.Description</p>
 
+                            @if (cardState.TotalTokens is not null)
+                            {
+                                <p class="coach-token-hint mb-0">Token usage: @cardState.TotalTokens.Value.ToString("N0")</p>
+                            }
+
                             @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
                             {
                                 <p class="coach-assess-error" role="alert">@cardState.ErrorMessage</p>
@@ -251,6 +256,11 @@
                         </div>
                         <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
                         <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+
+                        @if (expandedState.TotalTokens is not null)
+                        {
+                            <p class="coach-token-hint mb-0">Token usage: @expandedState.TotalTokens.Value.ToString("N0")</p>
+                        }
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>
@@ -321,6 +331,11 @@
                            rel="noopener noreferrer">coach logic</a>.
                         Automatic scope: Monday to Wednesday creates the plan for the current week, Thursday to Sunday creates the plan for the next week.
                     </p>
+
+                    @if (_planTotalTokens is not null)
+                    {
+                        <p class="coach-token-hint coach-token-hint--plan mb-0">Token usage: @_planTotalTokens.Value.ToString("N0")</p>
+                    }
                 </div>
 
                 <label class="field coach-plan-preference">
@@ -696,6 +711,7 @@
     private sealed class AssessCardState
     {
         public string? ResultText { get; set; }
+        public long? TotalTokens { get; set; }
         public bool IsLoading { get; set; }
         public string? ErrorMessage { get; set; }
         public string? CopyFeedback { get; set; }
@@ -771,6 +787,7 @@
     private bool _isPlanRequestInFlight;
     private bool _isPlanUploadInFlight;
     private bool _isPlanExpanded;
+    private long? _planTotalTokens;
     private string? _planReadableText;
     private string? _planUploadJson;
     private string? _planErrorMessage;
@@ -1697,6 +1714,7 @@
             }
 
             state.ResultText = assessResponse.Content;
+            state.TotalTokens = assessResponse.TotalTokens;
             state.ErrorMessage = null;
             _expandedCard = cardType;
         }
@@ -1751,8 +1769,15 @@
                 return;
             }
 
-            var responseBody = await response.Content.ReadAsStringAsync();
-            var coachResponse = NormalizeCoachResponse(responseBody);
+            var planResponse = await response.Content.ReadFromJsonAsync<PlanResponse>();
+            if (planResponse is null || string.IsNullOrWhiteSpace(planResponse.Content))
+            {
+                _planErrorMessage = "Plan request returned no content.";
+                return;
+            }
+
+            var coachResponse = NormalizeCoachResponse(planResponse.Content);
+            _planTotalTokens = planResponse.TotalTokens;
 
             var (planText, uploadJson) = SplitPlanAndUploadJson(coachResponse);
 
@@ -2148,6 +2173,7 @@
         _planUploaded = false;
         _planReadableText = null;
         _planUploadJson = null;
+        _planTotalTokens = null;
         _planErrorMessage = null;
         _planCopyFeedback = null;
         _planUploadFeedback = null;
@@ -2328,6 +2354,10 @@
         _assessCardStates[AssessCardType.LastTraining].ResultText = CoachPageState.LastTrainingResultText;
         _assessCardStates[AssessCardType.Week].ResultText = CoachPageState.WeekResultText;
 
+        _assessCardStates[AssessCardType.MetricsWellness].TotalTokens = CoachPageState.MetricsTotalTokens;
+        _assessCardStates[AssessCardType.LastTraining].TotalTokens = CoachPageState.LastTrainingTotalTokens;
+        _assessCardStates[AssessCardType.Week].TotalTokens = CoachPageState.WeekTotalTokens;
+
         _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage = CoachPageState.MetricsErrorMessage;
         _assessCardStates[AssessCardType.LastTraining].ErrorMessage = CoachPageState.LastTrainingErrorMessage;
         _assessCardStates[AssessCardType.Week].ErrorMessage = CoachPageState.WeekErrorMessage;
@@ -2339,6 +2369,7 @@
         _planUploadJson = CoachPageState.PlanUploadJson;
         _planErrorMessage = CoachPageState.PlanErrorMessage;
         _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
+        _planTotalTokens = CoachPageState.PlanTotalTokens;
 
         if (!string.IsNullOrWhiteSpace(_planUploadJson))
         {
@@ -2356,6 +2387,10 @@
         CoachPageState.LastTrainingResultText = _assessCardStates[AssessCardType.LastTraining].ResultText;
         CoachPageState.WeekResultText = _assessCardStates[AssessCardType.Week].ResultText;
 
+        CoachPageState.MetricsTotalTokens = _assessCardStates[AssessCardType.MetricsWellness].TotalTokens;
+        CoachPageState.LastTrainingTotalTokens = _assessCardStates[AssessCardType.LastTraining].TotalTokens;
+        CoachPageState.WeekTotalTokens = _assessCardStates[AssessCardType.Week].TotalTokens;
+
         CoachPageState.MetricsErrorMessage = _assessCardStates[AssessCardType.MetricsWellness].ErrorMessage;
         CoachPageState.LastTrainingErrorMessage = _assessCardStates[AssessCardType.LastTraining].ErrorMessage;
         CoachPageState.WeekErrorMessage = _assessCardStates[AssessCardType.Week].ErrorMessage;
@@ -2365,6 +2400,7 @@
         CoachPageState.PlanUploadJson = _planUploadJson;
         CoachPageState.PlanErrorMessage = _planErrorMessage;
         CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
+        CoachPageState.PlanTotalTokens = _planTotalTokens;
     }
 
     private static AssessCardType? ParseAssessCardType(string? value)

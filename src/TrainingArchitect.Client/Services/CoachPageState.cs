@@ -13,6 +13,10 @@ public sealed class CoachPageState
     public string? LastTrainingResultText { get; set; }
     public string? WeekResultText { get; set; }
 
+    public long? MetricsTotalTokens { get; set; }
+    public long? LastTrainingTotalTokens { get; set; }
+    public long? WeekTotalTokens { get; set; }
+
     public string? MetricsErrorMessage { get; set; }
     public string? LastTrainingErrorMessage { get; set; }
     public string? WeekErrorMessage { get; set; }
@@ -21,6 +25,7 @@ public sealed class CoachPageState
     public string? PlanReadableText { get; set; }
     public string? PlanUploadJson { get; set; }
     public string? PlanErrorMessage { get; set; }
+    public long? PlanTotalTokens { get; set; }
     public int SelectedPlanTabIndex { get; set; }
     public string? OpenOverviewSectionTitle { get; set; }
 }

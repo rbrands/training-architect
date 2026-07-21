@@ -1,5 +1,7 @@
 namespace TrainingArchitect.Services;
 
+public sealed record CoachingAgentResponse(string Content, long? TotalTokens);
+
 /// <summary>
 /// Sends prompts to the coaching agent and returns the generated response.
 /// </summary>
@@ -14,8 +16,8 @@ public interface ICoachingAgent
     /// <param name="intervalsAthleteId">Optional intervals.icu athlete ID used in a later workflow step.</param>
     /// <param name="intervalsApiKey">Optional intervals.icu API key used in a later workflow step.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The coaching agent response text.</returns>
-    Task<string> PromptAsync(
+    /// <returns>The coaching agent response payload including output text and optional token usage metadata.</returns>
+    Task<CoachingAgentResponse> PromptAsync(
         string prompt,
         string discipline,
         string language,

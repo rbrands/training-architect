@@ -18,6 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [0.3.1] - 2026-07-21
+
+### Added
+- Token usage is now surfaced directly in Coach Assess and Plan cards.
+
+### Changed
+- Coach token usage text was visually de-emphasized in Assess cards and aligned with existing text color in the Plan card.
+
+### Fixed
+- `/coach` route startup no longer fails due to missing service resolution in server-side route handling.
+
+### Removed
+-
+
 ---
 
 ## Release Template

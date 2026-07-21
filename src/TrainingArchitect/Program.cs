@@ -1,6 +1,7 @@
 ﻿using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Azure.AI.Projects;
+using TrainingArchitect.Client.Services;
 using TrainingArchitect.Components;
 using TrainingArchitect.Endpoints;
 using TrainingArchitect.Models;
@@ -263,6 +264,14 @@ builder.Services.AddSingleton<IAboutRepository, AboutRepository>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IAthleteDataService, McpAthleteDataService>();
 builder.Services.AddScoped<ICoachingAgent, FoundryCoachingAgent>();
+
+// The /coach page is an InteractiveWebAssembly route, but the server still
+// needs to construct the component endpoint pipeline and resolve injected
+// services. Register the client-side scoped services here to avoid 500 errors
+// during initial route handling.
+builder.Services.AddScoped<ICredentialStore, ServerCredentialStore>();
+builder.Services.AddScoped<IAthleteSession, ServerAthleteSession>();
+builder.Services.AddScoped<CoachPageState>();
 
 // Training Architect stubs — replace with real implementations once the
 // orchestration layer is connected.

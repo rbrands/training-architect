@@ -21,7 +21,7 @@ public sealed class FoundryCoachingAgent(
         configuration["FoundryProjectAgentName"]
         ?? throw new InvalidOperationException("Configuration key 'FoundryProjectAgentName' is required."));
 
-    public async Task<string> PromptAsync(
+    public async Task<CoachingAgentResponse> PromptAsync(
         string prompt,
         string discipline,
         string language,
@@ -56,7 +56,8 @@ public sealed class FoundryCoachingAgent(
         try
         {
             var response = await responseClient.CreateResponseAsync(options, ct);
-            return response.Value.GetOutputText();
+            var totalTokens = LogTokenUsage(response.Value);
+            return new CoachingAgentResponse(response.Value.GetOutputText(), totalTokens);
         }
         catch (RequestFailedException ex)
         {
@@ -76,6 +77,95 @@ public sealed class FoundryCoachingAgent(
 
             throw;
         }
+    }
+
+    private long? LogTokenUsage(object? responseValue)
+    {
+        if (!TryGetTokenUsage(responseValue, out var inputTokens, out var outputTokens, out var totalTokens))
+        {
+            _logger.LogDebug(
+                "Foundry agent call completed for {AgentName}@{AgentVersion}, but token usage was not present in the response payload.",
+                _configuredAgent.Name,
+                _configuredAgent.Version ?? "latest");
+            return null;
+        }
+
+        _logger.LogInformation(
+            "Foundry agent token usage for {AgentName}@{AgentVersion}: input={InputTokens}, output={OutputTokens}, total={TotalTokens}",
+            _configuredAgent.Name,
+            _configuredAgent.Version ?? "latest",
+            inputTokens,
+            outputTokens,
+            totalTokens);
+
+            return totalTokens;
+    }
+
+    private static bool TryGetTokenUsage(object? responseValue, out long? inputTokens, out long? outputTokens, out long? totalTokens)
+    {
+        inputTokens = null;
+        outputTokens = null;
+        totalTokens = null;
+
+        if (responseValue is null)
+        {
+            return false;
+        }
+
+        var responseType = responseValue.GetType();
+        var usageProperty = responseType.GetProperty("Usage");
+        var usage = usageProperty?.GetValue(responseValue);
+
+        if (usage is null)
+        {
+            return false;
+        }
+
+        // Confirmed runtime shape:
+        // OpenAI.Responses.ResponseTokenUsage with
+        // InputTokenCount / OutputTokenCount / TotalTokenCount.
+        inputTokens = ReadLongProperty(usage, "InputTokenCount");
+        outputTokens = ReadLongProperty(usage, "OutputTokenCount");
+        totalTokens = ReadLongProperty(usage, "TotalTokenCount");
+
+        return inputTokens.HasValue || outputTokens.HasValue || totalTokens.HasValue;
+    }
+
+    private static long? ReadLongProperty(object source, params string[] propertyNames)
+    {
+        var sourceType = source.GetType();
+
+        foreach (var propertyName in propertyNames)
+        {
+            var property = sourceType.GetProperty(propertyName);
+            if (property is null)
+            {
+                continue;
+            }
+
+            var value = property.GetValue(source);
+            if (value is null)
+            {
+                continue;
+            }
+
+            if (value is int intValue)
+            {
+                return intValue;
+            }
+
+            if (value is long longValue)
+            {
+                return longValue;
+            }
+
+            if (long.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
     }
 
     private static (string Name, string? Version) ParseConfiguredAgent(string configuredValue)
