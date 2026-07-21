@@ -92,7 +92,14 @@ jobs:
       - name: Health check on production (post-swap)
         shell: bash
         run: |
-          APP="${{ steps.ctx.outputs.app_name }}"
+          SITE_URL="${{ secrets.SITE_URL }}"
+
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Missing secret: SITE_URL."
+            exit 1
+          fi
+
+          SITE_URL="${SITE_URL%/}"
 
           check_url() {
             local url="$1"
@@ -115,9 +122,9 @@ jobs:
             done
           }
 
-          check_url "https://${APP}.azurewebsites.net/health" 10 15 || \
-          check_url "https://${APP}.azurewebsites.net/api/config" 6 10 || \
-          check_url "https://${APP}.azurewebsites.net/" 6 10 || {
+          check_url "$SITE_URL/health" 10 15 || \
+          check_url "$SITE_URL/api/config" 6 10 || \
+          check_url "$SITE_URL/" 6 10 || {
             echo "::error::Production health check failed after swap. Consider swapping back manually."
             exit 1
           }
