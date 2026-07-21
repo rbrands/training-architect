@@ -316,7 +316,7 @@ var websiteSlotName = builder.Configuration["WEBSITE_SLOT_NAME"]
     ?? Environment.GetEnvironmentVariable("WEBSITE_SLOT_NAME");
 
 var isProductionSlot = string.IsNullOrWhiteSpace(websiteSlotName)
-    || string.Equals(websiteSlotName, "production", StringComparison.OrdinalIgnoreCase);
+    || string.Equals(websiteSlotName.Trim(), "production", StringComparison.OrdinalIgnoreCase);
 
 // Configure the HTTP request pipeline.
 
@@ -328,18 +328,42 @@ app.UseForwardedHeaders();
 // *.azurewebsites.net origin. Canonical target comes from SiteUrl config.
 app.Use(async (context, next) =>
 {
-    if (isProductionSlot
-        && canonicalSiteUri is not null
-        && !string.IsNullOrWhiteSpace(productionAzureHost)
-        && string.Equals(context.Request.Host.Host, productionAzureHost, StringComparison.OrdinalIgnoreCase)
-        && !string.Equals(context.Request.Host.Host, canonicalSiteUri.Host, StringComparison.OrdinalIgnoreCase))
+    if (!isProductionSlot || canonicalSiteUri is null)
     {
-        var target = $"{canonicalSiteUri.Scheme}://{canonicalSiteUri.Authority}{context.Request.Path}{context.Request.QueryString}";
-        context.Response.Redirect(target, permanent: true);
+        await next();
         return;
     }
 
-    await next();
+    var requestHost = context.Request.Host.Host.Trim().TrimEnd('.');
+    var canonicalHost = canonicalSiteUri.Host.Trim().TrimEnd('.');
+
+    if (string.Equals(requestHost, canonicalHost, StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    // Redirect only Azure App Service default hostnames in the production slot.
+    // This keeps staging and custom domains untouched.
+    if (!requestHost.EndsWith(".azurewebsites.net", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    if (!string.IsNullOrWhiteSpace(productionAzureHost))
+    {
+        var configuredProductionHost = productionAzureHost.Trim().TrimEnd('.');
+        if (!string.Equals(requestHost, configuredProductionHost, StringComparison.OrdinalIgnoreCase))
+        {
+            await next();
+            return;
+        }
+    }
+
+    var target = $"{canonicalSiteUri.Scheme}://{canonicalSiteUri.Authority}{context.Request.Path}{context.Request.QueryString}";
+    context.Response.Redirect(target, permanent: true);
+    return;
 });
 
 // Internet-facing apps receive constant automated path probing
