@@ -299,11 +299,40 @@ builder.Services.AddSingleton(sp =>
 
 var app = builder.Build();
 
+var siteUrlValue = builder.Configuration["SiteUrl"];
+Uri? canonicalSiteUri = null;
+
+if (!string.IsNullOrWhiteSpace(siteUrlValue)
+    && !siteUrlValue.StartsWith("__", StringComparison.Ordinal)
+    && Uri.TryCreate(siteUrlValue, UriKind.Absolute, out var parsedSiteUri))
+{
+    canonicalSiteUri = parsedSiteUri;
+}
+
+var productionAzureHost = builder.Configuration["WEBSITE_HOSTNAME"]
+    ?? Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
+
 // Configure the HTTP request pipeline.
 
 // Must be first in the pipeline so all subsequent middleware
 // (including HTTPS redirect and authentication) sees the correct scheme.
 app.UseForwardedHeaders();
+
+// Enforce canonical production host for SEO and avoid indexing the
+// *.azurewebsites.net origin. Canonical target comes from SiteUrl config.
+app.Use(async (context, next) =>
+{
+    if (canonicalSiteUri is not null
+        && !string.IsNullOrWhiteSpace(productionAzureHost)
+        && string.Equals(context.Request.Host.Host, productionAzureHost, StringComparison.OrdinalIgnoreCase))
+    {
+        var target = $"{canonicalSiteUri.Scheme}://{canonicalSiteUri.Authority}{context.Request.Path}{context.Request.QueryString}";
+        context.Response.Redirect(target, permanent: true);
+        return;
+    }
+
+    await next();
+});
 
 // Internet-facing apps receive constant automated path probing
 // (e.g., /.env, /phpmyadmin, /wp-admin). Return 204 early to keep

@@ -1,12 +1,21 @@
 ﻿@inherits LayoutComponentBase
 @inject IOwnerService OwnerService
 @inject IAboutRepository AboutRepo
+@inject IConfiguration Config
+@inject NavigationManager Navigation
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
 
 <CascadingValue Value="@(_about?.HeaderTitle ?? "Header Title")" Name="SiteTitle">
 <CascadingValue Value="@(_about?.HeaderSubtitle ?? "Header Subtitle")" Name="SiteSubTitle">
 <CascadingValue Value="_isOwner" Name="IsOwner">
+
+<HeadContent>
+    @if (CanonicalUrl is not null)
+    {
+        <link rel="canonical" href="@CanonicalUrl" />
+    }
+</HeadContent>
 
 <nav class="navbar navbar-light border-bottom sticky-top premium-nav navbar-expand-md">
     <div class="container premium-nav-container" style="max-width: 900px;">
@@ -79,6 +88,35 @@
 @code {
     private bool _isOwner;
     private AboutContent? _about;
+
+    private string? CanonicalUrl
+    {
+        get
+        {
+            var siteUrl = Config["SiteUrl"];
+            if (string.IsNullOrWhiteSpace(siteUrl)
+                || siteUrl.StartsWith("__", StringComparison.Ordinal)
+                || !Uri.TryCreate(siteUrl, UriKind.Absolute, out var canonicalBaseUri)
+                || !Uri.TryCreate(Navigation.Uri, UriKind.Absolute, out var currentUri))
+            {
+                return null;
+            }
+
+            var normalizedPath = NormalizeCanonicalPath(currentUri.AbsolutePath);
+            var canonicalUri = new Uri(canonicalBaseUri, normalizedPath);
+            return canonicalUri.AbsoluteUri;
+        }
+    }
+
+    private static string NormalizeCanonicalPath(string absolutePath)
+    {
+        if (string.IsNullOrWhiteSpace(absolutePath) || absolutePath == "/")
+        {
+            return "/";
+        }
+
+        return absolutePath.TrimEnd('/');
+    }
 
     protected override async Task OnInitializedAsync()
     {
