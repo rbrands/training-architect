@@ -309,9 +309,6 @@ if (!string.IsNullOrWhiteSpace(siteUrlValue)
     canonicalSiteUri = parsedSiteUri;
 }
 
-var productionAzureHost = builder.Configuration["WEBSITE_HOSTNAME"]
-    ?? Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
-
 var websiteSlotName = builder.Configuration["WEBSITE_SLOT_NAME"]
     ?? Environment.GetEnvironmentVariable("WEBSITE_SLOT_NAME");
 
@@ -349,16 +346,6 @@ app.Use(async (context, next) =>
     {
         await next();
         return;
-    }
-
-    if (!string.IsNullOrWhiteSpace(productionAzureHost))
-    {
-        var configuredProductionHost = productionAzureHost.Trim().TrimEnd('.');
-        if (!string.Equals(requestHost, configuredProductionHost, StringComparison.OrdinalIgnoreCase))
-        {
-            await next();
-            return;
-        }
     }
 
     var target = $"{canonicalSiteUri.Scheme}://{canonicalSiteUri.Authority}{context.Request.Path}{context.Request.QueryString}";
