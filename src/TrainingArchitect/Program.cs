@@ -312,6 +312,12 @@ if (!string.IsNullOrWhiteSpace(siteUrlValue)
 var productionAzureHost = builder.Configuration["WEBSITE_HOSTNAME"]
     ?? Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
 
+var websiteSlotName = builder.Configuration["WEBSITE_SLOT_NAME"]
+    ?? Environment.GetEnvironmentVariable("WEBSITE_SLOT_NAME");
+
+var isProductionSlot = string.IsNullOrWhiteSpace(websiteSlotName)
+    || string.Equals(websiteSlotName, "production", StringComparison.OrdinalIgnoreCase);
+
 // Configure the HTTP request pipeline.
 
 // Must be first in the pipeline so all subsequent middleware
@@ -322,9 +328,11 @@ app.UseForwardedHeaders();
 // *.azurewebsites.net origin. Canonical target comes from SiteUrl config.
 app.Use(async (context, next) =>
 {
-    if (canonicalSiteUri is not null
+    if (isProductionSlot
+        && canonicalSiteUri is not null
         && !string.IsNullOrWhiteSpace(productionAzureHost)
-        && string.Equals(context.Request.Host.Host, productionAzureHost, StringComparison.OrdinalIgnoreCase))
+        && string.Equals(context.Request.Host.Host, productionAzureHost, StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(context.Request.Host.Host, canonicalSiteUri.Host, StringComparison.OrdinalIgnoreCase))
     {
         var target = $"{canonicalSiteUri.Scheme}://{canonicalSiteUri.Authority}{context.Request.Path}{context.Request.QueryString}";
         context.Response.Redirect(target, permanent: true);
