@@ -1,5 +1,4 @@
 ﻿@page "/"
-@attribute [StreamRendering]
 @inject IAboutRepository AboutRepo
 @inject NavigationManager Nav
 @inject IConfiguration Config
@@ -9,17 +8,17 @@
 <PageTitle>@_siteTitle · @_siteSubTitle</PageTitle>
 <HeadContent>
     <meta name="description"
-          content="@(_about?.Subtitle ?? "Training Architect.")" />
+        content="@PageDescription" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="@_siteTitle" />
     <meta property="og:title"
           content="@_siteTitle · @_siteSubTitle" />
     <meta property="og:description"
-          content="@(_about?.Subtitle ?? "Subtitle")" />
+        content="@PageDescription" />
     <meta property="og:url" content="@(Config["SiteUrl"])/" />
     <meta property="og:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
     <meta name="twitter:title" content="@_siteTitle · @_siteSubTitle" />
-    <meta name="twitter:description" content="@(_about?.Subtitle ?? "Subtitle")" />
+    <meta name="twitter:description" content="@PageDescription" />
     <meta name="twitter:image" content="@(Config["SiteUrl"])/images/training-architect-og.png" />
     <meta name="twitter:image:alt" content="@_siteTitle" />
     @if (!string.IsNullOrWhiteSpace(StructuredDataJson))
@@ -160,12 +159,19 @@ else
             ? tags.SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             : _defaultTags;
 
+    private string PageDescription =>
+        !string.IsNullOrWhiteSpace(_about?.Subtitle)
+            ? _about.Subtitle
+            : !string.IsNullOrWhiteSpace(_about?.HeaderSubtitle)
+                ? _about.HeaderSubtitle
+                : "Training Architect.";
+
     private string StructuredDataJson => JsonSerializer.Serialize(new Dictionary<string, object?>
     {
         ["@context"] = "https://schema.org",
         ["@type"] = "WebSite",
         ["name"] = _siteTitle,
-        ["description"] = _about?.Subtitle ?? "Training Architect.",
+        ["description"] = PageDescription,
         ["url"] = $"{Config["SiteUrl"]}/",
         ["image"] = $"{Config["SiteUrl"]}/images/training-architect-og.png",
         ["sameAs"] = _about?.Links

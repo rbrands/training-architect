@@ -654,18 +654,18 @@
                             else
                             {
                                 <div class="coach-overview-sections">
-                                    @foreach (var section in OverviewSections)
+                                    @foreach (var overviewSection in OverviewSections)
                                     {
-                                        var isOpen = IsOverviewSectionOpen(section);
+                                        var isOpen = IsOverviewSectionOpen(overviewSection);
 
                                         <div class="coach-overview-section @(isOpen ? "is-open" : string.Empty)">
                                             <button type="button"
                                                     class="coach-overview-section-summary"
                                                     aria-expanded="@isOpen"
-                                                    @onclick="() => ToggleOverviewSection(section)">
+                                                    @onclick="() => ToggleOverviewSection(overviewSection)">
                                                 <span class="coach-overview-section-summary-main">
-                                                    <span class="coach-overview-section-title">@section.Title</span>
-                                                    <span class="coach-overview-section-meta">@section.Summary</span>
+                                                    <span class="coach-overview-section-title">@overviewSection.Title</span>
+                                                    <span class="coach-overview-section-meta">@overviewSection.Summary</span>
                                                 </span>
                                                 <span class="coach-overview-section-chevron" aria-hidden="true">
                                                     <i class="bi bi-chevron-down"></i>
@@ -676,7 +676,7 @@
                                             {
                                                 <div class="coach-overview-section-panel">
                                                     <div class="coach-json-viewer coach-json-viewer--compact">
-                                                        @RenderFormattedJson(section.PrettyJson, includeLineNumbers: false)
+                                                        @RenderFormattedJson(overviewSection.PrettyJson, includeLineNumbers: false)
                                                     </div>
                                                 </div>
                                             }
