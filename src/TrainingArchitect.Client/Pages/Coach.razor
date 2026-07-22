@@ -125,12 +125,20 @@
                     </label>
 
                     <label class="field">
-                        <span>Athlete Profile Goal</span>
+                        <span class="field-label-with-help">
+                            <span>Athlete Goal</span>
+                            <a class="field-help-link"
+                               href="/blog/athlete-goals"
+                               title="Read more about athlete goals"
+                               aria-label="Read more about athlete goals">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i>
+                            </a>
+                        </span>
                         <select disabled="@IsBusy" @bind="_profileGoal">
-                            <option value="@AthleteProfileGoal.Climber">climber</option>
-                            <option value="@AthleteProfileGoal.Criterium">criterium</option>
-                            <option value="@AthleteProfileGoal.Marathon">marathon</option>
-                            <option value="@AthleteProfileGoal.RoadRace">roadrace</option>
+                            <option value="@AthleteProfileGoal.Climber">Climber</option>
+                            <option value="@AthleteProfileGoal.Criterium">Criterium</option>
+                            <option value="@AthleteProfileGoal.Marathon">Marathon</option>
+                            <option value="@AthleteProfileGoal.RoadRace">Road Race</option>
                         </select>
                     </label>
 

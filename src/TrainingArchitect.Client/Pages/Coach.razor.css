@@ -268,10 +268,30 @@
     gap: 0.35rem;
 }
 
-.credential-form .field span {
+.credential-form .field > span {
     font-size: 0.85rem;
     font-weight: 600;
     color: #4f463b;
+}
+
+.credential-form .field .field-label-with-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.credential-form .field .field-help-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f7087;
+    text-decoration: none;
+}
+
+.credential-form .field .field-help-link:hover,
+.credential-form .field .field-help-link:focus-visible {
+    color: #2e67bf;
+    outline: none;
 }
 
 .credential-form input[type="text"],
