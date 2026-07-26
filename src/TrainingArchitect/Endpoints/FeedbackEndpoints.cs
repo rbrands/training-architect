@@ -4,7 +4,7 @@ namespace TrainingArchitect.Endpoints;
 
 /// <summary>
 /// Minimal API endpoint for collecting user feedback about generated AI responses.
-/// Emits an OpenTelemetry event that can be correlated by response ID.
+/// Emits an Application Insights custom event that can be correlated by response ID.
 /// </summary>
 public static class FeedbackEndpoints
 {
