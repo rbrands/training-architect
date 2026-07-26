@@ -69,8 +69,11 @@ function Get-AppInsightsConnectionString {
         [string]$AppInsightsName
     )
 
-    if ([string]::IsNullOrWhiteSpace($AppInsightsName) -or $AppInsightsName.StartsWith('__')) {
-        throw 'AppInsightsName must be configured in config.ps1 before setup can resolve the connection string.'
+    if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or $SubscriptionId.StartsWith('__') -or
+        [string]::IsNullOrWhiteSpace($ResourceGroupName) -or $ResourceGroupName.StartsWith('__') -or
+        [string]::IsNullOrWhiteSpace($AppInsightsName) -or $AppInsightsName.StartsWith('__')) {
+        Write-Host "Skipping Application Insights connection string resolution (config placeholders still present)." -ForegroundColor Gray
+        return $null
     }
 
     Set-AzureSubscriptionContext -SubscriptionId $SubscriptionId
