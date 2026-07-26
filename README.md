@@ -184,6 +184,7 @@ safe to store as an App Setting.
 
 Locally, Application Insights telemetry is disabled by default
 unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set in user-secrets.
+`setup.ps1 -Secrets` (and `-All`) populates that value automatically from the Azure Application Insights resource referenced by `AppInsightsName` in `config.ps1`.
 
 ### Data Model
 
@@ -355,6 +356,8 @@ cp config.example.ps1 config.ps1
 # main.local.bicepparam in one step
 .\setup.ps1 -All
 ```
+
+`setup.ps1 -Secrets` also resolves the Application Insights connection string from the Azure App Insights resource named in `config.ps1` and stores it in local user-secrets as `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 
 Minimum SEO-related config values in `config.ps1`:
 

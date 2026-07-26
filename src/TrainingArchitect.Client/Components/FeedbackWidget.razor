@@ -1,0 +1,49 @@
+@if (!_isHidden)
+{
+    <div class="feedback-widget" aria-live="polite">
+        @if (_showConfirmation)
+        {
+            <span class="feedback-widget__thanks">Thanks for your feedback.</span>
+        }
+        else
+        {
+            <div class="feedback-widget__actions">
+                <button type="button"
+                        class="feedback-widget__icon-button"
+                        title="Helpful"
+                        aria-label="Helpful"
+                        @onclick="OnPositiveClick"
+                        disabled="@_isSendingOrSent">
+                    <span aria-hidden="true">👍</span>
+                </button>
+
+                <button type="button"
+                        class="feedback-widget__icon-button"
+                        title="Not helpful"
+                        aria-label="Not helpful"
+                        @onclick="OnNegativeClick"
+                        disabled="@_isSendingOrSent">
+                    <span aria-hidden="true">👎</span>
+                </button>
+            </div>
+
+            @if (_showNegativeTags && _availableTags.Count > 0)
+            {
+                <div class="feedback-widget__tags" role="group" aria-label="Negative feedback tags">
+                    @foreach (var tag in _availableTags)
+                    {
+                        var isSelected = _selectedTags.Contains(tag);
+
+                        <button type="button"
+                                class="feedback-widget__tag @(isSelected ? "feedback-widget__tag--selected" : string.Empty)"
+                                aria-pressed="@isSelected"
+                                @onclick="() => ToggleTag(tag)"
+                                disabled="@_isSendingOrSent">
+                            @tag
+                        </button>
+                    }
+                </div>
+            }
+        }
+    </div>
+}

@@ -57,7 +57,8 @@ public sealed class FoundryCoachingAgent(
         {
             var response = await responseClient.CreateResponseAsync(options, ct);
             var totalTokens = LogTokenUsage(response.Value);
-            return new CoachingAgentResponse(response.Value.GetOutputText(), totalTokens);
+            var responseId = TryGetResponseId(response.Value);
+            return new CoachingAgentResponse(response.Value.GetOutputText(), totalTokens, responseId);
         }
         catch (RequestFailedException ex)
         {
@@ -129,6 +130,20 @@ public sealed class FoundryCoachingAgent(
         totalTokens = ReadLongProperty(usage, "TotalTokenCount");
 
         return inputTokens.HasValue || outputTokens.HasValue || totalTokens.HasValue;
+    }
+
+    private static string? TryGetResponseId(object? responseValue)
+    {
+        if (responseValue is null)
+        {
+            return null;
+        }
+
+        var responseType = responseValue.GetType();
+        var idProperty = responseType.GetProperty("Id") ?? responseType.GetProperty("ResponseId");
+        var idValue = idProperty?.GetValue(responseValue)?.ToString();
+
+        return string.IsNullOrWhiteSpace(idValue) ? null : idValue;
     }
 
     private static long? ReadLongProperty(object source, params string[] propertyNames)

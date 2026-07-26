@@ -41,6 +41,55 @@ if (-not (Test-Path $configPath)) {
 }
 . $configPath
 
+function Set-AzureSubscriptionContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SubscriptionId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or $SubscriptionId.StartsWith('__')) {
+        throw 'SubscriptionId is required before Azure CLI-based setup can run.'
+    }
+
+    az account set --subscription $SubscriptionId | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to set the Azure CLI subscription context to '$SubscriptionId'. Make sure you are logged in with az login."
+    }
+}
+
+function Get-AppInsightsConnectionString {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SubscriptionId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$AppInsightsName
+    )
+
+    if ([string]::IsNullOrWhiteSpace($AppInsightsName) -or $AppInsightsName.StartsWith('__')) {
+        throw 'AppInsightsName must be configured in config.ps1 before setup can resolve the connection string.'
+    }
+
+    Set-AzureSubscriptionContext -SubscriptionId $SubscriptionId
+
+    $connectionString = az resource show `
+        --resource-group $ResourceGroupName `
+        --name $AppInsightsName `
+        --resource-type Microsoft.Insights/components `
+        --api-version 2020-02-02 `
+        --query properties.ConnectionString `
+        -o tsv
+
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($connectionString)) {
+        throw "Failed to resolve the Application Insights connection string for '$AppInsightsName' in resource group '$ResourceGroupName'."
+    }
+
+    return $connectionString.Trim()
+}
+
 # ---------------------------------------------------------------------------
 # 1. dotnet user-secrets
 # ---------------------------------------------------------------------------
@@ -63,6 +112,13 @@ if ($Secrets -or $All) {
     dotnet user-secrets set "Mcp:AthleteData:Endpoint"                                $config.McpAthleteDataEndpoint -p $project
     dotnet user-secrets set "FoundryProjectEndpoint"                                   $config.FoundryProjectEndpoint -p $project
     dotnet user-secrets set "FoundryProjectAgentName"                                  $config.FoundryProjectAgentName -p $project
+
+    $appInsightsConnectionString = Get-AppInsightsConnectionString `
+        -SubscriptionId $config.SubscriptionId `
+        -ResourceGroupName $config.CentralResourceGroupName `
+        -AppInsightsName $config.AppInsightsName
+
+    dotnet user-secrets set "APPLICATIONINSIGHTS_CONNECTION_STRING"                    $appInsightsConnectionString -p $project
 
     Write-Host "dotnet user-secrets set." -ForegroundColor Green
 }
@@ -152,6 +208,8 @@ if ($KeyVault -or $All) {
         -ForegroundColor Gray
     Write-Host "      cloud-admin-toolkit to assign the role." `
         -ForegroundColor Gray
+
+    Set-AzureSubscriptionContext -SubscriptionId $config.SubscriptionId
 
     az keyvault secret set `
         --vault-name $config.KeyVaultName `

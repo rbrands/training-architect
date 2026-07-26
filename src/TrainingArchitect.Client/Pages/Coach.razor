@@ -318,6 +318,13 @@
                         </div>
 
                         <div class="coach-assess-result-markdown">@RenderAssessMarkdown(expandedState.ResultText)</div>
+
+                        @if (!string.IsNullOrWhiteSpace(expandedState.ResponseId))
+                        {
+                            <FeedbackWidget RequestType="@GetFeedbackRequestType(expandedPrompt.CardType)"
+                                            ResponseId="@expandedState.ResponseId"
+                                            @key="expandedState.ResponseId" />
+                        }
                     </div>
                 }
             </div>
@@ -564,6 +571,16 @@
                             }
                         </div>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_planResponseId)
+                         && (!string.IsNullOrWhiteSpace(_planReadableText) || !string.IsNullOrWhiteSpace(_planUploadJson)))
+                    {
+                        <div class="mt-2">
+                            <FeedbackWidget RequestType="plan"
+                                            ResponseId="@_planResponseId"
+                                            @key="_planResponseId" />
+                        </div>
+                    }
                 </CardContent>
             </SfCard>
         </section>
@@ -720,6 +737,7 @@
     {
         public string? ResultText { get; set; }
         public long? TotalTokens { get; set; }
+        public string? ResponseId { get; set; }
         public bool IsLoading { get; set; }
         public string? ErrorMessage { get; set; }
         public string? CopyFeedback { get; set; }
@@ -799,6 +817,7 @@
     private string? _planReadableText;
     private string? _planUploadJson;
     private string? _planErrorMessage;
+    private string? _planResponseId;
     private string? _planCopyFeedback;
     private string? _planUploadFeedback;
     private bool _planUploaded;
@@ -1723,6 +1742,7 @@
 
             state.ResultText = assessResponse.Content;
             state.TotalTokens = assessResponse.TotalTokens;
+            state.ResponseId = assessResponse.ResponseId;
             state.ErrorMessage = null;
             _expandedCard = cardType;
         }
@@ -1750,6 +1770,7 @@
         _planErrorMessage = null;
         _planReadableText = null;
         _planUploadJson = null;
+        _planResponseId = null;
         _planCopyFeedback = null;
         _selectedPlanTabIndex = 0;
         ClearPlanWorkoutEditor();
@@ -1786,6 +1807,7 @@
 
             var coachResponse = NormalizeCoachResponse(planResponse.Content);
             _planTotalTokens = planResponse.TotalTokens;
+            _planResponseId = planResponse.ResponseId;
 
             var (planText, uploadJson) = SplitPlanAndUploadJson(coachResponse);
 
@@ -2144,6 +2166,14 @@
         _ => AssessmentType.Metrics
     };
 
+    private static string GetFeedbackRequestType(AssessCardType cardType) => cardType switch
+    {
+        AssessCardType.MetricsWellness => "assess.metrics",
+        AssessCardType.LastTraining => "assess.lastTraining",
+        AssessCardType.Week => "assess.week",
+        _ => "assess.metrics"
+    };
+
     private void AppendCredentialHeaders(HttpRequestMessage request)
     {
         var hasActiveCredentials = Session.TryGetActiveCredentials(out var activeAthleteId, out var activeApiKey);
@@ -2171,6 +2201,7 @@
             cardState.IsLoading = false;
             cardState.ErrorMessage = null;
             cardState.CopyFeedback = null;
+            cardState.ResponseId = null;
         }
 
         _expandedCard = null;
@@ -2181,6 +2212,7 @@
         _planUploaded = false;
         _planReadableText = null;
         _planUploadJson = null;
+        _planResponseId = null;
         _planTotalTokens = null;
         _planErrorMessage = null;
         _planCopyFeedback = null;
@@ -2361,6 +2393,9 @@
         _assessCardStates[AssessCardType.MetricsWellness].ResultText = CoachPageState.MetricsResultText;
         _assessCardStates[AssessCardType.LastTraining].ResultText = CoachPageState.LastTrainingResultText;
         _assessCardStates[AssessCardType.Week].ResultText = CoachPageState.WeekResultText;
+        _assessCardStates[AssessCardType.MetricsWellness].ResponseId = CoachPageState.MetricsResponseId;
+        _assessCardStates[AssessCardType.LastTraining].ResponseId = CoachPageState.LastTrainingResponseId;
+        _assessCardStates[AssessCardType.Week].ResponseId = CoachPageState.WeekResponseId;
 
         _assessCardStates[AssessCardType.MetricsWellness].TotalTokens = CoachPageState.MetricsTotalTokens;
         _assessCardStates[AssessCardType.LastTraining].TotalTokens = CoachPageState.LastTrainingTotalTokens;
@@ -2378,6 +2413,7 @@
         _planErrorMessage = CoachPageState.PlanErrorMessage;
         _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
         _planTotalTokens = CoachPageState.PlanTotalTokens;
+        _planResponseId = CoachPageState.PlanResponseId;
 
         if (!string.IsNullOrWhiteSpace(_planUploadJson))
         {
@@ -2394,6 +2430,9 @@
         CoachPageState.MetricsResultText = _assessCardStates[AssessCardType.MetricsWellness].ResultText;
         CoachPageState.LastTrainingResultText = _assessCardStates[AssessCardType.LastTraining].ResultText;
         CoachPageState.WeekResultText = _assessCardStates[AssessCardType.Week].ResultText;
+        CoachPageState.MetricsResponseId = _assessCardStates[AssessCardType.MetricsWellness].ResponseId;
+        CoachPageState.LastTrainingResponseId = _assessCardStates[AssessCardType.LastTraining].ResponseId;
+        CoachPageState.WeekResponseId = _assessCardStates[AssessCardType.Week].ResponseId;
 
         CoachPageState.MetricsTotalTokens = _assessCardStates[AssessCardType.MetricsWellness].TotalTokens;
         CoachPageState.LastTrainingTotalTokens = _assessCardStates[AssessCardType.LastTraining].TotalTokens;
@@ -2409,6 +2448,7 @@
         CoachPageState.PlanErrorMessage = _planErrorMessage;
         CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
         CoachPageState.PlanTotalTokens = _planTotalTokens;
+        CoachPageState.PlanResponseId = _planResponseId;
     }
 
     private static AssessCardType? ParseAssessCardType(string? value)

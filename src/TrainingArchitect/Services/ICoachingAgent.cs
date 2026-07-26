@@ -1,6 +1,6 @@
 namespace TrainingArchitect.Services;
 
-public sealed record CoachingAgentResponse(string Content, long? TotalTokens);
+public sealed record CoachingAgentResponse(string Content, long? TotalTokens, string? ResponseId);
 
 /// <summary>
 /// Sends prompts to the coaching agent and returns the generated response.
