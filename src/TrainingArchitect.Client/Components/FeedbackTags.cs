@@ -20,12 +20,13 @@ public static class FeedbackTags
                 "Recovery advice not appropriate",
                 "Too generic",
                 "Other"
+            ],
             ["assess.week"] =
             [
                 "Ramp rate assessment incorrect",
                 "Training phase misjudged",
                 "Too generic",
-                "Other"            
+                "Other"
             ],
             ["plan"] =
             [
@@ -36,7 +37,7 @@ public static class FeedbackTags
                 "Confused current week with next week",
                 "Schedule constraints ignored",
                 "Too generic",
-                "Other"            
+                "Other"
             ]
         };
 }
