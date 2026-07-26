@@ -19,8 +19,7 @@ public static class FeedbackTags
                 "Load recommendation off",
                 "Recovery advice not appropriate",
                 "Too generic",
-                "Other"            
-            ],
+                "Other"
             ["assess.week"] =
             [
                 "Ramp rate assessment incorrect",
