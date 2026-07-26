@@ -90,14 +90,9 @@ public static class FeedbackEndpoints
             var scoreValue = rating == "positive" ? "1.0" : "0.0";
             var scoreLabel = rating == "positive" ? "pass" : "fail";
 
-            var internalProperties = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>
-            {
-                ["gen_ai.evaluation.type"] = "boolean",
-                ["gen_ai.evaluation.min_value"] = 0.0,
-                ["gen_ai.evaluation.max_value"] = 1.0,
-                ["gen_ai.evaluation.threshold"] = 1.0,
-                ["gen_ai.evaluation.desirable_direction"] = "increase"
-            });
+const string internalProperties = """
+{\"gen_ai.evaluation.type\":\"boolean\",\"gen_ai.evaluation.min_value\":0.0,\"gen_ai.evaluation.max_value\":1.0,\"gen_ai.evaluation.threshold\":1.0,\"gen_ai.evaluation.desirable_direction\":\"increase\"}
+""";
 
 
             telemetryClient.TrackEvent(
