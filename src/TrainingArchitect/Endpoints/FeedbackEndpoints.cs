@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.ApplicationInsights;
 
 namespace TrainingArchitect.Endpoints;
