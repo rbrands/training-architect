@@ -104,7 +104,7 @@ public static class FeedbackEndpoints
                 "gen_ai.evaluation.result",
                 new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    ["gen_ai.evaluation.name"] = requestType,               // z.B. "assess.week" — dient als Gruppierungslabel in KQL
+["gen_ai.evaluation.name"] = requestType,               // e.g. "assess.week" — used as grouping label in KQL
                     ["gen_ai.evaluation.score.value"] = scoreValue,
                     ["gen_ai.evaluation.score.label"] = scoreLabel,
                     ["gen_ai.response.id"] = responseId,
