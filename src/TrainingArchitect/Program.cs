@@ -474,6 +474,7 @@ app.MapArticleEndpoints();
 app.MapImageEndpoints();
 app.MapAthleteDataEndpoints();
 app.MapCoachEndpoints();
+app.MapFeedbackEndpoints();
 
 // Client config endpoint (non-sensitive values for WASM startup)
 app.MapConfigEndpoints();

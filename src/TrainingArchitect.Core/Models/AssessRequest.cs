@@ -10,4 +10,4 @@ public record AssessRequest(
     AssessmentType AssessmentType
 );
 
-public record AssessResponse(string Content, long? TotalTokens = null);
+public record AssessResponse(string Content, long? TotalTokens = null, string? ResponseId = null);

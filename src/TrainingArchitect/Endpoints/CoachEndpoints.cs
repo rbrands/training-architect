@@ -131,7 +131,7 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
-        return Results.Ok(new AssessResponse(result.Content, result.TotalTokens));
+        return Results.Ok(new AssessResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
 
     private static async Task<IResult> PlanAsync(
@@ -160,7 +160,7 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
-        return Results.Ok(new PlanResponse(result.Content, result.TotalTokens));
+        return Results.Ok(new PlanResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
 
     private static async Task<IResult> UploadPlanAsync(

@@ -18,9 +18,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
-## [0.3.1] - 2026-07-21
+## [0.3.2] - 2026-07-26
 
 ### Added
+- Coach feedback loop was added for Assess and Plan results, including thumbs up/down feedback capture and negative tag selection.
+- Feedback telemetry is now sent through `/api/feedback` and recorded in Application Insights with correlated response IDs.
 - Token usage is now surfaced directly in Coach Assess and Plan cards.
 
 ### Changed
