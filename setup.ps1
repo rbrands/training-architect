@@ -121,8 +121,9 @@ if ($Secrets -or $All) {
         -ResourceGroupName $config.CentralResourceGroupName `
         -AppInsightsName $config.AppInsightsName
 
-    dotnet user-secrets set "APPLICATIONINSIGHTS_CONNECTION_STRING"                    $appInsightsConnectionString -p $project
-
+    if (-not [string]::IsNullOrWhiteSpace($appInsightsConnectionString)) {
+        dotnet user-secrets set "APPLICATIONINSIGHTS_CONNECTION_STRING"                    $appInsightsConnectionString -p $project
+    }
     Write-Host "dotnet user-secrets set." -ForegroundColor Green
 }
 
