@@ -118,8 +118,7 @@ public partial class FeedbackWidget : ComponentBase, IDisposable
             return;
         }
 
-        var tags = string.Join(", ", _selectedTags);
-        StartSend("negative", tags);
+        var tags = string.Join(", ", _selectedTags.Order(StringComparer.Ordinal));
     }
 
     private void StartSend(string rating, string? tags)
