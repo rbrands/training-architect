@@ -147,7 +147,8 @@ public partial class FeedbackWidget : ComponentBase, IDisposable
         try
         {
             var payload = new FeedbackRequest(ResponseId, RequestType, rating, tags);
-            await HttpClient.PostAsJsonAsync("/api/feedback", payload);
+            using var response = await HttpClient.PostAsJsonAsync("/api/feedback", payload);
+            response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
         {
@@ -156,6 +157,11 @@ public partial class FeedbackWidget : ComponentBase, IDisposable
                 "Feedback submission failed for RequestType={RequestType}, ResponseId={ResponseId}",
                 RequestType,
                 ResponseId);
+
+            _showConfirmation = false;
+            _isSendingOrSent = false;
+            await InvokeAsync(StateHasChanged);
+            return;
         }
 
         try
