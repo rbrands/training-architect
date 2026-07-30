@@ -1,5 +1,6 @@
 using TrainingArchitect.Services;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Endpoints;
@@ -109,6 +110,7 @@ public static class CoachEndpoints
         HttpContext       httpContext,
         AssessRequest      request,
         ICoachingAgent     agent,
+        IUsageCounterRepository usageCounterRepository,
         CancellationToken  ct)
     {
         var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
@@ -131,6 +133,13 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
+        await usageCounterRepository.RecordUsageAsync(
+            athleteIdHeader,
+            MapAssessAction(request.AssessmentType),
+            ToInt32NonNegative(result.InputTokens),
+            ToInt32NonNegative(result.CachedInputTokens),
+            ToInt32NonNegative(result.OutputTokens));
+
         return Results.Ok(new AssessResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
 
@@ -138,6 +147,7 @@ public static class CoachEndpoints
         HttpContext       httpContext,
         PlanRequest        request,
         ICoachingAgent     agent,
+        IUsageCounterRepository usageCounterRepository,
         CancellationToken  ct)
     {
         var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
@@ -159,6 +169,13 @@ public static class CoachEndpoints
             ct,
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
+
+        await usageCounterRepository.RecordUsageAsync(
+            athleteIdHeader,
+            "plan_create",
+            ToInt32NonNegative(result.InputTokens),
+            ToInt32NonNegative(result.CachedInputTokens),
+            ToInt32NonNegative(result.OutputTokens));
 
         return Results.Ok(new PlanResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
@@ -230,4 +247,25 @@ public static class CoachEndpoints
     }
 
     private sealed record PlanUploadRequest(string WeekPlanJson);
+
+    private static string MapAssessAction(AssessmentType assessmentType)
+    {
+        return assessmentType switch
+        {
+            AssessmentType.Metrics => "assess_metrics",
+            AssessmentType.Activity => "assess_last_training",
+            AssessmentType.Week => "assess_week",
+            _ => "assess_week"
+        };
+    }
+
+    private static int ToInt32NonNegative(long? value)
+    {
+        if (!value.HasValue || value.Value <= 0)
+        {
+            return 0;
+        }
+
+        return value.Value > int.MaxValue ? int.MaxValue : (int)value.Value;
+    }
 }
