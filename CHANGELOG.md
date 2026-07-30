@@ -18,6 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [0.3.3] - 2026-07-30
+
+### Added
+-
+
+### Changed
+- Feedback evaluation tags were expanded to support more granular negative feedback categorization.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [0.3.2] - 2026-07-26
 
 ### Added

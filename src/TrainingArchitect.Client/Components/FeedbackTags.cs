@@ -17,6 +17,8 @@ public static class FeedbackTags
             [
                 "Session type/intensity misclassified",
                 "Load recommendation off",
+                "Intervals misjudged",
+                "Session type misjudged",
                 "Recovery advice not appropriate",
                 "Too generic",
                 "Other"
@@ -25,6 +27,7 @@ public static class FeedbackTags
             [
                 "Ramp rate assessment incorrect",
                 "Training phase misjudged",
+                "Wrong week referenced",
                 "Too generic",
                 "Other"
             ],
@@ -33,6 +36,7 @@ public static class FeedbackTags
                 "Volume not appropriate",
                 "Intensity distribution off",
                 "Session type doesn't fit goal",
+                "Missing key session type",
                 "Referenced event from wrong week",
                 "Confused current week with next week",
                 "Schedule constraints ignored",
