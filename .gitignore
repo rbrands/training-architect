@@ -75,3 +75,6 @@ infra/*.local.bicepparam
 
 # APM dependencies
 apm_modules/
+
+# Local DeveloperTools device identifier
+src/TrainingArchitect/Library/Application Support/Microsoft/DeveloperTools/deviceid
