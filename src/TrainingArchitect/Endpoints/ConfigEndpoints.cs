@@ -13,7 +13,7 @@ public static class ConfigEndpoints
         {
             var blobEndpoint = config["Storage:BlobEndpoint"] ?? string.Empty;
             var imageContainerUrl = blobEndpoint.TrimEnd('/') + "/images/";
-            var syncfusionLicenseKey = config["Syncfusion:LicenseKey"] ?? string.Empty;
+            var syncfusionLicenseKey = NormalizeSyncfusionLicenseKey(config["Syncfusion:LicenseKey"]);
 
             if (syncfusionLicenseKey.StartsWith("__", StringComparison.Ordinal)
                 || syncfusionLicenseKey.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase))
@@ -29,6 +29,27 @@ public static class ConfigEndpoints
         })
         .AllowAnonymous()
         .WithName("GetClientConfig");
+    }
+
+    private static string NormalizeSyncfusionLicenseKey(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return string.Empty;
+        }
+
+        var normalized = rawValue.Trim();
+
+        if (normalized.Length >= 2
+            && normalized.StartsWith('"')
+            && normalized.EndsWith('"'))
+        {
+            normalized = normalized[1..^1].Trim();
+        }
+
+        normalized = new string(normalized.Where(c => !char.IsWhiteSpace(c)).ToArray());
+
+        return normalized;
     }
 }
 

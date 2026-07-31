@@ -85,7 +85,7 @@
                             </div>
 
                             <SfGrid DataSource="@FilteredUsageRows" AllowPaging="true" AllowSorting="true" Width="100%">
-                                <GridPageSettings PageSize="20" />
+                                <GridPageSettings PageSize="40" />
                                 <GridColumns>
                                     <GridColumn Field="@nameof(UsageGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
                                     <GridColumn Field="@nameof(UsageGridRow.UsageType)" HeaderText="Type" Width="130" />
