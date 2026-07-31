@@ -36,6 +36,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStatePr
 builder.Services.AddScoped<IAboutRepository, HttpAboutRepository>();
 builder.Services.AddScoped<IProjectRepository, HttpProjectRepository>();
 builder.Services.AddScoped<IArticleRepository, HttpArticleRepository>();
+builder.Services.AddScoped<IUsageCounterRepository, HttpUsageCounterRepository>();
 // Creditals store: persists Athlete-ID + API-Key in localStorage (opt-in via "remember")
 builder.Services.AddScoped<ICredentialStore, CredentialStore>(); // ersetzt NullCredentialStore
 // Coach-Session-State: Scoped = one instance per user (in WASM effectively singleton)

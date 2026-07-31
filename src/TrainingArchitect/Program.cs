@@ -472,6 +472,7 @@ app.MapGet("/api/user", (HttpContext context) =>
 app.MapAboutEndpoints();
 app.MapProjectEndpoints();
 app.MapArticleEndpoints();
+app.MapAdminEndpoints();
 app.MapImageEndpoints();
 app.MapAthleteDataEndpoints();
 app.MapCoachEndpoints();

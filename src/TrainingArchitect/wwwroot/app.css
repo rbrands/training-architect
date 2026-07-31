@@ -148,6 +148,38 @@ article img {
     }
 }
 
+/* Admin tab readability: keep text dark in all states, not only on hover. */
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-text {
+    color: #334155 !important;
+    opacity: 1 !important;
+    font-weight: 600;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-text {
+    color: #111827 !important;
+    opacity: 1 !important;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-text,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-text {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-wrap {
+    background-color: #f0dfc5 !important;
+    border-color: #d8c7ac !important;
+}
+
 .article-content code {
     background-color: #f0dfc5;
     border-radius: 4px;
