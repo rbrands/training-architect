@@ -111,8 +111,10 @@ public static class CoachEndpoints
         AssessRequest      request,
         ICoachingAgent     agent,
         IUsageCounterRepository usageCounterRepository,
+        ILoggerFactory loggerFactory,
         CancellationToken  ct)
     {
+        var logger = loggerFactory.CreateLogger(nameof(CoachEndpoints));
         var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
         var apiKeyHeader = httpContext.Request.Headers[IntervalsHeaders.ApiKey].ToString();
 
@@ -133,7 +135,9 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
-        await usageCounterRepository.RecordUsageAsync(
+        await RecordUsageBestEffortAsync(
+            usageCounterRepository,
+            logger,
             athleteIdHeader,
             MapAssessAction(request.AssessmentType),
             ToInt32NonNegative(result.InputTokens),
@@ -148,8 +152,10 @@ public static class CoachEndpoints
         PlanRequest        request,
         ICoachingAgent     agent,
         IUsageCounterRepository usageCounterRepository,
+        ILoggerFactory loggerFactory,
         CancellationToken  ct)
     {
+        var logger = loggerFactory.CreateLogger(nameof(CoachEndpoints));
         var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
         var apiKeyHeader = httpContext.Request.Headers[IntervalsHeaders.ApiKey].ToString();
 
@@ -170,7 +176,9 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
-        await usageCounterRepository.RecordUsageAsync(
+        await RecordUsageBestEffortAsync(
+            usageCounterRepository,
+            logger,
             athleteIdHeader,
             "plan_create",
             ToInt32NonNegative(result.InputTokens),
@@ -267,5 +275,29 @@ public static class CoachEndpoints
         }
 
         return value.Value > int.MaxValue ? int.MaxValue : (int)value.Value;
+    }
+
+    private static async Task RecordUsageBestEffortAsync(
+        IUsageCounterRepository usageCounterRepository,
+        ILogger logger,
+        string athleteId,
+        string action,
+        int inputTokens,
+        int cachedTokens,
+        int outputTokens)
+    {
+        try
+        {
+            await usageCounterRepository.RecordUsageAsync(
+                athleteId,
+                action,
+                inputTokens,
+                cachedTokens,
+                outputTokens);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Usage recording failed for coach action {Action}.", action);
+        }
     }
 }
