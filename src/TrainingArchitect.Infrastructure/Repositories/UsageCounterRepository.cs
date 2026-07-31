@@ -33,15 +33,19 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         int cachedTokens,
         int outputTokens)
     {
+        const string globalAthleteId = "__GLOBAL__";
+
         var now = DateTime.UtcNow;
         var isoWeek = ISOWeek.GetWeekOfYear(now);
         var isoYear = ISOWeek.GetYear(now);
 
         var monthlyPeriodKey = $"{now:yyyy-MM}";
         var monthlyId = $"{athleteId}_month_{monthlyPeriodKey}";
+        var globalMonthlyId = $"global_month_{monthlyPeriodKey}";
 
         var weeklyPeriodKey = $"{isoYear}-W{isoWeek:00}";
         var weeklyId = $"{athleteId}_week_{weeklyPeriodKey}";
+        var globalWeeklyId = $"global_week_{weeklyPeriodKey}";
 
         await UpsertPatchAsync(
             monthlyId,
@@ -56,6 +60,26 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         await UpsertPatchAsync(
             weeklyId,
             athleteId,
+            UsageCounter.WeeklyUsageType,
+            weeklyPeriodKey,
+            action,
+            inputTokens,
+            cachedTokens,
+            outputTokens);
+
+        await UpsertPatchAsync(
+            globalMonthlyId,
+            globalAthleteId,
+            UsageCounter.MonthlyUsageType,
+            monthlyPeriodKey,
+            action,
+            inputTokens,
+            cachedTokens,
+            outputTokens);
+
+        await UpsertPatchAsync(
+            globalWeeklyId,
+            globalAthleteId,
             UsageCounter.WeeklyUsageType,
             weeklyPeriodKey,
             action,
