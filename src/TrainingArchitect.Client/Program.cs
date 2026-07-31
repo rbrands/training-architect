@@ -12,16 +12,17 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Fetch non-sensitive configuration from the server before initializing services.
 // This keeps secrets out of wwwroot/appsettings.json (which is publicly accessible).
 var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
-var clientConfig = await http.GetFromJsonAsync<ClientConfig>("/api/config");
+var clientConfig = await http.GetFromJsonAsync<ClientConfig>("/api/config") ?? new ClientConfig();
+var normalizedSyncfusionLicenseKey = NormalizeSyncfusionLicenseKey(clientConfig.SyncfusionLicenseKey);
 
-if (!string.IsNullOrEmpty(clientConfig?.SyncfusionLicenseKey) &&
-    !clientConfig.SyncfusionLicenseKey.StartsWith("__"))
+if (!string.IsNullOrEmpty(normalizedSyncfusionLicenseKey) &&
+    !normalizedSyncfusionLicenseKey.StartsWith("__", StringComparison.Ordinal))
 {
-    Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(clientConfig.SyncfusionLicenseKey);
+    Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(normalizedSyncfusionLicenseKey);
 }
 
 builder.Services.AddSyncfusionBlazor();
-builder.Services.AddSingleton(clientConfig ?? new ClientConfig());
+builder.Services.AddSingleton(clientConfig with { SyncfusionLicenseKey = normalizedSyncfusionLicenseKey });
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 
@@ -36,6 +37,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStatePr
 builder.Services.AddScoped<IAboutRepository, HttpAboutRepository>();
 builder.Services.AddScoped<IProjectRepository, HttpProjectRepository>();
 builder.Services.AddScoped<IArticleRepository, HttpArticleRepository>();
+builder.Services.AddScoped<IUsageCounterRepository, HttpUsageCounterRepository>();
 // Creditals store: persists Athlete-ID + API-Key in localStorage (opt-in via "remember")
 builder.Services.AddScoped<ICredentialStore, CredentialStore>(); // ersetzt NullCredentialStore
 // Coach-Session-State: Scoped = one instance per user (in WASM effectively singleton)
@@ -54,3 +56,24 @@ builder.Services.AddScoped<IChatService, StubChatService>();
 builder.Services.AddScoped<IIntervalsDataProvider, StubIntervalsDataProvider>();
 
 await builder.Build().RunAsync();
+
+static string NormalizeSyncfusionLicenseKey(string? rawValue)
+{
+    if (string.IsNullOrWhiteSpace(rawValue))
+    {
+        return string.Empty;
+    }
+
+    var normalized = rawValue.Trim();
+
+    if (normalized.Length >= 2
+        && normalized.StartsWith('"')
+        && normalized.EndsWith('"'))
+    {
+        normalized = normalized[1..^1].Trim();
+    }
+
+    normalized = new string(normalized.Where(c => !char.IsWhiteSpace(c)).ToArray());
+
+    return normalized;
+}

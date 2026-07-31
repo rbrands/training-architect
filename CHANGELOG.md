@@ -18,6 +18,23 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [0.3.4] - 2026-07-31
+
+### Added
+- Token usage is now persisted per athlete in Cosmos DB as monthly and weekly usage counters.
+- Global usage counters aggregate token consumption across all athletes.
+- The `/admin` page shows a usage grid with filters for scope, usage type, athlete, period and action.
+
+### Changed
+- The usage grid now follows the light editorial theme instead of the dark Syncfusion default, including header, rows, selection and pager buttons.
+- The usage grid page size was raised from 20 to 40 rows.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [0.3.3] - 2026-07-30
 
 ### Added

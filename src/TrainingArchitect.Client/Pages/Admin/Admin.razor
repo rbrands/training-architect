@@ -1,0 +1,301 @@
+@page "/admin"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: true))
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IOwnerService OwnerService
+@inject IUsageCounterRepository UsageCounterRepository
+@inject NavigationManager Nav
+
+<PageTitle>Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Admin</h2>
+</div>
+
+<div class="admin-page">
+    <SfTab CssClass="admin-tabs">
+        <TabItems>
+            <TabItem>
+                <ChildContent>
+                    <TabHeader Text="Usage" />
+                </ChildContent>
+                <ContentTemplate>
+                    <div class="card-dark p-4">
+                        @if (_loading)
+                        {
+                            <div class="d-flex justify-content-center py-4">
+                                <div class="spinner-border text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_loadError))
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                @_loadError
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+                                <div>
+                                    <label class="form-label text-secondary small mb-1">Scope</label>
+                                    <select class="form-select form-select-sm" @bind="ScopeFilter">
+                                        <option value="all">All</option>
+                                        <option value="global">Global only</option>
+                                        <option value="athlete">Athletes only</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="form-label text-secondary small mb-1">Type</label>
+                                    <select class="form-select form-select-sm" @bind="UsageTypeFilter">
+                                        <option value="all">All</option>
+                                        <option value="monthly_usage">Monthly</option>
+                                        <option value="weekly_usage">Weekly</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="form-label text-secondary small mb-1">Athlete</label>
+                                    <input class="form-control form-control-sm"
+                                           @bind="AthleteFilter"
+                                           placeholder="contains..." />
+                                </div>
+
+                                <div>
+                                    <label class="form-label text-secondary small mb-1">Period</label>
+                                    <input class="form-control form-control-sm"
+                                           @bind="PeriodFilter"
+                                           placeholder="e.g. 2026-07 or 2026-W31" />
+                                </div>
+
+                                <div>
+                                    <label class="form-label text-secondary small mb-1">Action</label>
+                                    <input class="form-control form-control-sm"
+                                           @bind="ActionFilter"
+                                           placeholder="contains..." />
+                                </div>
+
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">Clear</button>
+                            </div>
+
+                            <div class="text-secondary small mb-2">
+                                Showing @FilteredUsageRows.Count of @_allUsageRows.Count records
+                            </div>
+
+                            <SfGrid DataSource="@FilteredUsageRows" AllowPaging="true" AllowSorting="true" Width="100%">
+                                <GridPageSettings PageSize="40" />
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(UsageGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
+                                    <GridColumn Field="@nameof(UsageGridRow.UsageType)" HeaderText="Type" Width="130" />
+                                    <GridColumn Field="@nameof(UsageGridRow.PeriodKey)" HeaderText="Period" Width="120" />
+                                    <GridColumn Field="@nameof(UsageGridRow.AthleteId)" HeaderText="Athlete" Width="180" />
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalInputTokens)" HeaderText="Input" TextAlign="TextAlign.Right" Width="110" />
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalCachedTokens)" HeaderText="Cached" TextAlign="TextAlign.Right" Width="110" />
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalOutputTokens)" HeaderText="Output" TextAlign="TextAlign.Right" Width="110" />
+                                    <GridColumn Field="@nameof(UsageGridRow.ActionSummary)" HeaderText="Actions" Width="320" />
+                                </GridColumns>
+                            </SfGrid>
+                        }
+                    </div>
+                </ContentTemplate>
+            </TabItem>
+        </TabItems>
+    </SfTab>
+</div>
+
+@code {
+    private bool _loading = true;
+    private string? _loadError;
+    private IReadOnlyList<UsageGridRow> _allUsageRows = [];
+    private string _scopeFilter = "all";
+    private string _usageTypeFilter = "all";
+    private string _athleteFilter = string.Empty;
+    private string _periodFilter = string.Empty;
+    private string _actionFilter = string.Empty;
+    private IReadOnlyList<UsageGridRow>? _filteredUsageRows;
+
+    private string ScopeFilter
+    {
+        get => _scopeFilter;
+        set => SetFilter(ref _scopeFilter, value);
+    }
+
+    private string UsageTypeFilter
+    {
+        get => _usageTypeFilter;
+        set => SetFilter(ref _usageTypeFilter, value);
+    }
+
+    private string AthleteFilter
+    {
+        get => _athleteFilter;
+        set => SetFilter(ref _athleteFilter, value);
+    }
+
+    private string PeriodFilter
+    {
+        get => _periodFilter;
+        set => SetFilter(ref _periodFilter, value);
+    }
+
+    private string ActionFilter
+    {
+        get => _actionFilter;
+        set => SetFilter(ref _actionFilter, value);
+    }
+
+    private IReadOnlyList<UsageGridRow> FilteredUsageRows => _filteredUsageRows ??= _allUsageRows
+        .Where(MatchesScope)
+        .Where(MatchesUsageType)
+        .Where(MatchesAthlete)
+        .Where(MatchesPeriod)
+        .Where(MatchesAction)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!OwnerService.IsOwner(authState.User))
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        try
+        {
+            var documents = await UsageCounterRepository.GetAllAsync();
+            _allUsageRows = documents
+                .OrderByDescending(d => d.UpdatedAt)
+                .Select(d => new UsageGridRow
+                {
+                    AthleteId = d.AthleteId,
+                    UsageType = d.UsageType,
+                    PeriodKey = d.PeriodKey,
+                    TotalInputTokens = d.TotalInputTokens,
+                    TotalCachedTokens = d.TotalCachedTokens,
+                    TotalOutputTokens = d.TotalOutputTokens,
+                    UpdatedAt = d.UpdatedAt,
+                    ActionSummary = BuildActionSummary(d.Counts)
+                })
+                .ToList();
+            _filteredUsageRows = null;
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Usage records could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ClearFilters()
+    {
+        ScopeFilter = "all";
+        UsageTypeFilter = "all";
+        AthleteFilter = string.Empty;
+        PeriodFilter = string.Empty;
+        ActionFilter = string.Empty;
+    }
+
+    private void SetFilter(ref string field, string value)
+    {
+        if (string.Equals(field, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        field = value;
+        _filteredUsageRows = null;
+    }
+
+    private bool MatchesScope(UsageGridRow row)
+    {
+        return _scopeFilter switch
+        {
+            "global" => string.Equals(row.AthleteId, "__GLOBAL__", StringComparison.Ordinal),
+            "athlete" => !string.Equals(row.AthleteId, "__GLOBAL__", StringComparison.Ordinal),
+            _ => true
+        };
+    }
+
+    private bool MatchesUsageType(UsageGridRow row)
+    {
+        if (string.Equals(_usageTypeFilter, "all", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return string.Equals(row.UsageType, _usageTypeFilter, StringComparison.Ordinal);
+    }
+
+    private bool MatchesAthlete(UsageGridRow row)
+    {
+        if (string.IsNullOrWhiteSpace(_athleteFilter))
+        {
+            return true;
+        }
+
+        return row.AthleteId.Contains(_athleteFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesPeriod(UsageGridRow row)
+    {
+        if (string.IsNullOrWhiteSpace(_periodFilter))
+        {
+            return true;
+        }
+
+        return row.PeriodKey.Contains(_periodFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesAction(UsageGridRow row)
+    {
+        if (string.IsNullOrWhiteSpace(_actionFilter))
+        {
+            return true;
+        }
+
+        return row.ActionSummary.Contains(_actionFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildActionSummary(IReadOnlyDictionary<string, int> counts)
+    {
+        if (counts.Count == 0)
+        {
+            return "-";
+        }
+
+        return string.Join(", ", counts
+            .OrderByDescending(kvp => kvp.Value)
+            .ThenBy(kvp => kvp.Key, StringComparer.Ordinal)
+            .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+    }
+
+    private sealed class UsageGridRow
+    {
+        public string AthleteId { get; init; } = string.Empty;
+
+        public string UsageType { get; init; } = string.Empty;
+
+        public string PeriodKey { get; init; } = string.Empty;
+
+        public int TotalInputTokens { get; init; }
+
+        public int TotalCachedTokens { get; init; }
+
+        public int TotalOutputTokens { get; init; }
+
+        public DateTime UpdatedAt { get; init; }
+
+        public string ActionSummary { get; init; } = string.Empty;
+    }
+}

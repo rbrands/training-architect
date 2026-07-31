@@ -1,0 +1,13 @@
+::deep .admin-tabs .e-tab-header .e-toolbar-item .e-tab-text {
+    color: #475569;
+    font-weight: 600;
+}
+
+::deep .admin-tabs .e-tab-header .e-toolbar-item.e-active .e-tab-text {
+    color: #1f2937;
+}
+
+::deep .admin-tabs .e-tab-header .e-toolbar-item:hover .e-tab-text,
+::deep .admin-tabs .e-tab-header .e-toolbar-item:focus-within .e-tab-text {
+    color: #111827;
+}

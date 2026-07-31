@@ -148,6 +148,38 @@ article img {
     }
 }
 
+/* Admin tab readability: keep text dark in all states, not only on hover. */
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item .e-tab-text {
+    color: #334155 !important;
+    opacity: 1 !important;
+    font-weight: 600;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-text {
+    color: #111827 !important;
+    opacity: 1 !important;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-text,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-text-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-text {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:hover .e-tab-wrap,
+.admin-page .admin-tabs.e-tab .e-tab-header .e-toolbar-item:focus-within .e-tab-wrap {
+    background-color: #f0dfc5 !important;
+    border-color: #d8c7ac !important;
+}
+
 .article-content code {
     background-color: #f0dfc5;
     border-radius: 4px;
@@ -221,6 +253,141 @@ article img {
 
 .e-richtexteditor .e-content {
     min-height: 320px;
+}
+
+/* Syncfusion data grid should follow the light editorial theme.
+   The Syncfusion theme is bootstrap5-dark, so every surface needs an override. */
+.e-grid,
+.e-grid .e-table,
+.e-grid .e-gridheader,
+.e-grid .e-gridcontent,
+.e-grid .e-content,
+.e-grid .e-gridpager {
+    background-color: var(--ba-card-bg) !important;
+    color: #1f2328 !important;
+    border-color: var(--ba-border) !important;
+}
+
+.e-grid {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.e-grid .e-gridheader {
+    background-color: #f0dfc5 !important;
+    border-bottom-color: var(--ba-border) !important;
+}
+
+.e-grid .e-gridheader .e-headercell,
+.e-grid .e-gridheader .e-detailheadercell,
+.e-grid .e-gridheader .e-headercell .e-headertext,
+.e-grid .e-gridheader .e-headercelldiv {
+    background-color: transparent !important;
+    color: #1f2328 !important;
+    border-color: var(--ba-border) !important;
+    font-weight: 700;
+}
+
+.e-grid .e-gridheader .e-headercell:hover {
+    background-color: #ecd7b7 !important;
+}
+
+.e-grid .e-row .e-rowcell {
+    background-color: var(--ba-card-bg) !important;
+    color: #1f2328 !important;
+    border-color: var(--ba-border) !important;
+}
+
+.e-grid .e-altrow .e-rowcell {
+    background-color: #faf3e4 !important;
+}
+
+.e-grid .e-row:hover .e-rowcell {
+    background-color: #f6ead6 !important;
+}
+
+.e-grid .e-row .e-rowcell.e-selectionbackground,
+.e-grid td.e-active {
+    background-color: #e1c39a !important;
+    color: #1f2328 !important;
+}
+
+.e-grid .e-emptyrow td {
+    background-color: var(--ba-card-bg) !important;
+    color: #7c6a55 !important;
+}
+
+.e-grid .e-icons,
+.e-grid .e-sortfilterdiv,
+.e-grid .e-gridheader .e-sortnumber {
+    color: #7c6a55 !important;
+}
+
+/* Pager */
+.e-grid .e-gridpager {
+    border-top: 1px solid var(--ba-border) !important;
+}
+
+.e-grid .e-gridpager .e-pagercontainer,
+.e-grid .e-gridpager .e-parentmsgbar,
+.e-grid .e-gridpager .e-pagerconstant,
+.e-grid .e-gridpager .e-pagenomsg,
+.e-grid .e-gridpager .e-pagecountmsg {
+    background-color: transparent !important;
+    color: #5b5245 !important;
+    border-color: var(--ba-border) !important;
+}
+
+/* Numeric page links and the first/prev/next/last navigation buttons.
+   The dark theme colours each enabled and disabled state separately. */
+.e-grid .e-gridpager .e-numericitem,
+.e-grid .e-gridpager .e-spacing,
+.e-grid .e-gridpager .e-firstpage,
+.e-grid .e-gridpager .e-prevpage,
+.e-grid .e-gridpager .e-nextpage,
+.e-grid .e-gridpager .e-lastpage,
+.e-grid .e-gridpager .e-mfirst,
+.e-grid .e-gridpager .e-mprev,
+.e-grid .e-gridpager .e-mnext,
+.e-grid .e-gridpager .e-mlast {
+    background-color: transparent !important;
+    color: #5b5245 !important;
+    border-color: var(--ba-border) !important;
+}
+
+.e-grid .e-gridpager .e-firstpagedisabled,
+.e-grid .e-gridpager .e-prevpagedisabled,
+.e-grid .e-gridpager .e-nextpagedisabled,
+.e-grid .e-gridpager .e-lastpagedisabled,
+.e-grid .e-gridpager .e-disable {
+    background-color: transparent !important;
+    color: #b3a795 !important;
+    border-color: var(--ba-border) !important;
+}
+
+.e-grid .e-gridpager .e-numericitem:not(.e-active):not(.e-np):not(.e-pp):hover,
+.e-grid .e-gridpager .e-firstpage:hover,
+.e-grid .e-gridpager .e-prevpage:hover,
+.e-grid .e-gridpager .e-nextpage:hover,
+.e-grid .e-gridpager .e-lastpage:hover {
+    background-color: #ecd7b7 !important;
+    color: #1f2328 !important;
+}
+
+.e-grid .e-gridpager .e-numericitem.e-currentitem,
+.e-grid .e-gridpager .e-numericitem.e-currentitem:hover,
+.e-grid .e-gridpager .e-currentitem,
+.e-grid .e-gridpager .e-numericitem.e-active {
+    background-color: #e1c39a !important;
+    color: #1f2328 !important;
+    border-color: #cdb892 !important;
+    border-right-color: #cdb892 !important;
+}
+
+.e-grid .e-gridpager .e-focused,
+.e-grid .e-gridpager .e-currentitem.e-numericitem.e-focused {
+    box-shadow: 0 0 0 1px #cdb892 inset !important;
+    background-color: #e1c39a !important;
 }
 
 /* ── Training Architect ──────────────────────────────────────── */

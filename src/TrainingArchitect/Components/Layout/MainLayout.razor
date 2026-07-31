@@ -61,6 +61,14 @@
                          ActiveClass="nav-pill-active">
                     Blog
                 </NavLink>
+                @if (_isOwner)
+                {
+                    <NavLink href="/admin"
+                             class="nav-pill-inactive"
+                             ActiveClass="nav-pill-active">
+                        Admin
+                    </NavLink>
+                }
             </div>
         </div>
     </div>

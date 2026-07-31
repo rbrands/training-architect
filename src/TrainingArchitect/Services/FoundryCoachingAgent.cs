@@ -56,9 +56,16 @@ public sealed class FoundryCoachingAgent(
         try
         {
             var response = await responseClient.CreateResponseAsync(options, ct);
-            var totalTokens = LogTokenUsage(response.Value);
+            var tokenUsage = ExtractTokenUsage(response.Value);
+            LogTokenUsage(tokenUsage);
             var responseId = TryGetResponseId(response.Value);
-            return new CoachingAgentResponse(response.Value.GetOutputText(), totalTokens, responseId);
+            return new CoachingAgentResponse(
+                response.Value.GetOutputText(),
+                tokenUsage.TotalTokens,
+                responseId,
+                tokenUsage.InputTokens,
+                tokenUsage.CachedInputTokens,
+                tokenUsage.OutputTokens);
         }
         catch (RequestFailedException ex)
         {
@@ -80,37 +87,32 @@ public sealed class FoundryCoachingAgent(
         }
     }
 
-    private long? LogTokenUsage(object? responseValue)
+    private void LogTokenUsage(TokenUsageSnapshot usage)
     {
-        if (!TryGetTokenUsage(responseValue, out var inputTokens, out var outputTokens, out var totalTokens))
+        if (!usage.HasAnyValue)
         {
             _logger.LogDebug(
                 "Foundry agent call completed for {AgentName}@{AgentVersion}, but token usage was not present in the response payload.",
                 _configuredAgent.Name,
                 _configuredAgent.Version ?? "latest");
-            return null;
+            return;
         }
 
         _logger.LogInformation(
-            "Foundry agent token usage for {AgentName}@{AgentVersion}: input={InputTokens}, output={OutputTokens}, total={TotalTokens}",
+            "Foundry agent token usage for {AgentName}@{AgentVersion}: input={InputTokens}, cachedInput={CachedInputTokens}, output={OutputTokens}, total={TotalTokens}",
             _configuredAgent.Name,
             _configuredAgent.Version ?? "latest",
-            inputTokens,
-            outputTokens,
-            totalTokens);
-
-            return totalTokens;
+            usage.InputTokens,
+            usage.CachedInputTokens,
+            usage.OutputTokens,
+            usage.TotalTokens);
     }
 
-    private static bool TryGetTokenUsage(object? responseValue, out long? inputTokens, out long? outputTokens, out long? totalTokens)
+    private static TokenUsageSnapshot ExtractTokenUsage(object? responseValue)
     {
-        inputTokens = null;
-        outputTokens = null;
-        totalTokens = null;
-
         if (responseValue is null)
         {
-            return false;
+            return TokenUsageSnapshot.Empty;
         }
 
         var responseType = responseValue.GetType();
@@ -119,17 +121,23 @@ public sealed class FoundryCoachingAgent(
 
         if (usage is null)
         {
-            return false;
+            return TokenUsageSnapshot.Empty;
         }
 
-        // Confirmed runtime shape:
-        // OpenAI.Responses.ResponseTokenUsage with
-        // InputTokenCount / OutputTokenCount / TotalTokenCount.
-        inputTokens = ReadLongProperty(usage, "InputTokenCount");
-        outputTokens = ReadLongProperty(usage, "OutputTokenCount");
-        totalTokens = ReadLongProperty(usage, "TotalTokenCount");
+        var inputTokens = ReadLongProperty(usage, "InputTokenCount");
+        var outputTokens = ReadLongProperty(usage, "OutputTokenCount");
+        var totalTokens = ReadLongProperty(usage, "TotalTokenCount");
 
-        return inputTokens.HasValue || outputTokens.HasValue || totalTokens.HasValue;
+        long? cachedInputTokens = null;
+        var inputDetails = usage.GetType().GetProperty("InputTokenDetails")?.GetValue(usage)
+            ?? usage.GetType().GetProperty("InputTokensDetails")?.GetValue(usage);
+
+        if (inputDetails is not null)
+        {
+            cachedInputTokens = ReadLongProperty(inputDetails, "CachedTokenCount", "CachedTokens", "Cached");
+        }
+
+        return new TokenUsageSnapshot(inputTokens, cachedInputTokens, outputTokens, totalTokens);
     }
 
     private static string? TryGetResponseId(object? responseValue)
@@ -277,6 +285,18 @@ public sealed class FoundryCoachingAgent(
         }
 
         return null;
+    }
+
+    private readonly record struct TokenUsageSnapshot(
+        long? InputTokens,
+        long? CachedInputTokens,
+        long? OutputTokens,
+        long? TotalTokens)
+    {
+        public static TokenUsageSnapshot Empty => new(null, null, null, null);
+
+        public bool HasAnyValue =>
+            InputTokens.HasValue || CachedInputTokens.HasValue || OutputTokens.HasValue || TotalTokens.HasValue;
     }
 }
 
