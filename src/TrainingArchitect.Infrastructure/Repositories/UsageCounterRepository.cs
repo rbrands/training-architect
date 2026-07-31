@@ -47,45 +47,43 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         var weeklyId = $"{athleteId}_week_{weeklyPeriodKey}";
         var globalWeeklyId = $"global_week_{weeklyPeriodKey}";
 
-        await UpsertPatchAsync(
-            monthlyId,
-            athleteId,
-            UsageCounter.MonthlyUsageType,
-            monthlyPeriodKey,
-            action,
-            inputTokens,
-            cachedTokens,
-            outputTokens);
-
-        await UpsertPatchAsync(
-            weeklyId,
-            athleteId,
-            UsageCounter.WeeklyUsageType,
-            weeklyPeriodKey,
-            action,
-            inputTokens,
-            cachedTokens,
-            outputTokens);
-
-        await UpsertPatchAsync(
-            globalMonthlyId,
-            globalAthleteId,
-            UsageCounter.MonthlyUsageType,
-            monthlyPeriodKey,
-            action,
-            inputTokens,
-            cachedTokens,
-            outputTokens);
-
-        await UpsertPatchAsync(
-            globalWeeklyId,
-            globalAthleteId,
-            UsageCounter.WeeklyUsageType,
-            weeklyPeriodKey,
-            action,
-            inputTokens,
-            cachedTokens,
-            outputTokens);
+        await Task.WhenAll(
+            UpsertPatchAsync(
+                monthlyId,
+                athleteId,
+                UsageCounter.MonthlyUsageType,
+                monthlyPeriodKey,
+                action,
+                inputTokens,
+                cachedTokens,
+                outputTokens),
+            UpsertPatchAsync(
+                weeklyId,
+                athleteId,
+                UsageCounter.WeeklyUsageType,
+                weeklyPeriodKey,
+                action,
+                inputTokens,
+                cachedTokens,
+                outputTokens),
+            UpsertPatchAsync(
+                globalMonthlyId,
+                globalAthleteId,
+                UsageCounter.MonthlyUsageType,
+                monthlyPeriodKey,
+                action,
+                inputTokens,
+                cachedTokens,
+                outputTokens),
+            UpsertPatchAsync(
+                globalWeeklyId,
+                globalAthleteId,
+                UsageCounter.WeeklyUsageType,
+                weeklyPeriodKey,
+                action,
+                inputTokens,
+                cachedTokens,
+                outputTokens));
     }
 
     /// <inheritdoc/>

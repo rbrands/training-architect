@@ -40,7 +40,7 @@
                             <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
                                 <div>
                                     <label class="form-label text-secondary small mb-1">Scope</label>
-                                    <select class="form-select form-select-sm" @bind="_scopeFilter">
+                                    <select class="form-select form-select-sm" @bind="ScopeFilter">
                                         <option value="all">All</option>
                                         <option value="global">Global only</option>
                                         <option value="athlete">Athletes only</option>
@@ -49,7 +49,7 @@
 
                                 <div>
                                     <label class="form-label text-secondary small mb-1">Type</label>
-                                    <select class="form-select form-select-sm" @bind="_usageTypeFilter">
+                                    <select class="form-select form-select-sm" @bind="UsageTypeFilter">
                                         <option value="all">All</option>
                                         <option value="monthly_usage">Monthly</option>
                                         <option value="weekly_usage">Weekly</option>
@@ -59,21 +59,21 @@
                                 <div>
                                     <label class="form-label text-secondary small mb-1">Athlete</label>
                                     <input class="form-control form-control-sm"
-                                           @bind="_athleteFilter"
+                                           @bind="AthleteFilter"
                                            placeholder="contains..." />
                                 </div>
 
                                 <div>
                                     <label class="form-label text-secondary small mb-1">Period</label>
                                     <input class="form-control form-control-sm"
-                                           @bind="_periodFilter"
+                                           @bind="PeriodFilter"
                                            placeholder="e.g. 2026-07 or 2026-W31" />
                                 </div>
 
                                 <div>
                                     <label class="form-label text-secondary small mb-1">Action</label>
                                     <input class="form-control form-control-sm"
-                                           @bind="_actionFilter"
+                                           @bind="ActionFilter"
                                            placeholder="contains..." />
                                 </div>
 
@@ -114,8 +114,39 @@
     private string _athleteFilter = string.Empty;
     private string _periodFilter = string.Empty;
     private string _actionFilter = string.Empty;
+    private IReadOnlyList<UsageGridRow>? _filteredUsageRows;
 
-    private IReadOnlyList<UsageGridRow> FilteredUsageRows => _allUsageRows
+    private string ScopeFilter
+    {
+        get => _scopeFilter;
+        set => SetFilter(ref _scopeFilter, value);
+    }
+
+    private string UsageTypeFilter
+    {
+        get => _usageTypeFilter;
+        set => SetFilter(ref _usageTypeFilter, value);
+    }
+
+    private string AthleteFilter
+    {
+        get => _athleteFilter;
+        set => SetFilter(ref _athleteFilter, value);
+    }
+
+    private string PeriodFilter
+    {
+        get => _periodFilter;
+        set => SetFilter(ref _periodFilter, value);
+    }
+
+    private string ActionFilter
+    {
+        get => _actionFilter;
+        set => SetFilter(ref _actionFilter, value);
+    }
+
+    private IReadOnlyList<UsageGridRow> FilteredUsageRows => _filteredUsageRows ??= _allUsageRows
         .Where(MatchesScope)
         .Where(MatchesUsageType)
         .Where(MatchesAthlete)
@@ -154,6 +185,7 @@
                     ActionSummary = BuildActionSummary(d.Counts)
                 })
                 .ToList();
+            _filteredUsageRows = null;
         }
         catch (Exception ex)
         {
@@ -167,11 +199,22 @@
 
     private void ClearFilters()
     {
-        _scopeFilter = "all";
-        _usageTypeFilter = "all";
-        _athleteFilter = string.Empty;
-        _periodFilter = string.Empty;
-        _actionFilter = string.Empty;
+        ScopeFilter = "all";
+        UsageTypeFilter = "all";
+        AthleteFilter = string.Empty;
+        PeriodFilter = string.Empty;
+        ActionFilter = string.Empty;
+    }
+
+    private void SetFilter(ref string field, string value)
+    {
+        if (string.Equals(field, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        field = value;
+        _filteredUsageRows = null;
     }
 
     private bool MatchesScope(UsageGridRow row)
