@@ -75,3 +75,7 @@ infra/*.local.bicepparam
 
 # APM dependencies
 apm_modules/
+
+# Stray user-profile files written into the working directory when tooling
+# resolves the home directory to the repository (e.g. Microsoft DeveloperTools deviceid)
+**/Library/Application Support/
