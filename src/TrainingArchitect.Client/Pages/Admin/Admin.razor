@@ -77,6 +77,7 @@
                                            placeholder="contains..." />
                                 </div>
 
+                                <button class="btn btn-outline-primary btn-sm" @onclick="ReloadUsageAsync">Refresh</button>
                                 <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">Clear</button>
                             </div>
 
@@ -88,13 +89,13 @@
                                 <GridPageSettings PageSize="40" />
                                 <GridColumns>
                                     <GridColumn Field="@nameof(UsageGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
-                                    <GridColumn Field="@nameof(UsageGridRow.UsageType)" HeaderText="Type" Width="130" />
-                                    <GridColumn Field="@nameof(UsageGridRow.PeriodKey)" HeaderText="Period" Width="120" />
-                                    <GridColumn Field="@nameof(UsageGridRow.AthleteId)" HeaderText="Athlete" Width="180" />
+                                    <GridColumn Field="@nameof(UsageGridRow.UsageType)" HeaderText="Type" Width="120" />
+                                    <GridColumn Field="@nameof(UsageGridRow.PeriodKey)" HeaderText="Period" Width="100" />
+                                    <GridColumn Field="@nameof(UsageGridRow.AthleteId)" HeaderText="Athlete" Width="120" />
                                     <GridColumn Field="@nameof(UsageGridRow.TotalInputTokens)" HeaderText="Input" TextAlign="TextAlign.Right" Width="110" />
                                     <GridColumn Field="@nameof(UsageGridRow.TotalCachedTokens)" HeaderText="Cached" TextAlign="TextAlign.Right" Width="110" />
                                     <GridColumn Field="@nameof(UsageGridRow.TotalOutputTokens)" HeaderText="Output" TextAlign="TextAlign.Right" Width="110" />
-                                    <GridColumn Field="@nameof(UsageGridRow.ActionSummary)" HeaderText="Actions" Width="320" />
+                                    <GridColumn Field="@nameof(UsageGridRow.ActionSummary)" HeaderText="Actions" Width="420" />
                                 </GridColumns>
                             </SfGrid>
                         }
@@ -167,6 +168,19 @@
             Nav.NavigateTo("/");
             return;
         }
+
+        await LoadUsageAsync();
+    }
+
+    private async Task ReloadUsageAsync()
+    {
+        await LoadUsageAsync();
+    }
+
+    private async Task LoadUsageAsync()
+    {
+        _loading = true;
+        _loadError = null;
 
         try
         {
