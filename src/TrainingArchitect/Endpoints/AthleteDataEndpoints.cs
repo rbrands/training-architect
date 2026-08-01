@@ -33,10 +33,8 @@ public static class AthleteDataEndpoints
                     logger.LogWarning(
                         "Rejected /api/athlete-data request due to missing required credential headers.");
 
-                    return Results.BadRequest(new
-                    {
-                        error = "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers."
-                    });
+                    return AthleteDataEndpointResults.CreateBadRequestResult(
+                        "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
                 }
 
                 var response = await athleteDataService.GetAsync(athleteIdHeader, apiKeyHeader, ct);
@@ -96,6 +94,86 @@ public static class AthleteDataEndpoints
             }
         });
 
+        var myDatasetGroup = app.MapGroup("/api/dataset");
+
+        myDatasetGroup.MapGet("", async (
+            HttpContext httpContext,
+            IAthleteDataService athleteDataService,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var logger = loggerFactory.CreateLogger("MyDatasetEndpoints");
+
+            try
+            {
+                var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
+                var apiKeyHeader = httpContext.Request.Headers[IntervalsHeaders.ApiKey].ToString();
+
+                if (string.IsNullOrWhiteSpace(athleteIdHeader) ||
+                    string.IsNullOrWhiteSpace(apiKeyHeader))
+                {
+                    logger.LogWarning(
+                        "Rejected /api/dataset request due to missing required credential headers.");
+
+                    return AthleteDataEndpointResults.CreateBadRequestResult(
+                        "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+                }
+
+                var response = await athleteDataService.GetAsync(athleteIdHeader, apiKeyHeader, ct);
+                return Results.Json(response.DataParsed);
+            }
+            catch (McpToolExecutionException ex)
+            {
+                logger.LogWarning(ex, "MCP tool execution failed in /api/dataset.");
+                return Results.Problem(
+                    title: "MCP tool execution failed.",
+                    detail: "The MCP server returned an error. Check server logs for details.",
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogWarning(ex, "MCP server connection failed in /api/dataset.");
+                return Results.Problem(
+                    title: "MCP server unreachable.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (TimeoutException ex)
+            {
+                logger.LogWarning(ex, "MCP server timeout in /api/dataset.");
+                return Results.Problem(
+                    title: "MCP server timeout.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status504GatewayTimeout);
+            }
+            catch (OperationCanceledException)
+            {
+                return Results.Problem(
+                    title: "Request was canceled.",
+                    statusCode: StatusCodes.Status408RequestTimeout);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogError(ex, "Invalid MCP configuration for /api/dataset.");
+                return Results.Problem(
+                    title: "MCP configuration error.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled error in /api/dataset.");
+                return Results.Problem(
+                    title: "Failed to retrieve dataset.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+        })
+        .WithName("GetDataset")
+        .WithTags("Dataset")
+        .WithSummary("Returns the \"curated\" dataset from intervals.icu for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
+        .WithDescription("Calls the intervals.icu athlete data service and returns the parsed JSON payload only. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+
         return app;
     }
 }
@@ -107,4 +185,10 @@ public record AthleteDataResponse
     public string MethodName { get; init; } = string.Empty;
     public string DataRaw { get; init; } = string.Empty;
     public JsonElement DataParsed { get; init; }
+}
+
+internal static class AthleteDataEndpointResults
+{
+    public static IResult CreateBadRequestResult(string message) =>
+        Results.Json(new { error = message }, statusCode: StatusCodes.Status400BadRequest);
 }

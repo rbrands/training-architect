@@ -18,6 +18,21 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [0.4.0] - 2026-08-01
+
+### Added
+- New `/api/dataset` endpoint that returns the parsed JSON payload from the athlete-data flow.
+- Swagger/OpenAPI documentation for `/api/dataset` with a filtered document that exposes only the dataset endpoint.
+
+### Changed
+- Missing request headers now return explicit JSON 400 responses for the dataset endpoint.
+
+### Fixed
+- Swagger UI no longer shows unrelated schemas and extra endpoint definitions.
+
+### Removed
+-
+
 ## [0.3.4] - 2026-07-31
 
 ### Added

@@ -22,6 +22,8 @@ using System.Security.Claims;
 using System.Net;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -160,6 +162,11 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.DocumentFilter<DatasetOnlyDocumentFilter>();
+});
 
 builder.Services.AddCors(options =>
 {
@@ -426,6 +433,15 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Training Architect API v1");
+    });
+}
+
 app.UseAntiforgery();
 
 // blazor.web.js (even in Release builds) dynamically imports the Hot Reload
@@ -508,3 +524,22 @@ app.MapGet("/health", () =>
     .AllowAnonymous();
 
 app.Run();
+
+internal sealed class DatasetOnlyDocumentFilter : IDocumentFilter
+{
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+    {
+        var datasetOperations = swaggerDoc.Paths
+            .Where(path => path.Key.StartsWith("/api/dataset", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(path => path.Key, path => path.Value);
+
+        swaggerDoc.Paths = new OpenApiPaths();
+        foreach (var item in datasetOperations)
+        {
+            swaggerDoc.Paths[item.Key] = item.Value;
+        }
+
+        swaggerDoc.Components = new OpenApiComponents();
+        swaggerDoc.SecurityRequirements.Clear();
+    }
+}
