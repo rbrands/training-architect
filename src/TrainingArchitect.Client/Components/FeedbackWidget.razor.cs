@@ -119,6 +119,7 @@ public partial class FeedbackWidget : ComponentBase, IDisposable
         }
 
         var tags = string.Join(", ", _selectedTags.Order(StringComparer.Ordinal));
+        await InvokeAsync(() => StartSend("negative", tags));
     }
 
     private void StartSend(string rating, string? tags)
