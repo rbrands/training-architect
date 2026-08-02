@@ -18,7 +18,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
-## [0.4.0] - 2026-08-01
+## [0.4.1] - 2026-08-02
 
 ### Added
 - New `/api/dataset` endpoint that returns the parsed JSON payload from the athlete-data flow.
@@ -26,6 +26,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Missing request headers now return explicit JSON 400 responses for the dataset endpoint.
+- For planning: Prompt now accepts time remaining on constrained days
 
 ### Fixed
 - Swagger UI no longer shows unrelated schemas and extra endpoint definitions.
