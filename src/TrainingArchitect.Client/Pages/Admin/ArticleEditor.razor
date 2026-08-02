@@ -73,11 +73,19 @@ else
                     Published
                 </label>
             </div>
-            @if (_article.IsPublished && _article.PublishedDate.HasValue)
+        </div>
+
+        <div>
+            <label class="form-label text-secondary small">Article Date</label>
+            <input class="form-control"
+                   type="date"
+                   value="@PublishedDateInput"
+                   @onchange="OnPublishedDateChanged" />
+            @if (_article.PublishedDate.HasValue)
             {
-                <span class="text-secondary small">
+                <div class="form-text text-secondary small">
                     @_article.PublishedDate.Value.ToString("MMMM d, yyyy")
-                </span>
+                </div>
             }
         </div>
 
@@ -172,7 +180,11 @@ else
 
         if (_isNew)
         {
-            _article = new Article { Id = Guid.NewGuid().ToString() };
+            _article = new Article
+            {
+                Id = Guid.NewGuid().ToString(),
+                PublishedDate = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc)
+            };
         }
         else
         {
@@ -204,10 +216,7 @@ else
             _article.Slug = NormalizeSlug(_article.Title);
 
         if (_article.IsPublished && _article.PublishedDate is null)
-            _article.PublishedDate = DateTime.UtcNow;
-
-        if (!_article.IsPublished)
-            _article.PublishedDate = null;
+            _article.PublishedDate = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
         await ArticleRepo.UpsertAsync(_article);
         Nav.NavigateTo($"/blog/{_article.Slug}");
@@ -227,6 +236,21 @@ else
     {
         var value = e.Value?.ToString();
         _article.ExpiresAfterDays = int.TryParse(value, out var days) ? days : null;
+    }
+
+    private string PublishedDateInput => _article.PublishedDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+
+    private void OnPublishedDateChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _article.PublishedDate = null;
+            return;
+        }
+
+        if (DateTime.TryParse(value, out var parsedDate))
+            _article.PublishedDate = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Utc);
     }
 
     // OnImageUploadSuccess fires BEFORE ValueChanged updates _article.Content.

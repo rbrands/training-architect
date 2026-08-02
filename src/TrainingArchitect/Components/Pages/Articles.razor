@@ -194,10 +194,16 @@ else
             .ToArray() ?? [];
 
     private IReadOnlyList<Article> PublishedArticles =>
-        FilteredArticles.Where(a => a.IsPublished).ToArray();
+        FilteredArticles
+            .Where(a => a.IsPublished)
+            .OrderByDescending(GetArticleSortDate)
+            .ToArray();
 
     private IReadOnlyList<Article> UnpublishedArticles =>
-        FilteredArticles.Where(a => !a.IsPublished).ToArray();
+        FilteredArticles
+            .Where(a => !a.IsPublished)
+            .OrderByDescending(GetArticleSortDate)
+            .ToArray();
 
     private bool EffectiveIsOwner => IsOwner
         || (HttpContextAccessor.HttpContext?.User?.IsInRole("SiteAdmin") ?? false);
@@ -209,6 +215,9 @@ else
 
     private static string GetTagUrl(string tag) =>
         $"/blog/tag/{Uri.EscapeDataString(tag)}";
+
+    private static DateTime GetArticleSortDate(Article article) =>
+        article.PublishedDate ?? article.CreatedAt;
 
     protected override async Task OnInitializedAsync()
     {
