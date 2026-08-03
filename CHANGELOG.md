@@ -18,6 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [0.4.2] - 2026-08-03
+
+### Added
+-
+
+### Changed
+- "Plan Week" now better considers already existing training sessions.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [0.4.1] - 2026-08-02
 
 ### Added

@@ -115,6 +115,18 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 
 The endpoint at `/api/athlete-data` now supports credential forwarding via headers and executes the MCP tool `prepare_week_data` server-side.
 
+- Method: `GET`
+- Route: `/api/athlete-data`
+- Response: full athlete data payload (`DataRaw`, `DataParsed`, and metadata)
+
+### Curated Dataset Endpoint
+
+The curated dataset can be retrieved with a dedicated endpoint that returns only the parsed JSON payload.
+
+- Method: `GET`
+- Route: `/api/dataset`
+- Response: parsed dataset JSON only (curated payload used by dataset consumers)
+
 - Required request headers:
   - `X-Intervals-Athlete-Id`
   - `X-Intervals-Api-Key`
