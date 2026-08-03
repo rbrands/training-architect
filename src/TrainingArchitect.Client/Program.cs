@@ -34,6 +34,8 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
 
 // Repositories: call minimal API endpoints on the host server
+builder.Services.AddScoped<IAthleteRepository, HttpAthleteRepository>();
+builder.Services.AddScoped<ILevelRepository, HttpLevelRepository>();
 builder.Services.AddScoped<IAboutRepository, HttpAboutRepository>();
 builder.Services.AddScoped<IProjectRepository, HttpProjectRepository>();
 builder.Services.AddScoped<IArticleRepository, HttpArticleRepository>();

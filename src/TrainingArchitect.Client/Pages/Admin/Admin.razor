@@ -3,6 +3,8 @@
 @attribute [Authorize]
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IOwnerService OwnerService
+@inject IAthleteRepository AthleteRepository
+@inject ILevelRepository LevelRepository
 @inject IUsageCounterRepository UsageCounterRepository
 @inject NavigationManager Nav
 
@@ -102,6 +104,401 @@
                     </div>
                 </ContentTemplate>
             </TabItem>
+            <TabItem>
+                <ChildContent>
+                    <TabHeader Text="Levels" />
+                </ChildContent>
+                <ContentTemplate>
+                    <div class="card-dark p-4 d-flex flex-column gap-4">
+                        @if (_levelsLoading)
+                        {
+                            <div class="d-flex justify-content-center py-4">
+                                <div class="spinner-border text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_levelsLoadError))
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                @_levelsLoadError
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                                <div class="text-secondary small">
+                                    Select a level in the grid to edit details and limits.
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="NewLevelAsync">New Level</button>
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="ReloadLevelsAsync">Refresh</button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSelectedLevel">Clear</button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="DeleteLevelAsync" disabled="@_levelSaving || _selectedLevel is null || _isCreatingLevel">
+                                        Delete
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="SaveLevelAsync" disabled="@_levelSaving">
+                                        @(_levelSaving ? "Saving…" : "Save")
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_levelActionError))
+                            {
+                                <div class="alert alert-danger mb-0" role="alert">
+                                    @_levelActionError
+                                </div>
+                            }
+
+                            <SfGrid TValue="LevelGridRow"
+                                    DataSource="@_levelRows"
+                                    AllowPaging="true"
+                                    AllowSorting="true"
+                                    Height="320"
+                                    Width="100%">
+                                <GridSelectionSettings Mode="SelectionMode.Row" Type="Syncfusion.Blazor.Grids.SelectionType.Single" />
+                                <GridEvents TValue="LevelGridRow" RowSelected="OnLevelRowSelected" />
+                                <GridPageSettings PageSize="20" />
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(LevelGridRow.Id)" HeaderText="ID" Width="180" />
+                                    <GridColumn Field="@nameof(LevelGridRow.Level)" HeaderText="Level" Width="120" />
+                                    <GridColumn Field="@nameof(LevelGridRow.Label)" HeaderText="Label" Width="180" />
+                                    <GridColumn Field="@nameof(LevelGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
+                                </GridColumns>
+                            </SfGrid>
+
+                            @if (_selectedLevel is not null)
+                            {
+                                <div class="border-top border-secondary-subtle pt-4 d-flex flex-column gap-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-semibold text-white">@(_isCreatingLevel ? "New Level" : "Edit Level")</div>
+                                            <div class="text-secondary small">@_selectedLevel.Id</div>
+                                        </div>
+                                        <div class="text-secondary small">
+                                            Last updated: @_selectedLevel.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Level Key</label>
+                                            @if (_isCreatingLevel)
+                                            {
+                                                <input class="form-control"
+                                                       placeholder="e.g. basic"
+                                                       @bind-value="_selectedLevel.Level"
+                                                       @bind-value:event="oninput" />
+                                            }
+                                            else
+                                            {
+                                                <input class="form-control" @bind-value="_selectedLevel.Level" readonly />
+                                            }
+                                        </div>
+
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Label</label>
+                                            <input class="form-control" @bind="_selectedLevel.Label" />
+                                        </div>
+
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Type</label>
+                                            <div class="form-control bg-body-tertiary text-secondary" aria-readonly="true">@_selectedLevel.Type</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Plan Create</div>
+                                                <div class="text-secondary small mb-3">Limit for creating a new training plan</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.PlanCreate.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.PlanCreate.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Metrics</div>
+                                                <div class="text-secondary small mb-3">Limit for metric assessments</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessMetrics.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessMetrics.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Last Training</div>
+                                                <div class="text-secondary small mb-3">Limit for the last training session assessment</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessLastTraining.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessLastTraining.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Week</div>
+                                                <div class="text-secondary small mb-3">Limit for the weekly assessment flow</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessWeek.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessWeek.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-secondary small">
+                                    No level selected.
+                                </div>
+                            }
+                        }
+                    </div>
+                </ContentTemplate>
+            </TabItem>
+            <TabItem>
+                <ChildContent>
+                    <TabHeader Text="Athletes" />
+                </ChildContent>
+                <ContentTemplate>
+                    <div class="card-dark p-4 d-flex flex-column gap-4">
+                        @if (_athletesLoading)
+                        {
+                            <div class="d-flex justify-content-center py-4">
+                                <div class="spinner-border text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_athletesLoadError))
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                @_athletesLoadError
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                                <div class="text-secondary small">
+                                    Select an athlete in the grid to edit the configuration.
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="NewAthleteAsync">New Athlete</button>
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="ReloadAthletesAsync">Refresh</button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSelectedAthlete">Clear</button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="DeleteAthleteAsync" disabled="@_athleteSaving || _selectedAthlete is null || _isCreatingAthlete">
+                                        Delete
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAthleteAsync" disabled="@_athleteSaving">
+                                        @(_athleteSaving ? "Saving…" : "Save")
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_athleteActionError))
+                            {
+                                <div class="alert alert-danger mb-0" role="alert">
+                                    @_athleteActionError
+                                </div>
+                            }
+
+                            <SfGrid TValue="AthleteGridRow"
+                                    DataSource="@_athleteRows"
+                                    AllowPaging="true"
+                                    AllowSorting="true"
+                                    Height="420"
+                                    Width="100%">
+                                <GridSelectionSettings Mode="SelectionMode.Row" Type="Syncfusion.Blazor.Grids.SelectionType.Single" />
+                                <GridEvents TValue="AthleteGridRow" RowSelected="OnAthleteRowSelected" />
+                                <GridPageSettings PageSize="20" />
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AthleteGridRow.AthleteId)" HeaderText="Athlete" Width="140" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.Level)" HeaderText="Level" Width="100" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.Locked)" HeaderText="Locked" Width="110" TextAlign="TextAlign.Center">
+                                        <Template>
+                                            @{ var row = context as AthleteGridRow; }
+                                            <span class="badge @(row?.Locked == true ? "text-bg-success" : "text-bg-secondary")">
+                                                @(row?.Locked == true ? "Locked" : "Open")
+                                            </span>
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field="@nameof(AthleteGridRow.Message)" HeaderText="Message" Width="240" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.PlanCreateWeekly)" HeaderText="Plan W" TextAlign="TextAlign.Right" Width="80" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.PlanCreateMonthly)" HeaderText="Plan M" TextAlign="TextAlign.Right" Width="80" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessMetricsWeekly)" HeaderText="Metrics W" TextAlign="TextAlign.Right" Width="90" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessMetricsMonthly)" HeaderText="Metrics M" TextAlign="TextAlign.Right" Width="90" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessLastTrainingWeekly)" HeaderText="Last W" TextAlign="TextAlign.Right" Width="80" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessLastTrainingMonthly)" HeaderText="Last M" TextAlign="TextAlign.Right" Width="80" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessWeekWeekly)" HeaderText="Week W" TextAlign="TextAlign.Right" Width="80" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.AssessWeekMonthly)" HeaderText="Week M" TextAlign="TextAlign.Right" Width="80" />
+                                </GridColumns>
+                            </SfGrid>
+
+                            @if (_selectedAthlete is not null)
+                            {
+                                <div class="border-top border-secondary-subtle pt-4 d-flex flex-column gap-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-semibold text-white">@(_isCreatingAthlete ? "New Athlete" : "Edit Athlete")</div>
+                                            <div class="text-secondary small">@_selectedAthlete.AthleteId</div>
+                                        </div>
+                                        <div class="text-secondary small">
+                                            Last updated: @_selectedAthlete.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Athlete ID</label>
+                                            @if (_isCreatingAthlete)
+                                            {
+                                                <input class="form-control"
+                                                       placeholder="e.g. i57401"
+                                                       @bind-value="_selectedAthlete.AthleteId"
+                                                       @bind-value:event="oninput" />
+                                            }
+                                            else
+                                            {
+                                                <input class="form-control" @bind-value="_selectedAthlete.AthleteId" readonly />
+                                            }
+                                        </div>
+
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Level</label>
+                                            <select class="form-select" @bind="_selectedAthlete.Level">
+                                                @foreach (var levelOption in GetAthleteLevelOptions(_selectedAthlete.Level))
+                                                {
+                                                    <option value="@levelOption">@levelOption</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12 col-md-4 d-flex align-items-end">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="athleteLockedToggle" @bind="_selectedAthlete.Locked" />
+                                                <label class="form-check-label text-secondary small" for="athleteLockedToggle">Locked</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label text-secondary small">Message</label>
+                                            <textarea class="form-control" rows="2" @bind="_selectedAthlete.Message"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Plan Create</div>
+                                                <div class="text-secondary small mb-3">Limit for creating a new training plan</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.PlanCreate.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.PlanCreate.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Metrics</div>
+                                                <div class="text-secondary small mb-3">Limit for metric assessments</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessMetrics.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessMetrics.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Last Training</div>
+                                                <div class="text-secondary small mb-3">Limit for the last training session assessment</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessLastTraining.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessLastTraining.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-lg-6">
+                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
+                                                <div class="fw-semibold text-white mb-1">Assess Week</div>
+                                                <div class="text-secondary small mb-3">Limit for the weekly assessment flow</div>
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Weekly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessWeek.Weekly" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label text-secondary small">Monthly</label>
+                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessWeek.Monthly" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-secondary small">
+                                    No athlete selected.
+                                </div>
+                            }
+                        }
+                    </div>
+                </ContentTemplate>
+            </TabItem>
         </TabItems>
     </SfTab>
 </div>
@@ -110,6 +507,20 @@
     private bool _loading = true;
     private string? _loadError;
     private IReadOnlyList<UsageGridRow> _allUsageRows = [];
+    private bool _athletesLoading = true;
+    private string? _athletesLoadError;
+    private IReadOnlyList<AthleteGridRow> _athleteRows = [];
+    private AthleteConfig? _selectedAthlete;
+    private bool _athleteSaving;
+    private bool _isCreatingAthlete;
+    private string? _athleteActionError;
+    private bool _levelsLoading = true;
+    private string? _levelsLoadError;
+    private IReadOnlyList<LevelGridRow> _levelRows = [];
+    private LevelConfig? _selectedLevel;
+    private bool _levelSaving;
+    private bool _isCreatingLevel;
+    private string? _levelActionError;
     private string _scopeFilter = "all";
     private string _usageTypeFilter = "all";
     private string _athleteFilter = string.Empty;
@@ -170,11 +581,91 @@
         }
 
         await LoadUsageAsync();
+        await LoadLevelsAsync();
+        await LoadAthletesAsync();
+    }
+
+    private async Task ReloadLevelsAsync()
+    {
+        await LoadLevelsAsync();
+    }
+
+    private async Task ReloadAthletesAsync()
+    {
+        await LoadAthletesAsync();
     }
 
     private async Task ReloadUsageAsync()
     {
         await LoadUsageAsync();
+    }
+
+    private async Task LoadLevelsAsync()
+    {
+        _levelsLoading = true;
+        _levelsLoadError = null;
+
+        try
+        {
+            var documents = await LevelRepository.GetAllAsync();
+            _levelRows = documents
+                .OrderBy(d => d.Level, StringComparer.OrdinalIgnoreCase)
+                .Select(ToLevelGridRow)
+                .ToList();
+
+            if (_selectedLevel is not null && !_isCreatingLevel)
+            {
+                var refreshed = documents.FirstOrDefault(d => string.Equals(d.Id, _selectedLevel.Id, StringComparison.Ordinal));
+                _selectedLevel = refreshed is null ? null : CloneLevelConfig(refreshed);
+            }
+
+            if (_selectedLevel is null && !_isCreatingLevel && _levelRows.Count > 0)
+            {
+                _selectedLevel = CloneLevelConfig(_levelRows[0].ToModel());
+            }
+        }
+        catch (Exception ex)
+        {
+            _levelsLoadError = $"Level configs could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _levelsLoading = false;
+        }
+    }
+
+    private async Task LoadAthletesAsync()
+    {
+        _athletesLoading = true;
+        _athletesLoadError = null;
+
+        try
+        {
+            var documents = await AthleteRepository.GetAllAsync();
+            _athleteRows = documents
+                .OrderByDescending(d => d.UpdatedAt)
+                .Select(ToGridRow)
+                .ToList();
+
+            if (_selectedAthlete is not null && !_isCreatingAthlete)
+            {
+                var refreshed = documents.FirstOrDefault(d => string.Equals(d.AthleteId, _selectedAthlete.AthleteId, StringComparison.Ordinal));
+                _selectedAthlete = refreshed is null ? null : CloneAthleteConfig(refreshed);
+            }
+
+            if (_selectedAthlete is null && !_isCreatingAthlete && _athleteRows.Count > 0)
+            {
+                _selectedAthlete = CloneAthleteConfig(_athleteRows[0].ToModel());
+            }
+        }
+        catch (Exception ex)
+        {
+            _athletesLoadError = $"Athlete configs could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _athletesLoading = false;
+        }
     }
 
     private async Task LoadUsageAsync()
@@ -229,6 +720,189 @@
 
         field = value;
         _filteredUsageRows = null;
+    }
+
+    private async Task OnAthleteRowSelected(RowSelectEventArgs<AthleteGridRow> args)
+    {
+        if (args.Data is null)
+        {
+            return;
+        }
+
+        _isCreatingAthlete = false;
+        _athleteActionError = null;
+        _selectedAthlete = CloneAthleteConfig(args.Data.ToModel());
+        await Task.CompletedTask;
+    }
+
+    private async Task OnLevelRowSelected(RowSelectEventArgs<LevelGridRow> args)
+    {
+        if (args.Data is null)
+        {
+            return;
+        }
+
+        _isCreatingLevel = false;
+        _levelActionError = null;
+        _selectedLevel = CloneLevelConfig(args.Data.ToModel());
+        await Task.CompletedTask;
+    }
+
+    private void ClearSelectedLevel()
+    {
+        _isCreatingLevel = false;
+        _levelActionError = null;
+        _selectedLevel = null;
+    }
+
+    private Task NewLevelAsync()
+    {
+        _levelActionError = null;
+        _isCreatingLevel = true;
+        _selectedLevel = CreateBlankLevelConfig();
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveLevelAsync()
+    {
+        if (_selectedLevel is null)
+        {
+            return;
+        }
+
+        _levelActionError = null;
+        _levelSaving = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_selectedLevel.Level))
+            {
+                _levelActionError = "Level key is required.";
+                return;
+            }
+
+            _selectedLevel.Level = _selectedLevel.Level.Trim();
+            _selectedLevel.Label = _selectedLevel.Label.Trim();
+
+            var saved = await LevelRepository.UpsertAsync(_selectedLevel);
+            _isCreatingLevel = false;
+            _selectedLevel = CloneLevelConfig(saved);
+            await LoadLevelsAsync();
+        }
+        catch (Exception ex)
+        {
+            _levelActionError = $"Level config could not be saved: {ex.Message}";
+        }
+        finally
+        {
+            _levelSaving = false;
+        }
+    }
+
+    private async Task DeleteLevelAsync()
+    {
+        if (_selectedLevel is null)
+        {
+            return;
+        }
+
+        _levelActionError = null;
+        _levelSaving = true;
+
+        try
+        {
+            await LevelRepository.DeleteAsync(_selectedLevel.Id);
+            _isCreatingLevel = false;
+            _selectedLevel = null;
+            await LoadLevelsAsync();
+        }
+        catch (Exception ex)
+        {
+            _levelActionError = $"Level config could not be deleted: {ex.Message}";
+        }
+        finally
+        {
+            _levelSaving = false;
+        }
+    }
+
+    private void ClearSelectedAthlete()
+    {
+        _isCreatingAthlete = false;
+        _athleteActionError = null;
+        _selectedAthlete = null;
+    }
+
+    private Task NewAthleteAsync()
+    {
+        _athleteActionError = null;
+        _isCreatingAthlete = true;
+        _selectedAthlete = CreateBlankAthleteConfig();
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAthleteAsync()
+    {
+        if (_selectedAthlete is null)
+        {
+            return;
+        }
+
+        _athleteActionError = null;
+        _athleteSaving = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_selectedAthlete.AthleteId))
+            {
+                _athleteActionError = "Athlete ID is required.";
+                return;
+            }
+
+            _selectedAthlete.AthleteId = _selectedAthlete.AthleteId.Trim();
+            _selectedAthlete.Level = _selectedAthlete.Level.Trim();
+            _selectedAthlete.Message = _selectedAthlete.Message.Trim();
+
+            var saved = await AthleteRepository.UpsertAsync(_selectedAthlete);
+            _isCreatingAthlete = false;
+            _selectedAthlete = CloneAthleteConfig(saved);
+            await LoadAthletesAsync();
+        }
+        catch (Exception ex)
+        {
+            _athleteActionError = $"Athlete config could not be saved: {ex.Message}";
+        }
+        finally
+        {
+            _athleteSaving = false;
+        }
+    }
+
+    private async Task DeleteAthleteAsync()
+    {
+        if (_selectedAthlete is null)
+        {
+            return;
+        }
+
+        _athleteActionError = null;
+        _athleteSaving = true;
+
+        try
+        {
+            await AthleteRepository.DeleteAsync(_selectedAthlete.AthleteId);
+            _isCreatingAthlete = false;
+            _selectedAthlete = null;
+            await LoadAthletesAsync();
+        }
+        catch (Exception ex)
+        {
+            _athleteActionError = $"Athlete config could not be deleted: {ex.Message}";
+        }
+        finally
+        {
+            _athleteSaving = false;
+        }
     }
 
     private bool MatchesScope(UsageGridRow row)
@@ -294,6 +968,169 @@
             .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
     }
 
+    private static AthleteGridRow ToGridRow(AthleteConfig config)
+    {
+        return new AthleteGridRow
+        {
+            AthleteId = config.AthleteId,
+            Level = config.Level,
+            Locked = config.Locked,
+            Message = config.Message,
+            PlanCreateWeekly = config.Limits.PlanCreate.Weekly,
+            PlanCreateMonthly = config.Limits.PlanCreate.Monthly,
+            AssessMetricsWeekly = config.Limits.AssessMetrics.Weekly,
+            AssessMetricsMonthly = config.Limits.AssessMetrics.Monthly,
+            AssessLastTrainingWeekly = config.Limits.AssessLastTraining.Weekly,
+            AssessLastTrainingMonthly = config.Limits.AssessLastTraining.Monthly,
+            AssessWeekWeekly = config.Limits.AssessWeek.Weekly,
+            AssessWeekMonthly = config.Limits.AssessWeek.Monthly,
+            UpdatedAt = config.UpdatedAt
+        };
+    }
+
+    private static AthleteConfig CloneAthleteConfig(AthleteConfig source)
+    {
+        return new AthleteConfig
+        {
+            Id = source.Id,
+            AthleteId = source.AthleteId,
+            Level = source.Level,
+            Limits = new AthleteLimits
+            {
+                PlanCreate = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.PlanCreate.Weekly,
+                    Monthly = source.Limits.PlanCreate.Monthly
+                },
+                AssessMetrics = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessMetrics.Weekly,
+                    Monthly = source.Limits.AssessMetrics.Monthly
+                },
+                AssessLastTraining = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessLastTraining.Weekly,
+                    Monthly = source.Limits.AssessLastTraining.Monthly
+                },
+                AssessWeek = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessWeek.Weekly,
+                    Monthly = source.Limits.AssessWeek.Monthly
+                }
+            },
+            Locked = source.Locked,
+            Message = source.Message,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            TimeToLive = source.TimeToLive
+        };
+    }
+
+    private static AthleteConfig CreateBlankAthleteConfig()
+    {
+        return new AthleteConfig
+        {
+            Level = "basic",
+            Limits = new AthleteLimits
+            {
+                PlanCreate = new AthleteLimitWindow { Weekly = 2, Monthly = 0 },
+                AssessMetrics = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
+                AssessLastTraining = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
+                AssessWeek = new AthleteLimitWindow { Weekly = 0, Monthly = 0 }
+            },
+            Locked = false,
+            Message = string.Empty
+        };
+    }
+
+    private IReadOnlyList<string> GetAthleteLevelOptions(string? selectedLevel)
+    {
+        var levels = _levelRows
+            .Select(r => r.Level)
+            .Where(level => !string.IsNullOrWhiteSpace(level))
+            .Select(level => level.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(level => level, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (levels.Count == 0)
+        {
+            levels.Add("basic");
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedLevel)
+            && !levels.Contains(selectedLevel, StringComparer.OrdinalIgnoreCase))
+        {
+            levels.Add(selectedLevel);
+        }
+
+        return levels;
+    }
+
+    private static LevelGridRow ToLevelGridRow(LevelConfig config)
+    {
+        return new LevelGridRow
+        {
+            Id = config.Id,
+            Level = config.Level,
+            Label = config.Label,
+            UpdatedAt = config.UpdatedAt,
+            Document = CloneLevelConfig(config)
+        };
+    }
+
+    private static LevelConfig CloneLevelConfig(LevelConfig source)
+    {
+        return new LevelConfig
+        {
+            Id = source.Id,
+            Level = source.Level,
+            Label = source.Label,
+            Limits = new AthleteLimits
+            {
+                PlanCreate = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.PlanCreate.Weekly,
+                    Monthly = source.Limits.PlanCreate.Monthly
+                },
+                AssessMetrics = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessMetrics.Weekly,
+                    Monthly = source.Limits.AssessMetrics.Monthly
+                },
+                AssessLastTraining = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessLastTraining.Weekly,
+                    Monthly = source.Limits.AssessLastTraining.Monthly
+                },
+                AssessWeek = new AthleteLimitWindow
+                {
+                    Weekly = source.Limits.AssessWeek.Weekly,
+                    Monthly = source.Limits.AssessWeek.Monthly
+                }
+            },
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            TimeToLive = source.TimeToLive
+        };
+    }
+
+    private static LevelConfig CreateBlankLevelConfig()
+    {
+        return new LevelConfig
+        {
+            Level = "basic",
+            Label = "Basic",
+            Limits = new AthleteLimits
+            {
+                PlanCreate = new AthleteLimitWindow { Weekly = 2, Monthly = 0 },
+                AssessMetrics = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
+                AssessLastTraining = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
+                AssessWeek = new AthleteLimitWindow { Weekly = 0, Monthly = 0 }
+            }
+        };
+    }
+
     private sealed class UsageGridRow
     {
         public string AthleteId { get; init; } = string.Empty;
@@ -311,5 +1148,88 @@
         public DateTime UpdatedAt { get; init; }
 
         public string ActionSummary { get; init; } = string.Empty;
+    }
+
+    private sealed class AthleteGridRow
+    {
+        public string AthleteId { get; init; } = string.Empty;
+
+        public string Level { get; init; } = string.Empty;
+
+        public bool Locked { get; init; }
+
+        public string Message { get; init; } = string.Empty;
+
+        public int PlanCreateWeekly { get; init; }
+
+        public int PlanCreateMonthly { get; init; }
+
+        public int AssessMetricsWeekly { get; init; }
+
+        public int AssessMetricsMonthly { get; init; }
+
+        public int AssessLastTrainingWeekly { get; init; }
+
+        public int AssessLastTrainingMonthly { get; init; }
+
+        public int AssessWeekWeekly { get; init; }
+
+        public int AssessWeekMonthly { get; init; }
+
+        public DateTime UpdatedAt { get; init; }
+
+        public AthleteConfig ToModel()
+        {
+            return new AthleteConfig
+            {
+                Id = AthleteId,
+                AthleteId = AthleteId,
+                Level = Level,
+                Limits = new AthleteLimits
+                {
+                    PlanCreate = new AthleteLimitWindow
+                    {
+                        Weekly = PlanCreateWeekly,
+                        Monthly = PlanCreateMonthly
+                    },
+                    AssessMetrics = new AthleteLimitWindow
+                    {
+                        Weekly = AssessMetricsWeekly,
+                        Monthly = AssessMetricsMonthly
+                    },
+                    AssessLastTraining = new AthleteLimitWindow
+                    {
+                        Weekly = AssessLastTrainingWeekly,
+                        Monthly = AssessLastTrainingMonthly
+                    },
+                    AssessWeek = new AthleteLimitWindow
+                    {
+                        Weekly = AssessWeekWeekly,
+                        Monthly = AssessWeekMonthly
+                    }
+                },
+                Locked = Locked,
+                Message = Message,
+                UpdatedAt = UpdatedAt
+            };
+        }
+    }
+
+    private sealed class LevelGridRow
+    {
+        public string Id { get; init; } = string.Empty;
+
+        public string Level { get; init; } = string.Empty;
+
+        public string Label { get; init; } = string.Empty;
+
+        public DateTime UpdatedAt { get; init; }
+
+        public LevelConfig Document { get; init; } = new();
+
+        public LevelConfig ToModel()
+        {
+            return CloneLevelConfig(Document);
+        }
     }
 }
