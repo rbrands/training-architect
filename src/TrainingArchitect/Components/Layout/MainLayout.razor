@@ -81,7 +81,13 @@
 <footer class="border-top py-3 small premium-footer">
     <div class="container d-flex justify-content-between align-items-center" style="max-width: 900px;">
         <span class="text-secondary">&copy; @DateTime.UtcNow.Year @(_about?.FooterCopyright ?? "Brands Advisory")</span>
-        <span class="text-secondary app-version">@ApplicationVersionInfo.Current.Display</span>
+        <a href="https://github.com/rbrands/training-architect/blob/main/CHANGELOG.md"
+           class="text-secondary text-decoration-none app-version"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Open changelog">
+            @ApplicationVersionInfo.Current.Display
+        </a>
         <span class="text-secondary d-flex align-items-center gap-3">
             @if (!string.IsNullOrEmpty(_about?.FooterLink))
             {
