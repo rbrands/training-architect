@@ -212,6 +212,17 @@ public static class CoachEndpoints
 
         var athleteConfig = await EnsureAthleteConfigAsync(athleteRepository, levelRepository, athleteIdHeader, logger);
 
+        if (athleteConfig.Locked)
+        {
+            var lockMessage = string.IsNullOrWhiteSpace(athleteConfig.Message)
+                ? "Your athlete account is locked. Please contact support to re-enable access."
+                : athleteConfig.Message.Trim();
+
+            return Results.Json(
+                new { error = lockMessage },
+                statusCode: StatusCodes.Status423Locked);
+        }
+
         var limitError = await CheckTokenLimitAsync(
             usageCounterRepository,
             levelRepository,
