@@ -224,7 +224,7 @@
 
                             @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
                             {
-                                <p class="coach-assess-error" role="alert">@cardState.ErrorMessage</p>
+                                <p class="@GetErrorCssClass(cardState.ErrorMessage)" role="alert">@cardState.ErrorMessage</p>
                             }
                         </CardContent>
                         <CardFooter>
@@ -425,7 +425,7 @@
                 <CardContent>
                     @if (!string.IsNullOrWhiteSpace(_planErrorMessage))
                     {
-                        <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
+                        <p class="@GetErrorCssClass(_planErrorMessage)" role="alert">@_planErrorMessage</p>
                     }
 
                     <div class="coach-custom-tabs">
@@ -1187,6 +1187,67 @@
         return message.Trim();
     }
 
+    private static string FormatRequestError(string requestType, string? message)
+    {
+        var fallback = $"{requestType} request failed. Please try again.";
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return fallback;
+        }
+
+        if (TryExtractRequestErrorText(message, out var endpointMessage))
+        {
+            return endpointMessage;
+        }
+
+        return message.Trim();
+    }
+
+    private static bool TryExtractRequestErrorText(string message, out string endpointMessage)
+    {
+        endpointMessage = string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(message);
+            if (!TryFindErrorPayload(document.RootElement, out var payload))
+            {
+                return false;
+            }
+
+            var errorText = GetStringProperty(payload, "error");
+            if (string.IsNullOrWhiteSpace(errorText))
+            {
+                return false;
+            }
+
+            endpointMessage = errorText.Trim();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string GetErrorCssClass(string? message)
+    {
+        return IsTokenLimitError(message)
+            ? "coach-assess-error coach-assess-error-limit"
+            : "coach-assess-error";
+    }
+
+    private static bool IsTokenLimitError(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("Monthly token limit", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Weekly token limit", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool TryExtractConnectionError(string message, out string conciseMessage)
     {
         conciseMessage = string.Empty;
@@ -1727,9 +1788,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                state.ErrorMessage = string.IsNullOrWhiteSpace(errorBody)
-                    ? "Assess request failed. Please try again."
-                    : $"Assess request failed: {errorBody}";
+                state.ErrorMessage = FormatRequestError("Assess", errorBody);
                 return;
             }
 
@@ -1792,9 +1851,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                _planErrorMessage = string.IsNullOrWhiteSpace(errorBody)
-                    ? "Plan request failed. Please try again."
-                    : $"Plan request failed: {errorBody}";
+                _planErrorMessage = FormatRequestError("Plan", errorBody);
                 return;
             }
 

@@ -25,6 +25,12 @@ public sealed class AthleteConfig : CosmosDocument
     public string Message { get; set; } = string.Empty;
 
     public override string Type => DocumentType;
+
+    /// <summary>
+    /// Returns the Cosmos document id used for storage operations.
+    /// Falls back to the athlete id for legacy documents that were created before the document id was normalized.
+    /// </summary>
+    public string GetDeleteId() => string.IsNullOrWhiteSpace(Id) ? AthleteId : Id;
 }
 
 /// <summary>

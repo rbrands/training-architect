@@ -5,4 +5,7 @@
     <Project Path="src/TrainingArchitect.Infrastructure/TrainingArchitect.Infrastructure.csproj" />
     <Project Path="src/TrainingArchitect/TrainingArchitect.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TrainingArchitect.Tests/TrainingArchitect.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -900,6 +900,14 @@
     font-weight: 600;
 }
 
+.coach-assess-error-limit {
+    color: #8a5f13;
+    background: #fff4df;
+    border: 1px solid #f0d6a2;
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+}
+
 .coach-assess-spinner {
     width: 0.9rem;
     height: 0.9rem;
