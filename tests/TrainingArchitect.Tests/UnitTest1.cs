@@ -1,10 +1,3 @@
 ﻿namespace TrainingArchitect.Tests;
 
-public class UnitTest1
-{
-    [Fact]
-    public void Test1()
-    {
-
-    }
-}
+// Placeholder removed; add new tests in dedicated files/classes.
