@@ -18,6 +18,26 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.0.0] - 2026-08-04
+
+### Added
+- Athlete connect/read flow now returns athlete level metadata (`Level`, `LevelLabel`) for UI usage.
+- Coach status now shows a level label badge when configured for the connected athlete.
+- Admin athlete editor now includes an "Apply Level Default Limits" action to copy default limits from the selected level.
+
+### Changed
+- Admin token values are now rendered with thousands separators in `Usage`, `Levels`, and `Athletes` grids.
+- Athlete level selection in Admin no longer offers the `global` level.
+- Coach Assess cards were visually updated (icon-before-title layout) and section heading cleanup was applied.
+
+### Fixed
+- Existing locked athlete configs now reject connect/read requests with explicit lock messaging and HTTP 423.
+- Added explicit structured warning logs for token limit rejections (`/api/coach/assess`, `/api/coach/plan`) to improve App Insights diagnostics.
+- Server-side `IAthleteSession` stub now fully implements the extended contract (`Level`, `LevelLabel`).
+
+### Removed
+- "Standard Prompts" heading from the Coach page.
+
 ## [0.4.2] - 2026-08-03
 
 ### Added
