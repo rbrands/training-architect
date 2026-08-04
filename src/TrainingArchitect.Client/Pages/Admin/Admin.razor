@@ -163,6 +163,7 @@
                                     <GridColumn Field="@nameof(LevelGridRow.Id)" HeaderText="ID" Width="180" />
                                     <GridColumn Field="@nameof(LevelGridRow.Level)" HeaderText="Level" Width="120" />
                                     <GridColumn Field="@nameof(LevelGridRow.Label)" HeaderText="Label" Width="180" />
+                                    <GridColumn Field="@nameof(LevelGridRow.Token)" HeaderText="Token" TextAlign="TextAlign.Right" Width="90" />
                                     <GridColumn Field="@nameof(LevelGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
                                 </GridColumns>
                             </SfGrid>
@@ -205,75 +206,10 @@
                                             <label class="form-label text-secondary small">Type</label>
                                             <div class="form-control bg-body-tertiary text-secondary" aria-readonly="true">@_selectedLevel.Type</div>
                                         </div>
-                                    </div>
 
-                                    <div class="row g-3">
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Plan Create</div>
-                                                <div class="text-secondary small mb-3">Limit for creating a new training plan</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.PlanCreate.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.PlanCreate.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Metrics</div>
-                                                <div class="text-secondary small mb-3">Limit for metric assessments</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessMetrics.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessMetrics.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Last Training</div>
-                                                <div class="text-secondary small mb-3">Limit for the last training session assessment</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessLastTraining.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessLastTraining.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Week</div>
-                                                <div class="text-secondary small mb-3">Limit for the weekly assessment flow</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessWeek.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.AssessWeek.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Token</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.Token" />
                                         </div>
                                     </div>
                                 </div>
@@ -346,6 +282,7 @@
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AthleteGridRow.AthleteId)" HeaderText="Athlete" Width="140" />
                                     <GridColumn Field="@nameof(AthleteGridRow.Level)" HeaderText="Level" Width="100" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.Token)" HeaderText="Token" TextAlign="TextAlign.Right" Width="90" />
                                     <GridColumn Field="@nameof(AthleteGridRow.Locked)" HeaderText="Locked" Width="110" TextAlign="TextAlign.Center">
                                         <Template>
                                             @{ var row = context as AthleteGridRow; }
@@ -355,14 +292,6 @@
                                         </Template>
                                     </GridColumn>
                                     <GridColumn Field="@nameof(AthleteGridRow.Message)" HeaderText="Message" Width="240" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.PlanCreateWeekly)" HeaderText="Plan W" TextAlign="TextAlign.Right" Width="80" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.PlanCreateMonthly)" HeaderText="Plan M" TextAlign="TextAlign.Right" Width="80" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessMetricsWeekly)" HeaderText="Metrics W" TextAlign="TextAlign.Right" Width="90" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessMetricsMonthly)" HeaderText="Metrics M" TextAlign="TextAlign.Right" Width="90" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessLastTrainingWeekly)" HeaderText="Last W" TextAlign="TextAlign.Right" Width="80" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessLastTrainingMonthly)" HeaderText="Last M" TextAlign="TextAlign.Right" Width="80" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessWeekWeekly)" HeaderText="Week W" TextAlign="TextAlign.Right" Width="80" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.AssessWeekMonthly)" HeaderText="Week M" TextAlign="TextAlign.Right" Width="80" />
                                 </GridColumns>
                             </SfGrid>
 
@@ -416,75 +345,10 @@
                                             <label class="form-label text-secondary small">Message</label>
                                             <textarea class="form-control" rows="2" @bind="_selectedAthlete.Message"></textarea>
                                         </div>
-                                    </div>
 
-                                    <div class="row g-3">
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Plan Create</div>
-                                                <div class="text-secondary small mb-3">Limit for creating a new training plan</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.PlanCreate.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.PlanCreate.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Metrics</div>
-                                                <div class="text-secondary small mb-3">Limit for metric assessments</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessMetrics.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessMetrics.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Last Training</div>
-                                                <div class="text-secondary small mb-3">Limit for the last training session assessment</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessLastTraining.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessLastTraining.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-lg-6">
-                                            <div class="card-dark border border-secondary-subtle p-3 h-100">
-                                                <div class="fw-semibold text-white mb-1">Assess Week</div>
-                                                <div class="text-secondary small mb-3">Limit for the weekly assessment flow</div>
-                                                <div class="row g-3">
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Weekly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessWeek.Weekly" />
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label text-secondary small">Monthly</label>
-                                                        <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.AssessWeek.Monthly" />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label text-secondary small">Token</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.Token" />
                                         </div>
                                     </div>
                                 </div>
@@ -976,14 +840,7 @@
             Level = config.Level,
             Locked = config.Locked,
             Message = config.Message,
-            PlanCreateWeekly = config.Limits.PlanCreate.Weekly,
-            PlanCreateMonthly = config.Limits.PlanCreate.Monthly,
-            AssessMetricsWeekly = config.Limits.AssessMetrics.Weekly,
-            AssessMetricsMonthly = config.Limits.AssessMetrics.Monthly,
-            AssessLastTrainingWeekly = config.Limits.AssessLastTraining.Weekly,
-            AssessLastTrainingMonthly = config.Limits.AssessLastTraining.Monthly,
-            AssessWeekWeekly = config.Limits.AssessWeek.Weekly,
-            AssessWeekMonthly = config.Limits.AssessWeek.Monthly,
+            Token = config.Limits.Token,
             UpdatedAt = config.UpdatedAt
         };
     }
@@ -997,26 +854,7 @@
             Level = source.Level,
             Limits = new AthleteLimits
             {
-                PlanCreate = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.PlanCreate.Weekly,
-                    Monthly = source.Limits.PlanCreate.Monthly
-                },
-                AssessMetrics = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessMetrics.Weekly,
-                    Monthly = source.Limits.AssessMetrics.Monthly
-                },
-                AssessLastTraining = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessLastTraining.Weekly,
-                    Monthly = source.Limits.AssessLastTraining.Monthly
-                },
-                AssessWeek = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessWeek.Weekly,
-                    Monthly = source.Limits.AssessWeek.Monthly
-                }
+                Token = source.Limits.Token
             },
             Locked = source.Locked,
             Message = source.Message,
@@ -1033,10 +871,7 @@
             Level = "basic",
             Limits = new AthleteLimits
             {
-                PlanCreate = new AthleteLimitWindow { Weekly = 2, Monthly = 0 },
-                AssessMetrics = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
-                AssessLastTraining = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
-                AssessWeek = new AthleteLimitWindow { Weekly = 0, Monthly = 0 }
+                Token = 0
             },
             Locked = false,
             Message = string.Empty
@@ -1074,6 +909,7 @@
             Id = config.Id,
             Level = config.Level,
             Label = config.Label,
+            Token = config.Limits.Token,
             UpdatedAt = config.UpdatedAt,
             Document = CloneLevelConfig(config)
         };
@@ -1086,30 +922,7 @@
             Id = source.Id,
             Level = source.Level,
             Label = source.Label,
-            Limits = new AthleteLimits
-            {
-                PlanCreate = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.PlanCreate.Weekly,
-                    Monthly = source.Limits.PlanCreate.Monthly
-                },
-                AssessMetrics = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessMetrics.Weekly,
-                    Monthly = source.Limits.AssessMetrics.Monthly
-                },
-                AssessLastTraining = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessLastTraining.Weekly,
-                    Monthly = source.Limits.AssessLastTraining.Monthly
-                },
-                AssessWeek = new AthleteLimitWindow
-                {
-                    Weekly = source.Limits.AssessWeek.Weekly,
-                    Monthly = source.Limits.AssessWeek.Monthly
-                }
-            },
-            CreatedAt = source.CreatedAt,
+            Limits = new AthleteLimits { Token = source.Limits.Token },
             UpdatedAt = source.UpdatedAt,
             TimeToLive = source.TimeToLive
         };
@@ -1123,10 +936,7 @@
             Label = "Basic",
             Limits = new AthleteLimits
             {
-                PlanCreate = new AthleteLimitWindow { Weekly = 2, Monthly = 0 },
-                AssessMetrics = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
-                AssessLastTraining = new AthleteLimitWindow { Weekly = 0, Monthly = 0 },
-                AssessWeek = new AthleteLimitWindow { Weekly = 0, Monthly = 0 }
+                Token = 0
             }
         };
     }
@@ -1160,21 +970,7 @@
 
         public string Message { get; init; } = string.Empty;
 
-        public int PlanCreateWeekly { get; init; }
-
-        public int PlanCreateMonthly { get; init; }
-
-        public int AssessMetricsWeekly { get; init; }
-
-        public int AssessMetricsMonthly { get; init; }
-
-        public int AssessLastTrainingWeekly { get; init; }
-
-        public int AssessLastTrainingMonthly { get; init; }
-
-        public int AssessWeekWeekly { get; init; }
-
-        public int AssessWeekMonthly { get; init; }
+        public int Token { get; init; }
 
         public DateTime UpdatedAt { get; init; }
 
@@ -1187,26 +983,7 @@
                 Level = Level,
                 Limits = new AthleteLimits
                 {
-                    PlanCreate = new AthleteLimitWindow
-                    {
-                        Weekly = PlanCreateWeekly,
-                        Monthly = PlanCreateMonthly
-                    },
-                    AssessMetrics = new AthleteLimitWindow
-                    {
-                        Weekly = AssessMetricsWeekly,
-                        Monthly = AssessMetricsMonthly
-                    },
-                    AssessLastTraining = new AthleteLimitWindow
-                    {
-                        Weekly = AssessLastTrainingWeekly,
-                        Monthly = AssessLastTrainingMonthly
-                    },
-                    AssessWeek = new AthleteLimitWindow
-                    {
-                        Weekly = AssessWeekWeekly,
-                        Monthly = AssessWeekMonthly
-                    }
+                    Token = Token
                 },
                 Locked = Locked,
                 Message = Message,
@@ -1222,6 +999,8 @@
         public string Level { get; init; } = string.Empty;
 
         public string Label { get; init; } = string.Empty;
+
+        public int Token { get; init; }
 
         public DateTime UpdatedAt { get; init; }
 

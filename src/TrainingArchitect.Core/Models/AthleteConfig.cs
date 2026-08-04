@@ -32,27 +32,6 @@ public sealed class AthleteConfig : CosmosDocument
 /// </summary>
 public sealed class AthleteLimits
 {
-    [JsonPropertyName("plan_create")]
-    public AthleteLimitWindow PlanCreate { get; set; } = new();
-
-    [JsonPropertyName("assess_metrics")]
-    public AthleteLimitWindow AssessMetrics { get; set; } = new();
-
-    [JsonPropertyName("assess_last_training")]
-    public AthleteLimitWindow AssessLastTraining { get; set; } = new();
-
-    [JsonPropertyName("assess_week")]
-    public AthleteLimitWindow AssessWeek { get; set; } = new();
-}
-
-/// <summary>
-/// Weekly and monthly allowance for one action.
-/// </summary>
-public sealed class AthleteLimitWindow
-{
-    [JsonPropertyName("weekly")]
-    public int Weekly { get; set; }
-
-    [JsonPropertyName("monthly")]
-    public int Monthly { get; set; }
+    [JsonPropertyName("token")]
+    public int Token { get; set; }
 }
