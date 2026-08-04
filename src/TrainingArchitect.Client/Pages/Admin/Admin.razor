@@ -94,9 +94,24 @@
                                     <GridColumn Field="@nameof(UsageGridRow.UsageType)" HeaderText="Type" Width="120" />
                                     <GridColumn Field="@nameof(UsageGridRow.PeriodKey)" HeaderText="Period" Width="100" />
                                     <GridColumn Field="@nameof(UsageGridRow.AthleteId)" HeaderText="Athlete" Width="120" />
-                                    <GridColumn Field="@nameof(UsageGridRow.TotalInputTokens)" HeaderText="Input" TextAlign="TextAlign.Right" Width="110" />
-                                    <GridColumn Field="@nameof(UsageGridRow.TotalCachedTokens)" HeaderText="Cached" TextAlign="TextAlign.Right" Width="110" />
-                                    <GridColumn Field="@nameof(UsageGridRow.TotalOutputTokens)" HeaderText="Output" TextAlign="TextAlign.Right" Width="110" />
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalInputTokens)" HeaderText="Input" TextAlign="TextAlign.Right" Width="110">
+                                        <Template>
+                                            @{ var row = context as UsageGridRow; }
+                                            @FormatTokenNumber(row?.TotalInputTokens ?? 0)
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalCachedTokens)" HeaderText="Cached" TextAlign="TextAlign.Right" Width="110">
+                                        <Template>
+                                            @{ var row = context as UsageGridRow; }
+                                            @FormatTokenNumber(row?.TotalCachedTokens ?? 0)
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field="@nameof(UsageGridRow.TotalOutputTokens)" HeaderText="Output" TextAlign="TextAlign.Right" Width="110">
+                                        <Template>
+                                            @{ var row = context as UsageGridRow; }
+                                            @FormatTokenNumber(row?.TotalOutputTokens ?? 0)
+                                        </Template>
+                                    </GridColumn>
                                     <GridColumn Field="@nameof(UsageGridRow.ActionSummary)" HeaderText="Actions" Width="450" />
                                 </GridColumns>
                             </SfGrid>

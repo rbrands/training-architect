@@ -206,8 +206,6 @@
     </SfCard>
 
     <section class="coach-section">
-        <h2 class="coach-section-title">Standard Prompts</h2>
-
         @if (_expandedCard is null)
         {
             <div class="coach-prompt-grid">
@@ -217,21 +215,25 @@
 
                     <SfCard CssClass="coach-prompt-card">
                         <CardContent>
-                            <div class="coach-prompt-icon" aria-hidden="true">
-                                <i class="@prompt.IconClass"></i>
+                            <div class="coach-prompt-content">
+                                <div class="coach-prompt-heading">
+                                    <div class="coach-prompt-icon" aria-hidden="true">
+                                        <i class="@prompt.IconClass"></i>
+                                    </div>
+                                    <h3 class="coach-prompt-title">@prompt.Title</h3>
+                                </div>
+                                <p class="coach-prompt-description mb-0">@prompt.Description</p>
+
+                                @if (cardState.TotalTokens is not null)
+                                {
+                                    <p class="coach-token-hint mb-0">Token usage: @cardState.TotalTokens.Value.ToString("N0")</p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
+                                {
+                                    <p class="@GetErrorCssClass(cardState.ErrorMessage)" role="alert">@cardState.ErrorMessage</p>
+                                }
                             </div>
-                            <h3 class="coach-prompt-title">@prompt.Title</h3>
-                            <p class="coach-prompt-description mb-0">@prompt.Description</p>
-
-                            @if (cardState.TotalTokens is not null)
-                            {
-                                <p class="coach-token-hint mb-0">Token usage: @cardState.TotalTokens.Value.ToString("N0")</p>
-                            }
-
-                            @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
-                            {
-                                <p class="@GetErrorCssClass(cardState.ErrorMessage)" role="alert">@cardState.ErrorMessage</p>
-                            }
                         </CardContent>
                         <CardFooter>
                             <CardFooterContent>
@@ -265,16 +267,20 @@
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
                     <CardContent>
-                        <div class="coach-prompt-icon" aria-hidden="true">
-                            <i class="@expandedPrompt.IconClass"></i>
-                        </div>
-                        <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
-                        <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                        <div class="coach-prompt-content">
+                            <div class="coach-prompt-heading">
+                                <div class="coach-prompt-icon" aria-hidden="true">
+                                    <i class="@expandedPrompt.IconClass"></i>
+                                </div>
+                                <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
+                            </div>
+                            <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
 
-                        @if (expandedState.TotalTokens is not null)
-                        {
-                            <p class="coach-token-hint mb-0">Token usage: @expandedState.TotalTokens.Value.ToString("N0")</p>
-                        }
+                            @if (expandedState.TotalTokens is not null)
+                            {
+                                <p class="coach-token-hint mb-0">Token usage: @expandedState.TotalTokens.Value.ToString("N0")</p>
+                            }
+                        </div>
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>

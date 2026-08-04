@@ -140,6 +140,14 @@ public static class CoachEndpoints
 
         if (limitError is not null)
         {
+            logger.LogWarning(
+                "Rejected /api/coach/assess for athlete {AthleteId} due to token limit. Level: {Level}. WeeklyLimit: {WeeklyLimit}. MonthlyLimit: {MonthlyLimit}. Reason: {Reason}",
+                athleteIdHeader,
+                athleteConfig.Level,
+                athleteConfig.Limits.WeeklyToken,
+                athleteConfig.Limits.MonthlyToken,
+                limitError);
+
             return Results.Json(
                 new { error = limitError },
                 statusCode: StatusCodes.Status429TooManyRequests);
@@ -202,6 +210,14 @@ public static class CoachEndpoints
 
         if (limitError is not null)
         {
+            logger.LogWarning(
+                "Rejected /api/coach/plan for athlete {AthleteId} due to token limit. Level: {Level}. WeeklyLimit: {WeeklyLimit}. MonthlyLimit: {MonthlyLimit}. Reason: {Reason}",
+                athleteIdHeader,
+                athleteConfig.Level,
+                athleteConfig.Limits.WeeklyToken,
+                athleteConfig.Limits.MonthlyToken,
+                limitError);
+
             return Results.Json(
                 new { error = limitError },
                 statusCode: StatusCodes.Status429TooManyRequests);
