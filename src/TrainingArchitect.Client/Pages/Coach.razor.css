@@ -81,6 +81,18 @@
     color: #4d463b;
 }
 
+.coach-level-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    background-color: #e7eefb;
+    color: #2f4f8f;
+}
+
 .coach-status-topline.status-connected .coach-status-badge {
     background-color: #edf5e4;
     color: #3c6c28;
@@ -900,6 +912,14 @@
     font-weight: 600;
 }
 
+.coach-assess-error-limit {
+    color: #8a5f13;
+    background: #fff4df;
+    border: 1px solid #f0d6a2;
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+}
+
 .coach-assess-spinner {
     width: 0.9rem;
     height: 0.9rem;
@@ -913,7 +933,12 @@
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
-    min-height: 11.25rem;
+    padding-top: 0 !important;
+    min-height: 10.25rem;
+}
+
+.coach-prompt-content {
+    margin-top: -0.45rem;
 }
 
 .coach-page ::deep .coach-prompt-card .e-card-actions {
@@ -922,12 +947,19 @@
 
 .coach-prompt-icon {
     color: #4d463b;
-    font-size: 1.15rem;
+    font-size: 1.7rem;
+    line-height: 1;
+}
+
+.coach-prompt-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .coach-prompt-title {
     margin: 0;
-    font-size: 1.55rem;
+    font-size: 1.45rem;
     font-weight: 700;
     line-height: 1.2;
     color: #1f2328;

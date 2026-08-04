@@ -9,7 +9,7 @@ namespace TrainingArchitect.Core.Models;
 public abstract class CosmosDocument
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("type")]
     public abstract string Type { get; }

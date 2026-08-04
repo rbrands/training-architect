@@ -42,6 +42,12 @@
                             <i class="bi @StatusIconClass"></i>
                         </span>
                         <span class="coach-status-title">@StatusText@AthleteSuffix</span>
+                        @if (ShowLevelLabelBadge)
+                        {
+                            <span class="coach-level-badge" title="Configured athlete level label">
+                                @Session.LevelLabel
+                            </span>
+                        }
                     </div>
                     @if (ShowRememberedNote)
                     {
@@ -200,8 +206,6 @@
     </SfCard>
 
     <section class="coach-section">
-        <h2 class="coach-section-title">Standard Prompts</h2>
-
         @if (_expandedCard is null)
         {
             <div class="coach-prompt-grid">
@@ -211,21 +215,25 @@
 
                     <SfCard CssClass="coach-prompt-card">
                         <CardContent>
-                            <div class="coach-prompt-icon" aria-hidden="true">
-                                <i class="@prompt.IconClass"></i>
+                            <div class="coach-prompt-content">
+                                <div class="coach-prompt-heading">
+                                    <div class="coach-prompt-icon" aria-hidden="true">
+                                        <i class="@prompt.IconClass"></i>
+                                    </div>
+                                    <h3 class="coach-prompt-title">@prompt.Title</h3>
+                                </div>
+                                <p class="coach-prompt-description mb-0">@prompt.Description</p>
+
+                                @if (cardState.TotalTokens is not null)
+                                {
+                                    <p class="coach-token-hint mb-0">Token usage: @cardState.TotalTokens.Value.ToString("N0")</p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
+                                {
+                                    <p class="@GetErrorCssClass(cardState.ErrorMessage)" role="alert">@cardState.ErrorMessage</p>
+                                }
                             </div>
-                            <h3 class="coach-prompt-title">@prompt.Title</h3>
-                            <p class="coach-prompt-description mb-0">@prompt.Description</p>
-
-                            @if (cardState.TotalTokens is not null)
-                            {
-                                <p class="coach-token-hint mb-0">Token usage: @cardState.TotalTokens.Value.ToString("N0")</p>
-                            }
-
-                            @if (!string.IsNullOrWhiteSpace(cardState.ErrorMessage))
-                            {
-                                <p class="coach-assess-error" role="alert">@cardState.ErrorMessage</p>
-                            }
                         </CardContent>
                         <CardFooter>
                             <CardFooterContent>
@@ -259,16 +267,20 @@
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
                     <CardContent>
-                        <div class="coach-prompt-icon" aria-hidden="true">
-                            <i class="@expandedPrompt.IconClass"></i>
-                        </div>
-                        <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
-                        <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                        <div class="coach-prompt-content">
+                            <div class="coach-prompt-heading">
+                                <div class="coach-prompt-icon" aria-hidden="true">
+                                    <i class="@expandedPrompt.IconClass"></i>
+                                </div>
+                                <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
+                            </div>
+                            <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
 
-                        @if (expandedState.TotalTokens is not null)
-                        {
-                            <p class="coach-token-hint mb-0">Token usage: @expandedState.TotalTokens.Value.ToString("N0")</p>
-                        }
+                            @if (expandedState.TotalTokens is not null)
+                            {
+                                <p class="coach-token-hint mb-0">Token usage: @expandedState.TotalTokens.Value.ToString("N0")</p>
+                            }
+                        </div>
                     </CardContent>
                     <CardFooter>
                         <CardFooterContent>
@@ -425,7 +437,7 @@
                 <CardContent>
                     @if (!string.IsNullOrWhiteSpace(_planErrorMessage))
                     {
-                        <p class="coach-assess-error" role="alert">@_planErrorMessage</p>
+                        <p class="@GetErrorCssClass(_planErrorMessage)" role="alert">@_planErrorMessage</p>
                     }
 
                     <div class="coach-custom-tabs">
@@ -766,6 +778,10 @@
     private string AthleteSuffix => string.IsNullOrWhiteSpace(Session.AthleteId)
         ? string.Empty
         : $" · Athlete {Session.AthleteId}";
+
+    private bool ShowLevelLabelBadge =>
+        Session.State == CoachConnectionState.Connected &&
+        !string.IsNullOrWhiteSpace(Session.LevelLabel);
 
     private string StatusCssClass => Session.State switch
     {
@@ -1185,6 +1201,67 @@
         }
 
         return message.Trim();
+    }
+
+    private static string FormatRequestError(string requestType, string? message)
+    {
+        var fallback = $"{requestType} request failed. Please try again.";
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return fallback;
+        }
+
+        if (TryExtractRequestErrorText(message, out var endpointMessage))
+        {
+            return endpointMessage;
+        }
+
+        return message.Trim();
+    }
+
+    private static bool TryExtractRequestErrorText(string message, out string endpointMessage)
+    {
+        endpointMessage = string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(message);
+            if (!TryFindErrorPayload(document.RootElement, out var payload))
+            {
+                return false;
+            }
+
+            var errorText = GetStringProperty(payload, "error");
+            if (string.IsNullOrWhiteSpace(errorText))
+            {
+                return false;
+            }
+
+            endpointMessage = errorText.Trim();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string GetErrorCssClass(string? message)
+    {
+        return IsTokenLimitError(message)
+            ? "coach-assess-error coach-assess-error-limit"
+            : "coach-assess-error";
+    }
+
+    private static bool IsTokenLimitError(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("Monthly token limit", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Weekly token limit", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryExtractConnectionError(string message, out string conciseMessage)
@@ -1727,9 +1804,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                state.ErrorMessage = string.IsNullOrWhiteSpace(errorBody)
-                    ? "Assess request failed. Please try again."
-                    : $"Assess request failed: {errorBody}";
+                state.ErrorMessage = FormatRequestError("Assess", errorBody);
                 return;
             }
 
@@ -1792,9 +1867,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                _planErrorMessage = string.IsNullOrWhiteSpace(errorBody)
-                    ? "Plan request failed. Please try again."
-                    : $"Plan request failed: {errorBody}";
+                _planErrorMessage = FormatRequestError("Plan", errorBody);
                 return;
             }
 

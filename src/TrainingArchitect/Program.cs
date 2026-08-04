@@ -264,6 +264,8 @@ builder.Services.AddSingleton(sp =>
 });
 
 // Repositories
+builder.Services.AddSingleton<IAthleteRepository, AthleteRepository>();
+builder.Services.AddSingleton<ILevelRepository, LevelRepository>();
 builder.Services.AddSingleton<IArticleRepository, ArticleRepository>();
 builder.Services.AddSingleton<IProjectRepository, ProjectRepository>();
 builder.Services.AddSingleton<IAboutRepository, AboutRepository>();

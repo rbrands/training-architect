@@ -1,3 +1,4 @@
+using System.Globalization;
 using TrainingArchitect.Services;
 using TrainingArchitect.Core.Constants;
 using TrainingArchitect.Core.Interfaces;
@@ -110,6 +111,8 @@ public static class CoachEndpoints
         HttpContext       httpContext,
         AssessRequest      request,
         ICoachingAgent     agent,
+        IAthleteRepository athleteRepository,
+        ILevelRepository levelRepository,
         IUsageCounterRepository usageCounterRepository,
         ILoggerFactory loggerFactory,
         CancellationToken  ct)
@@ -124,6 +127,41 @@ public static class CoachEndpoints
             {
                 error = "Missing required headers: X-Intervals-Athlete-Id and X-Intervals-Api-Key."
             });
+        }
+
+        var athleteConfig = await EnsureAthleteConfigAsync(athleteRepository, levelRepository, athleteIdHeader, logger);
+
+        if (athleteConfig.Locked)
+        {
+            var lockMessage = string.IsNullOrWhiteSpace(athleteConfig.Message)
+                ? "Your athlete account is locked. Please contact support to re-enable access."
+                : athleteConfig.Message.Trim();
+
+            return Results.Json(
+                new { error = lockMessage },
+                statusCode: StatusCodes.Status423Locked);
+        }
+
+        var limitError = await CheckTokenLimitAsync(
+            usageCounterRepository,
+            levelRepository,
+            athleteConfig,
+            athleteIdHeader,
+            logger);
+
+        if (limitError is not null)
+        {
+            logger.LogWarning(
+                "Rejected /api/coach/assess for athlete {AthleteId} due to token limit. Level: {Level}. WeeklyLimit: {WeeklyLimit}. MonthlyLimit: {MonthlyLimit}. Reason: {Reason}",
+                athleteIdHeader,
+                athleteConfig.Level,
+                athleteConfig.Limits.WeeklyToken,
+                athleteConfig.Limits.MonthlyToken,
+                limitError);
+
+            return Results.Json(
+                new { error = limitError },
+                statusCode: StatusCodes.Status429TooManyRequests);
         }
 
         var prompt = PromptBuilder.BuildAssessPrompt(request);
@@ -135,14 +173,17 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
+        var inputTokens = ToInt32NonNegative(result.InputTokens);
+        var outputTokens = ToInt32NonNegative(result.OutputTokens);
+
         await RecordUsageBestEffortAsync(
             usageCounterRepository,
             logger,
             athleteIdHeader,
             MapAssessAction(request.AssessmentType),
-            ToInt32NonNegative(result.InputTokens),
+            inputTokens,
             ToInt32NonNegative(result.CachedInputTokens),
-            ToInt32NonNegative(result.OutputTokens));
+            outputTokens);
 
         return Results.Ok(new AssessResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
@@ -151,6 +192,8 @@ public static class CoachEndpoints
         HttpContext       httpContext,
         PlanRequest        request,
         ICoachingAgent     agent,
+        IAthleteRepository athleteRepository,
+        ILevelRepository levelRepository,
         IUsageCounterRepository usageCounterRepository,
         ILoggerFactory loggerFactory,
         CancellationToken  ct)
@@ -167,6 +210,41 @@ public static class CoachEndpoints
             });
         }
 
+        var athleteConfig = await EnsureAthleteConfigAsync(athleteRepository, levelRepository, athleteIdHeader, logger);
+
+        if (athleteConfig.Locked)
+        {
+            var lockMessage = string.IsNullOrWhiteSpace(athleteConfig.Message)
+                ? "Your athlete account is locked. Please contact support to re-enable access."
+                : athleteConfig.Message.Trim();
+
+            return Results.Json(
+                new { error = lockMessage },
+                statusCode: StatusCodes.Status423Locked);
+        }
+
+        var limitError = await CheckTokenLimitAsync(
+            usageCounterRepository,
+            levelRepository,
+            athleteConfig,
+            athleteIdHeader,
+            logger);
+
+        if (limitError is not null)
+        {
+            logger.LogWarning(
+                "Rejected /api/coach/plan for athlete {AthleteId} due to token limit. Level: {Level}. WeeklyLimit: {WeeklyLimit}. MonthlyLimit: {MonthlyLimit}. Reason: {Reason}",
+                athleteIdHeader,
+                athleteConfig.Level,
+                athleteConfig.Limits.WeeklyToken,
+                athleteConfig.Limits.MonthlyToken,
+                limitError);
+
+            return Results.Json(
+                new { error = limitError },
+                statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
         var prompt = PromptBuilder.BuildPlanPrompt(request);
         var result = await agent.PromptAsync(
             prompt,
@@ -176,14 +254,17 @@ public static class CoachEndpoints
             intervalsAthleteId: athleteIdHeader,
             intervalsApiKey: apiKeyHeader);
 
+        var inputTokens = ToInt32NonNegative(result.InputTokens);
+        var outputTokens = ToInt32NonNegative(result.OutputTokens);
+
         await RecordUsageBestEffortAsync(
             usageCounterRepository,
             logger,
             athleteIdHeader,
             "plan_create",
-            ToInt32NonNegative(result.InputTokens),
+            inputTokens,
             ToInt32NonNegative(result.CachedInputTokens),
-            ToInt32NonNegative(result.OutputTokens));
+            outputTokens);
 
         return Results.Ok(new PlanResponse(result.Content, result.TotalTokens, result.ResponseId));
     }
@@ -255,6 +336,114 @@ public static class CoachEndpoints
     }
 
     private sealed record PlanUploadRequest(string WeekPlanJson);
+
+    private static async Task<AthleteConfig> EnsureAthleteConfigAsync(
+        IAthleteRepository athleteRepository,
+        ILevelRepository levelRepository,
+        string athleteId,
+        ILogger logger)
+    {
+        var existingConfig = await athleteRepository.GetByAthleteIdAsync(athleteId);
+        if (existingConfig is not null)
+        {
+            existingConfig.Limits ??= new AthleteLimits();
+            return existingConfig;
+        }
+
+        var basicLevelConfig = await levelRepository.GetByLevelAsync("basic");
+        var createdConfig = new AthleteConfig
+        {
+            AthleteId = athleteId,
+            Level = basicLevelConfig?.Level ?? "basic",
+            Limits = new AthleteLimits
+            {
+                WeeklyToken = basicLevelConfig?.Limits?.WeeklyToken ?? 0,
+                MonthlyToken = basicLevelConfig?.Limits?.MonthlyToken ?? 0
+            }
+        };
+
+        try
+        {
+            return await athleteRepository.UpsertAsync(createdConfig);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to create athlete config for {AthleteId}.", athleteId);
+            return createdConfig;
+        }
+    }
+
+    private static async Task<string?> CheckTokenLimitAsync(
+        IUsageCounterRepository usageCounterRepository,
+        ILevelRepository levelRepository,
+        AthleteConfig athleteConfig,
+        string athleteId,
+        ILogger logger)
+    {
+        const string GlobalLevelId = "level_global";
+        const string GlobalAthleteId = "__GLOBAL__";
+
+        try
+        {
+            var usageCounters = await usageCounterRepository.GetByAthleteIdAsync(athleteId);
+            var now = DateTime.UtcNow;
+            var monthlyPeriodKey = $"{now:yyyy-MM}";
+            var weeklyPeriodKey = $"{ISOWeek.GetYear(now)}-W{ISOWeek.GetWeekOfYear(now):00}";
+
+            var monthlyCounter = usageCounters.FirstOrDefault(counter =>
+                counter.UsageType == UsageCounter.MonthlyUsageType &&
+                string.Equals(counter.PeriodKey, monthlyPeriodKey, StringComparison.Ordinal));
+            var weeklyCounter = usageCounters.FirstOrDefault(counter =>
+                counter.UsageType == UsageCounter.WeeklyUsageType &&
+                string.Equals(counter.PeriodKey, weeklyPeriodKey, StringComparison.Ordinal));
+
+            var currentMonthlyTokens = (monthlyCounter?.TotalInputTokens ?? 0) + (monthlyCounter?.TotalOutputTokens ?? 0);
+            var currentWeeklyTokens = (weeklyCounter?.TotalInputTokens ?? 0) + (weeklyCounter?.TotalOutputTokens ?? 0);
+
+            if (athleteConfig.Limits.MonthlyToken > 0 && currentMonthlyTokens > athleteConfig.Limits.MonthlyToken)
+            {
+                return "Your monthly token limit exceeded.";
+            }
+
+            if (athleteConfig.Limits.WeeklyToken > 0 && currentWeeklyTokens > athleteConfig.Limits.WeeklyToken)
+            {
+                return "Your weekly token limit exceeded.";
+            }
+
+            var globalLevelConfig = await levelRepository.GetByIdAsync(GlobalLevelId);
+            if (globalLevelConfig is null)
+            {
+                return null;
+            }
+
+            var globalUsageCounters = await usageCounterRepository.GetByAthleteIdAsync(GlobalAthleteId);
+            var globalMonthlyCounter = globalUsageCounters.FirstOrDefault(counter =>
+                counter.UsageType == UsageCounter.MonthlyUsageType &&
+                string.Equals(counter.PeriodKey, monthlyPeriodKey, StringComparison.Ordinal));
+            var globalWeeklyCounter = globalUsageCounters.FirstOrDefault(counter =>
+                counter.UsageType == UsageCounter.WeeklyUsageType &&
+                string.Equals(counter.PeriodKey, weeklyPeriodKey, StringComparison.Ordinal));
+
+            var currentGlobalMonthlyTokens = (globalMonthlyCounter?.TotalInputTokens ?? 0) + (globalMonthlyCounter?.TotalOutputTokens ?? 0);
+            var currentGlobalWeeklyTokens = (globalWeeklyCounter?.TotalInputTokens ?? 0) + (globalWeeklyCounter?.TotalOutputTokens ?? 0);
+
+            if (globalLevelConfig.Limits.MonthlyToken > 0 && currentGlobalMonthlyTokens > globalLevelConfig.Limits.MonthlyToken)
+            {
+                return "Global monthly token limit exceeded.";
+            }
+
+            if (globalLevelConfig.Limits.WeeklyToken > 0 && currentGlobalWeeklyTokens > globalLevelConfig.Limits.WeeklyToken)
+            {
+                return "Global weekly token limit exceeded.";
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Token limit evaluation failed for athlete {AthleteId}.", athleteId);
+        }
+
+        return null;
+    }
 
     private static string MapAssessAction(AssessmentType assessmentType)
     {

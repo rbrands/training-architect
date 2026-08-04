@@ -57,7 +57,9 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = envelope.MethodName ?? string.Empty,
             DataRaw = raw,
-            DataParsed = parsed
+            DataParsed = parsed,
+            Level = envelope.Level ?? string.Empty,
+            LevelLabel = envelope.LevelLabel ?? string.Empty
         };
     }
 
@@ -68,7 +70,9 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         {
             MethodName = string.Empty,
             DataRaw = empty.GetRawText(),
-            DataParsed = empty
+            DataParsed = empty,
+            Level = string.Empty,
+            LevelLabel = string.Empty
         };
     }
 
@@ -231,5 +235,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         public string? MethodName { get; init; }
         public string? DataRaw { get; init; }
         public JsonElement DataParsed { get; init; }
+        public string? Level { get; init; }
+        public string? LevelLabel { get; init; }
     }
 }
