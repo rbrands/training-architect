@@ -1,5 +1,7 @@
 using TrainingArchitect.Services;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Interfaces;
+using TrainingArchitect.Core.Models;
 using System.Text.Json;
 
 namespace TrainingArchitect.Endpoints;
@@ -17,6 +19,8 @@ public static class AthleteDataEndpoints
         group.MapGet("/", async (
             HttpContext httpContext,
             IAthleteDataService athleteDataService,
+            IAthleteRepository athleteRepository,
+            ILevelRepository levelRepository,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -37,8 +41,32 @@ public static class AthleteDataEndpoints
                         "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
                 }
 
+                var existingAthleteConfig = await athleteRepository.GetByAthleteIdAsync(athleteIdHeader);
+                if (AthleteDataEndpointResults.TryCreateLockedAthleteResult(existingAthleteConfig, out var lockedResult, out var lockMessage))
+                {
+                    logger.LogWarning(
+                        "Rejected /api/athlete-data request for athlete {AthleteId} because the athlete config is locked. Message: {Message}",
+                        athleteIdHeader,
+                        lockMessage);
+
+                    return lockedResult;
+                }
+
+                var athleteLevel = existingAthleteConfig?.Level?.Trim() ?? string.Empty;
+                var athleteLevelLabel = string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(athleteLevel))
+                {
+                    var levelConfig = await levelRepository.GetByLevelAsync(athleteLevel);
+                    athleteLevelLabel = levelConfig?.Label?.Trim() ?? string.Empty;
+                }
+
                 var response = await athleteDataService.GetAsync(athleteIdHeader, apiKeyHeader, ct);
-                return Results.Ok(response);
+                return Results.Ok(response with
+                {
+                    Level = athleteLevel,
+                    LevelLabel = athleteLevelLabel
+                });
             }
             catch (McpToolExecutionException ex)
             {
@@ -99,6 +127,7 @@ public static class AthleteDataEndpoints
         myDatasetGroup.MapGet("", async (
             HttpContext httpContext,
             IAthleteDataService athleteDataService,
+            IAthleteRepository athleteRepository,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -117,6 +146,17 @@ public static class AthleteDataEndpoints
 
                     return AthleteDataEndpointResults.CreateBadRequestResult(
                         "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+                }
+
+                var existingAthleteConfig = await athleteRepository.GetByAthleteIdAsync(athleteIdHeader);
+                if (AthleteDataEndpointResults.TryCreateLockedAthleteResult(existingAthleteConfig, out var lockedResult, out var lockMessage))
+                {
+                    logger.LogWarning(
+                        "Rejected /api/dataset request for athlete {AthleteId} because the athlete config is locked. Message: {Message}",
+                        athleteIdHeader,
+                        lockMessage);
+
+                    return lockedResult;
                 }
 
                 var response = await athleteDataService.GetAsync(athleteIdHeader, apiKeyHeader, ct);
@@ -185,10 +225,35 @@ public record AthleteDataResponse
     public string MethodName { get; init; } = string.Empty;
     public string DataRaw { get; init; } = string.Empty;
     public JsonElement DataParsed { get; init; }
+    public string Level { get; init; } = string.Empty;
+    public string LevelLabel { get; init; } = string.Empty;
 }
 
 internal static class AthleteDataEndpointResults
 {
     public static IResult CreateBadRequestResult(string message) =>
         Results.Json(new { error = message }, statusCode: StatusCodes.Status400BadRequest);
+
+    public static bool TryCreateLockedAthleteResult(
+        AthleteConfig? athleteConfig,
+        out IResult result,
+        out string lockMessage)
+    {
+        if (athleteConfig is null || !athleteConfig.Locked)
+        {
+            result = Results.Empty;
+            lockMessage = string.Empty;
+            return false;
+        }
+
+        lockMessage = string.IsNullOrWhiteSpace(athleteConfig.Message)
+            ? "Your athlete account is locked. Please contact support to re-enable access."
+            : athleteConfig.Message.Trim();
+
+        result = Results.Json(
+            new { error = lockMessage },
+            statusCode: StatusCodes.Status423Locked);
+
+        return true;
+    }
 }

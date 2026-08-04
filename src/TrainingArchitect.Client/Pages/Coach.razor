@@ -42,6 +42,12 @@
                             <i class="bi @StatusIconClass"></i>
                         </span>
                         <span class="coach-status-title">@StatusText@AthleteSuffix</span>
+                        @if (ShowLevelLabelBadge)
+                        {
+                            <span class="coach-level-badge" title="Configured athlete level label">
+                                @Session.LevelLabel
+                            </span>
+                        }
                     </div>
                     @if (ShowRememberedNote)
                     {
@@ -766,6 +772,10 @@
     private string AthleteSuffix => string.IsNullOrWhiteSpace(Session.AthleteId)
         ? string.Empty
         : $" · Athlete {Session.AthleteId}";
+
+    private bool ShowLevelLabelBadge =>
+        Session.State == CoachConnectionState.Connected &&
+        !string.IsNullOrWhiteSpace(Session.LevelLabel);
 
     private string StatusCssClass => Session.State switch
     {

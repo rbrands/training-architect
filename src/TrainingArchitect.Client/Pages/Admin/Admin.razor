@@ -163,8 +163,18 @@
                                     <GridColumn Field="@nameof(LevelGridRow.Id)" HeaderText="ID" Width="120" />
                                     <GridColumn Field="@nameof(LevelGridRow.Level)" HeaderText="Level" Width="120" />
                                     <GridColumn Field="@nameof(LevelGridRow.Label)" HeaderText="Label" Width="120" />
-                                    <GridColumn Field="@nameof(LevelGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130" />
-                                    <GridColumn Field="@nameof(LevelGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="140" />
+                                    <GridColumn Field="@nameof(LevelGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130">
+                                        <Template>
+                                            @{ var row = context as LevelGridRow; }
+                                            @FormatTokenNumber(row?.WeeklyToken ?? 0)
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field="@nameof(LevelGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="140">
+                                        <Template>
+                                            @{ var row = context as LevelGridRow; }
+                                            @FormatTokenNumber(row?.MonthlyToken ?? 0)
+                                        </Template>
+                                    </GridColumn>
                                     <GridColumn Field="@nameof(LevelGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="650" />
                                 </GridColumns>
                             </SfGrid>
@@ -288,8 +298,18 @@
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AthleteGridRow.AthleteId)" HeaderText="Athlete" Width="140" />
                                     <GridColumn Field="@nameof(AthleteGridRow.Level)" HeaderText="Level" Width="100" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="130" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130">
+                                        <Template>
+                                            @{ var row = context as AthleteGridRow; }
+                                            @FormatTokenNumber(row?.WeeklyToken ?? 0)
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field="@nameof(AthleteGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="130">
+                                        <Template>
+                                            @{ var row = context as AthleteGridRow; }
+                                            @FormatTokenNumber(row?.MonthlyToken ?? 0)
+                                        </Template>
+                                    </GridColumn>
                                     <GridColumn Field="@nameof(AthleteGridRow.Locked)" HeaderText="Locked" Width="110" TextAlign="TextAlign.Center">
                                         <Template>
                                             @{ var row = context as AthleteGridRow; }
@@ -353,6 +373,15 @@
                                             <textarea class="form-control" rows="2" @bind="_selectedAthlete.Message"></textarea>
                                         </div>
 
+                                        <div class="col-12 col-md-6 d-flex align-items-end">
+                                            <button class="btn btn-outline-secondary"
+                                                    type="button"
+                                                    @onclick="ApplyDefaultAthleteLimits"
+                                                    disabled="@(_athleteSaving)">
+                                                Apply Level Default Limits
+                                            </button>
+                                        </div>
+
                                         <div class="col-12 col-md-3">
                                             <label class="form-label text-secondary small">Weekly Token</label>
                                             <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.WeeklyToken" />
@@ -380,6 +409,8 @@
 </div>
 
 @code {
+    private static readonly System.Globalization.CultureInfo TokenNumberCulture = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+
     private bool _loading = true;
     private string? _loadError;
     private IReadOnlyList<UsageGridRow> _allUsageRows = [];
@@ -782,6 +813,35 @@
         }
     }
 
+    private void ApplyDefaultAthleteLimits()
+    {
+        if (_selectedAthlete is null)
+        {
+            return;
+        }
+
+        _athleteActionError = null;
+
+        var selectedLevel = _selectedAthlete.Level?.Trim();
+        if (string.IsNullOrWhiteSpace(selectedLevel))
+        {
+            _athleteActionError = "Select a level first to apply default limits.";
+            return;
+        }
+
+        var levelDefaults = _levelRows.FirstOrDefault(level =>
+            string.Equals(level.Level, selectedLevel, StringComparison.OrdinalIgnoreCase));
+
+        if (levelDefaults is null)
+        {
+            _athleteActionError = $"No level configuration found for '{selectedLevel}'.";
+            return;
+        }
+
+        _selectedAthlete.Limits.WeeklyToken = levelDefaults.WeeklyToken;
+        _selectedAthlete.Limits.MonthlyToken = levelDefaults.MonthlyToken;
+    }
+
     private bool MatchesScope(UsageGridRow row)
     {
         return _scopeFilter switch
@@ -845,6 +905,11 @@
             .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
     }
 
+    private static string FormatTokenNumber(int value)
+    {
+        return value.ToString("N0", TokenNumberCulture);
+    }
+
     private static AthleteGridRow ToGridRow(AthleteConfig config)
     {
         return new AthleteGridRow
@@ -902,6 +967,7 @@
             .Select(r => r.Level)
             .Where(level => !string.IsNullOrWhiteSpace(level))
             .Select(level => level.Trim())
+            .Where(level => !string.Equals(level, "global", StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(level => level, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -912,6 +978,7 @@
         }
 
         if (!string.IsNullOrWhiteSpace(selectedLevel)
+            && !string.Equals(selectedLevel, "global", StringComparison.OrdinalIgnoreCase)
             && !levels.Contains(selectedLevel, StringComparer.OrdinalIgnoreCase))
         {
             levels.Add(selectedLevel);

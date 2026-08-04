@@ -37,6 +37,10 @@ public sealed class ServerAthleteSession : IAthleteSession
 
     public string? AthleteId => null;
 
+    public string? Level => null;
+
+    public string? LevelLabel => null;
+
     public CoachLanguage? Language => null;
 
     public AthleteProfileGoal? ProfileGoal => null;

@@ -36,6 +36,8 @@ public interface IAthleteSession
     bool IsRefreshing { get; }          // Re-sync without tearing down the connected view
 
     string? AthleteId { get; }
+    string? Level { get; }
+    string? LevelLabel { get; }
     CoachLanguage? Language { get; }
     AthleteProfileGoal? ProfileGoal { get; }
     DateTimeOffset? LastSynced { get; }
@@ -84,6 +86,8 @@ public sealed class AthleteDataResult
     public string MethodName { get; init; } = string.Empty;
     public string DataRaw { get; init; } = string.Empty;
     public JsonElement DataParsed { get; init; }
+    public string Level { get; init; } = string.Empty;
+    public string LevelLabel { get; init; } = string.Empty;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +103,8 @@ public sealed class AthleteSession(
     public CoachConnectionState State { get; private set; } = CoachConnectionState.Disconnected;
     public bool IsRefreshing { get; private set; }
     public string? AthleteId { get; private set; }
+    public string? Level { get; private set; }
+    public string? LevelLabel { get; private set; }
     public CoachLanguage? Language { get; private set; }
     public AthleteProfileGoal? ProfileGoal { get; private set; }
     public DateTimeOffset? LastSynced { get; private set; }
@@ -133,6 +139,8 @@ public sealed class AthleteSession(
             Language = language;
             ProfileGoal = profileGoal;
             _apiKey = apiKey;
+            Level = string.IsNullOrWhiteSpace(result.Level) ? null : result.Level;
+            LevelLabel = string.IsNullOrWhiteSpace(result.LevelLabel) ? null : result.LevelLabel;
             AthleteDataMethodName = result.MethodName;
             AthleteDataRaw = result.DataRaw;
             AthleteDataParsed = result.DataParsed;
@@ -202,6 +210,8 @@ public sealed class AthleteSession(
             AthleteDataMethodName = result.MethodName;
             AthleteDataRaw = result.DataRaw;
             AthleteDataParsed = result.DataParsed;
+            Level = string.IsNullOrWhiteSpace(result.Level) ? Level : result.Level;
+            LevelLabel = string.IsNullOrWhiteSpace(result.LevelLabel) ? null : result.LevelLabel;
             AthleteDataJson = result.DataParsed.GetRawText();
             LastSynced = DateTimeOffset.Now;
             ErrorMessage = null;
@@ -271,6 +281,8 @@ public sealed class AthleteSession(
         AthleteDataRaw = null;
         AthleteDataParsed = null;
         AthleteDataMethodName = null;
+        Level = null;
+        LevelLabel = null;
         LastSynced = null;
     }
 

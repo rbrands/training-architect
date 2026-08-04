@@ -12,7 +12,9 @@ internal sealed class StubAthleteDataClient : IAthleteDataClient
         {
             MethodName = "stub",
             DataRaw = parsed.GetRawText(),
-            DataParsed = parsed
+            DataParsed = parsed,
+            Level = "basic",
+            LevelLabel = "Basic"
         });
     }
 }
