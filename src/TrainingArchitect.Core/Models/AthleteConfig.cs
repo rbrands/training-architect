@@ -32,6 +32,9 @@ public sealed class AthleteConfig : CosmosDocument
 /// </summary>
 public sealed class AthleteLimits
 {
-    [JsonPropertyName("token")]
-    public int Token { get; set; }
+    [JsonPropertyName("weeklyToken")]
+    public int WeeklyToken { get; set; }
+
+    [JsonPropertyName("monthlyToken")]
+    public int MonthlyToken { get; set; }
 }

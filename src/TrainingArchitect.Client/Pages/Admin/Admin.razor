@@ -160,11 +160,12 @@
                                 <GridEvents TValue="LevelGridRow" RowSelected="OnLevelRowSelected" />
                                 <GridPageSettings PageSize="20" />
                                 <GridColumns>
-                                    <GridColumn Field="@nameof(LevelGridRow.Id)" HeaderText="ID" Width="180" />
+                                    <GridColumn Field="@nameof(LevelGridRow.Id)" HeaderText="ID" Width="120" />
                                     <GridColumn Field="@nameof(LevelGridRow.Level)" HeaderText="Level" Width="120" />
-                                    <GridColumn Field="@nameof(LevelGridRow.Label)" HeaderText="Label" Width="180" />
-                                    <GridColumn Field="@nameof(LevelGridRow.Token)" HeaderText="Token" TextAlign="TextAlign.Right" Width="90" />
-                                    <GridColumn Field="@nameof(LevelGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="150" />
+                                    <GridColumn Field="@nameof(LevelGridRow.Label)" HeaderText="Label" Width="120" />
+                                    <GridColumn Field="@nameof(LevelGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130" />
+                                    <GridColumn Field="@nameof(LevelGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="140" />
+                                    <GridColumn Field="@nameof(LevelGridRow.UpdatedAt)" HeaderText="Updated" Type="ColumnType.DateTime" Format="yyyy-MM-dd HH:mm" Width="650" />
                                 </GridColumns>
                             </SfGrid>
 
@@ -207,9 +208,14 @@
                                             <div class="form-control bg-body-tertiary text-secondary" aria-readonly="true">@_selectedLevel.Type</div>
                                         </div>
 
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label text-secondary small">Token</label>
-                                            <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.Token" />
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label text-secondary small">Weekly Token Limit</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.WeeklyToken" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label text-secondary small">Monthly Token Limit</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedLevel.Limits.MonthlyToken" />
                                         </div>
                                     </div>
                                 </div>
@@ -282,7 +288,8 @@
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AthleteGridRow.AthleteId)" HeaderText="Athlete" Width="140" />
                                     <GridColumn Field="@nameof(AthleteGridRow.Level)" HeaderText="Level" Width="100" />
-                                    <GridColumn Field="@nameof(AthleteGridRow.Token)" HeaderText="Token" TextAlign="TextAlign.Right" Width="90" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.WeeklyToken)" HeaderText="Weekly Token" TextAlign="TextAlign.Right" Width="130" />
+                                    <GridColumn Field="@nameof(AthleteGridRow.MonthlyToken)" HeaderText="Monthly Token" TextAlign="TextAlign.Right" Width="130" />
                                     <GridColumn Field="@nameof(AthleteGridRow.Locked)" HeaderText="Locked" Width="110" TextAlign="TextAlign.Center">
                                         <Template>
                                             @{ var row = context as AthleteGridRow; }
@@ -346,9 +353,14 @@
                                             <textarea class="form-control" rows="2" @bind="_selectedAthlete.Message"></textarea>
                                         </div>
 
-                                        <div class="col-12 col-md-4">
-                                            <label class="form-label text-secondary small">Token</label>
-                                            <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.Token" />
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label text-secondary small">Weekly Token</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.WeeklyToken" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label text-secondary small">Monthly Token</label>
+                                            <input class="form-control" type="number" min="0" @bind="_selectedAthlete.Limits.MonthlyToken" />
                                         </div>
                                     </div>
                                 </div>
@@ -840,7 +852,8 @@
             Level = config.Level,
             Locked = config.Locked,
             Message = config.Message,
-            Token = config.Limits.Token,
+            WeeklyToken = config.Limits.WeeklyToken,
+            MonthlyToken = config.Limits.MonthlyToken,
             UpdatedAt = config.UpdatedAt
         };
     }
@@ -854,7 +867,8 @@
             Level = source.Level,
             Limits = new AthleteLimits
             {
-                Token = source.Limits.Token
+                WeeklyToken = source.Limits.WeeklyToken,
+                MonthlyToken = source.Limits.MonthlyToken
             },
             Locked = source.Locked,
             Message = source.Message,
@@ -871,7 +885,8 @@
             Level = "basic",
             Limits = new AthleteLimits
             {
-                Token = 0
+                WeeklyToken = 0,
+                MonthlyToken = 0
             },
             Locked = false,
             Message = string.Empty
@@ -909,7 +924,8 @@
             Id = config.Id,
             Level = config.Level,
             Label = config.Label,
-            Token = config.Limits.Token,
+            WeeklyToken = config.Limits.WeeklyToken,
+            MonthlyToken = config.Limits.MonthlyToken,
             UpdatedAt = config.UpdatedAt,
             Document = CloneLevelConfig(config)
         };
@@ -922,7 +938,11 @@
             Id = source.Id,
             Level = source.Level,
             Label = source.Label,
-            Limits = new AthleteLimits { Token = source.Limits.Token },
+            Limits = new AthleteLimits
+            {
+                WeeklyToken = source.Limits.WeeklyToken,
+                MonthlyToken = source.Limits.MonthlyToken
+            },
             UpdatedAt = source.UpdatedAt,
             TimeToLive = source.TimeToLive
         };
@@ -936,7 +956,8 @@
             Label = "Basic",
             Limits = new AthleteLimits
             {
-                Token = 0
+                WeeklyToken = 0,
+                MonthlyToken = 0
             }
         };
     }
@@ -970,7 +991,9 @@
 
         public string Message { get; init; } = string.Empty;
 
-        public int Token { get; init; }
+        public int WeeklyToken { get; init; }
+
+        public int MonthlyToken { get; init; }
 
         public DateTime UpdatedAt { get; init; }
 
@@ -983,7 +1006,8 @@
                 Level = Level,
                 Limits = new AthleteLimits
                 {
-                    Token = Token
+                    WeeklyToken = WeeklyToken,
+                    MonthlyToken = MonthlyToken
                 },
                 Locked = Locked,
                 Message = Message,
@@ -1000,7 +1024,9 @@
 
         public string Label { get; init; } = string.Empty;
 
-        public int Token { get; init; }
+        public int WeeklyToken { get; init; }
+
+        public int MonthlyToken { get; init; }
 
         public DateTime UpdatedAt { get; init; }
 
