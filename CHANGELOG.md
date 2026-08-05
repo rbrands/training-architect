@@ -18,6 +18,23 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.0.1] - 2026-08-05
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
+- Coaching flow now works with the `gpt-5.6-luna` Foundry model, including improved compatibility handling for unsupported generation parameters.
+- Foundry agent responses now use stricter assistant-message extraction to avoid leaking tool/intermediate HTML content into Coach output.
+- Coach endpoint error handling for agent calls now returns concise API problem responses instead of surfacing full exception stack traces.
+- Model compatibility errors (for example unsupported `temperature` parameter) are normalized to clearer operator-facing messages.
+
+### Removed
+-
+
 ## [1.0.0] - 2026-08-04
 
 ### Added
