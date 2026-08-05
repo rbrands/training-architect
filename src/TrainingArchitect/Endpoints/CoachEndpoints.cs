@@ -165,13 +165,34 @@ public static class CoachEndpoints
         }
 
         var prompt = PromptBuilder.BuildAssessPrompt(request);
-        var result = await agent.PromptAsync(
-            prompt,
-            request.DisciplineType,
-            request.Language,
-            ct,
-            intervalsAthleteId: athleteIdHeader,
-            intervalsApiKey: apiKeyHeader);
+        CoachingAgentResponse result;
+
+        try
+        {
+            result = await agent.PromptAsync(
+                prompt,
+                request.DisciplineType,
+                request.Language,
+                ct,
+                intervalsAthleteId: athleteIdHeader,
+                intervalsApiKey: apiKeyHeader);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogError(ex, "Agent configuration error in /api/coach/assess for athlete {AthleteId}.", athleteIdHeader);
+            return Results.Problem(
+                title: "Coaching agent configuration error.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Agent request failed in /api/coach/assess for athlete {AthleteId}.", athleteIdHeader);
+            return Results.Problem(
+                title: "Coaching agent request failed.",
+                detail: "The coaching model request failed. Check server logs for details.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
 
         var inputTokens = ToInt32NonNegative(result.InputTokens);
         var outputTokens = ToInt32NonNegative(result.OutputTokens);
@@ -246,13 +267,34 @@ public static class CoachEndpoints
         }
 
         var prompt = PromptBuilder.BuildPlanPrompt(request);
-        var result = await agent.PromptAsync(
-            prompt,
-            request.DisciplineType,
-            request.Language,
-            ct,
-            intervalsAthleteId: athleteIdHeader,
-            intervalsApiKey: apiKeyHeader);
+        CoachingAgentResponse result;
+
+        try
+        {
+            result = await agent.PromptAsync(
+                prompt,
+                request.DisciplineType,
+                request.Language,
+                ct,
+                intervalsAthleteId: athleteIdHeader,
+                intervalsApiKey: apiKeyHeader);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogError(ex, "Agent configuration error in /api/coach/plan for athlete {AthleteId}.", athleteIdHeader);
+            return Results.Problem(
+                title: "Coaching agent configuration error.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Agent request failed in /api/coach/plan for athlete {AthleteId}.", athleteIdHeader);
+            return Results.Problem(
+                title: "Coaching agent request failed.",
+                detail: "The coaching model request failed. Check server logs for details.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
 
         var inputTokens = ToInt32NonNegative(result.InputTokens);
         var outputTokens = ToInt32NonNegative(result.OutputTokens);

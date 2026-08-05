@@ -3,6 +3,7 @@ using Azure.AI.Projects;
 using Azure.AI.Extensions.OpenAI;
 using Microsoft.Extensions.Logging;
 using OpenAI.Responses;
+using System.Collections;
 using System.Text.Json;
 
 namespace TrainingArchitect.Services;
@@ -59,8 +60,19 @@ public sealed class FoundryCoachingAgent(
             var tokenUsage = ExtractTokenUsage(response.Value);
             LogTokenUsage(tokenUsage);
             var responseId = TryGetResponseId(response.Value);
+            var content = ExtractAssistantOutputText(response.Value);
+
+            if (LooksLikeHtmlDocument(content))
+            {
+                _logger.LogWarning(
+                    "Foundry agent returned HTML-like content for {AgentName}@{AgentVersion}. ResponseId={ResponseId}",
+                    _configuredAgent.Name,
+                    _configuredAgent.Version ?? "latest",
+                    responseId ?? "unknown");
+            }
+
             return new CoachingAgentResponse(
-                response.Value.GetOutputText(),
+                content,
                 tokenUsage.TotalTokens,
                 responseId,
                 tokenUsage.InputTokens,
@@ -83,7 +95,23 @@ public sealed class FoundryCoachingAgent(
                 normalized.Type ?? "unknown",
                 normalized.Message ?? ex.Message);
 
+            if (TryBuildModelCompatibilityError(normalized.Message ?? ex.Message, out var compatibilityMessage))
+            {
+                throw new InvalidOperationException(compatibilityMessage, ex);
+            }
+
             throw;
+        }
+        catch (Exception ex) when (TryBuildModelCompatibilityError(ex.Message, out var compatibilityMessage))
+        {
+            _logger.LogError(
+                ex,
+                "Foundry agent model compatibility issue for {AgentName}@{AgentVersion}: {Message}",
+                _configuredAgent.Name,
+                _configuredAgent.Version ?? "latest",
+                compatibilityMessage);
+
+            throw new InvalidOperationException(compatibilityMessage, ex);
         }
     }
 
@@ -189,6 +217,134 @@ public sealed class FoundryCoachingAgent(
         }
 
         return null;
+    }
+
+    private static string ExtractAssistantOutputText(object responseValue)
+    {
+        var assistantText = TryExtractAssistantMessageText(responseValue);
+        if (!string.IsNullOrWhiteSpace(assistantText))
+        {
+            return assistantText;
+        }
+
+        // Fallback for SDKs that expose only aggregate helper methods.
+        var getOutputTextMethod = responseValue.GetType().GetMethod("GetOutputText", Type.EmptyTypes);
+        if (getOutputTextMethod is not null)
+        {
+            var outputText = getOutputTextMethod.Invoke(responseValue, null)?.ToString();
+            if (!string.IsNullOrWhiteSpace(outputText))
+            {
+                return outputText;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string? TryExtractAssistantMessageText(object responseValue)
+    {
+        var outputItemsProperty = responseValue.GetType().GetProperty("OutputItems")
+            ?? responseValue.GetType().GetProperty("Output");
+
+        if (outputItemsProperty?.GetValue(responseValue) is not IEnumerable outputItems)
+        {
+            return null;
+        }
+
+        var assistantMessages = new List<string>();
+
+        foreach (var item in outputItems)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            var role = item.GetType().GetProperty("Role")?.GetValue(item)?.ToString();
+            if (!string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var contentProperty = item.GetType().GetProperty("Content");
+            if (contentProperty?.GetValue(item) is not IEnumerable messageContents)
+            {
+                continue;
+            }
+
+            var textParts = new List<string>();
+
+            foreach (var contentPart in messageContents)
+            {
+                if (contentPart is null)
+                {
+                    continue;
+                }
+
+                var directText = contentPart.GetType().GetProperty("Text")?.GetValue(contentPart)?.ToString();
+                if (!string.IsNullOrWhiteSpace(directText))
+                {
+                    textParts.Add(directText);
+                    continue;
+                }
+
+                // Some SDK variants nest text under a Value property.
+                var textObject = contentPart.GetType().GetProperty("Text")?.GetValue(contentPart);
+                var nestedText = textObject?.GetType().GetProperty("Value")?.GetValue(textObject)?.ToString();
+                if (!string.IsNullOrWhiteSpace(nestedText))
+                {
+                    textParts.Add(nestedText);
+                }
+            }
+
+            if (textParts.Count > 0)
+            {
+                assistantMessages.Add(string.Join("\n", textParts));
+            }
+        }
+
+        if (assistantMessages.Count == 0)
+        {
+            return null;
+        }
+
+        // Prefer the last assistant message in case of intermediate tool loops.
+        return assistantMessages[^1];
+    }
+
+    private static bool LooksLikeHtmlDocument(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        var trimmed = content.TrimStart();
+        return trimmed.StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("<script", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("</body>", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryBuildModelCompatibilityError(string? rawMessage, out string message)
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(rawMessage))
+        {
+            return false;
+        }
+
+        var hasUnsupportedParameter = rawMessage.Contains("Unsupported parameter", StringComparison.OrdinalIgnoreCase);
+        var hasTemperature = rawMessage.Contains("temperature", StringComparison.OrdinalIgnoreCase);
+
+        if (!hasUnsupportedParameter || !hasTemperature)
+        {
+            return false;
+        }
+
+        message = "The configured Foundry model does not support the 'temperature' parameter. Update the agent/model settings to remove temperature or use a model that supports it.";
+        return true;
     }
 
     private static (string Name, string? Version) ParseConfiguredAgent(string configuredValue)
