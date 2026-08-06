@@ -54,8 +54,6 @@ builder.Services.AddScoped<IOwnerService, OwnerService>();
 // orchestration layer is connected.
 // TODO: IChatService should be scoped (one conversation per WASM circuit/session).
 builder.Services.AddScoped<IChatService, StubChatService>();
-// TODO: IIntervalsDataProvider should call the real intervals.icu API server-side.
-builder.Services.AddScoped<IIntervalsDataProvider, StubIntervalsDataProvider>();
 
 await builder.Build().RunAsync();
 

@@ -290,8 +290,6 @@ builder.Services.AddScoped<CoachPageState>();
 builder.Services.AddScoped<IAuthContext, StubAuthContext>();
 // TODO: Replace StubChatService with the AI orchestration pipeline.
 builder.Services.AddScoped<IChatService, StubChatService>();
-// TODO: Replace StubIntervalsDataProvider with the real intervals.icu API client.
-builder.Services.AddScoped<IIntervalsDataProvider, StubIntervalsDataProvider>();
 
 // ClientConfig must be available in server-side DI for Blazor WASM prerender.
 // The WASM client fetches this at startup via /api/config; during SSR prerender

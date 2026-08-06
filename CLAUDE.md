@@ -76,7 +76,6 @@ The `/coach` and `/training-plan` pages are scaffolded with stub implementations
 |---|---|---|
 | `IChatService` | `StubChatService` | Real orchestration pipeline (e.g. Microsoft.Extensions.AI / Semantic Kernel) |
 | `IAuthContext` | `StubAuthContext` | OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` server-side |
-| `IIntervalsDataProvider` | `StubIntervalsDataProvider` | intervals.icu REST API with athlete's API key from Key Vault |
 
 Register replacements in `TrainingArchitect/Program.cs` (server) and `TrainingArchitect.Client/Program.cs` (WASM).
 

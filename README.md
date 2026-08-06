@@ -109,7 +109,6 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 |---|---|---|
 | `IChatService` | `StubChatService` | Invoke the Microsoft Foundry Agent and forward messages through the MCP server |
 | `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
-| `IIntervalsDataProvider` | `StubIntervalsDataProvider` | Call the intervals.icu REST API with the athlete's stored API key (retrieved server-side from Key Vault) |
 
 ### MCP Athlete Data Endpoint
 
