@@ -18,11 +18,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
-## [1.0.2] - 2026-08-06
+## [1.0.3] - 2026-08-06
 
 ### Added
 - Dynamic `/sitemap.xml` generation for canonical public URLs and published article pages.
 - `/robots.txt` now references the sitemap for search engine discovery.
+- CTL/ATL/Foram now as KPI on coach page as part of metrics.
 
 ### Changed
 -
