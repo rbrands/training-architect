@@ -56,7 +56,6 @@ src/
 - **Static SSR** is the default for all public pages
 - **InteractiveWebAssembly** only for components that require client-side reactivity:
   - `/coach` — coaching chat (IChatService)
-  - `/dashboard` — KPI cards and fitness chart (IIntervalsDataProvider)
   - `<PlanConfirmation>` island inside the otherwise-SSR `/training-plan` page
 - Never use `@rendermode InteractiveServer`
 
@@ -71,7 +70,7 @@ src/
 - Admin API endpoints in `TrainingArchitect/Endpoints/` are protected by the `SiteAdmin` role
 
 ### Training Architect Stubs
-The `/coach`, `/training-plan`, and `/dashboard` pages are scaffolded with stub implementations:
+The `/coach` and `/training-plan` pages are scaffolded with stub implementations:
 
 | Interface | Stub | Replace with |
 |---|---|---|

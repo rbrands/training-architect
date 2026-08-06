@@ -263,6 +263,9 @@
             var metricsSnapshot = expandedPrompt.CardType == AssessCardType.MetricsWellness
                 ? BuildMetricsSnapshot()
                 : [];
+            var fitnessKpis = expandedPrompt.CardType == AssessCardType.MetricsWellness
+                ? BuildFitnessKpis()
+                : null;
 
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
@@ -301,6 +304,24 @@
                         {
                             <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
                                 <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
+
+                                @if (fitnessKpis is not null)
+                                {
+                                    <div class="coach-metrics-kpis" aria-label="CTL ATL TSB summary">
+                                        <div class="coach-metrics-kpi coach-metrics-kpi--ctl">
+                                            <span class="coach-metrics-kpi-label">CTL (Fitness)</span>
+                                            <span class="coach-metrics-kpi-value">@FormatKpiValue(fitnessKpis.Ctl)</span>
+                                        </div>
+                                        <div class="coach-metrics-kpi coach-metrics-kpi--atl">
+                                            <span class="coach-metrics-kpi-label">ATL (Fatigue)</span>
+                                            <span class="coach-metrics-kpi-value">@FormatKpiValue(fitnessKpis.Atl)</span>
+                                        </div>
+                                        <div class="coach-metrics-kpi coach-metrics-kpi--tsb">
+                                            <span class="coach-metrics-kpi-label">TSB (Form)</span>
+                                            <span class="coach-metrics-kpi-value @GetTsbZoneCssClass(fitnessKpis)">@FormatTsbDisplay(fitnessKpis)</span>
+                                        </div>
+                                    </div>
+                                }
 
                                 <dl class="coach-metrics-snapshot-grid">
                                     @foreach (var item in metricsSnapshot)
@@ -755,6 +776,8 @@
         public string? CopyFeedback { get; set; }
     }
 
+    private sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
+
     private sealed class PlanWorkoutViewModel
     {
         public required string Id { get; init; }
@@ -1065,6 +1088,220 @@
             new("VO2max Age Group", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
             new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category")))
         ];
+    }
+
+    private FitnessKpiSnapshot? BuildFitnessKpis()
+    {
+        var root = GetOverviewRoot();
+        if (root is null)
+        {
+            return null;
+        }
+
+        var ctl = FindNumericProperty(root.Value, "ctl");
+        var atl = FindNumericProperty(root.Value, "atl");
+        var tsb = FindNumericProperty(root.Value, "tsb") ?? FindNumericProperty(root.Value, "form");
+        var formPercentDisplay = FindPreferredFormDisplay(root.Value);
+        var formPercent = FindNumericProperty(root.Value, "form_pct")
+            ?? FindNumericProperty(root.Value, "form_percent")
+            ?? FindNumericProperty(root.Value, "tsb_percent");
+        var formZone = NormalizeFormZone(FindStringProperty(root.Value, "form_zone"));
+
+        if (ctl is null || atl is null)
+        {
+            return null;
+        }
+
+        return new FitnessKpiSnapshot(
+            ctl.Value,
+            atl.Value,
+            tsb ?? (ctl.Value - atl.Value),
+            formPercentDisplay,
+            formPercent,
+            formZone ?? DetermineFormZone(formPercent));
+    }
+
+    private static double? FindNumericProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase)
+                    && TryReadDouble(property.Value, out var directValue))
+                {
+                    return directValue;
+                }
+
+                var nestedValue = FindNumericProperty(property.Value, propertyName);
+                if (nestedValue is not null)
+                {
+                    return nestedValue;
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var nestedValue = FindNumericProperty(item, propertyName);
+                if (nestedValue is not null)
+                {
+                    return nestedValue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? FindStringProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase)
+                    && property.Value.ValueKind == JsonValueKind.String)
+                {
+                    var directValue = property.Value.GetString();
+                    if (!string.IsNullOrWhiteSpace(directValue))
+                    {
+                        return directValue;
+                    }
+                }
+
+                var nestedValue = FindStringProperty(property.Value, propertyName);
+                if (!string.IsNullOrWhiteSpace(nestedValue))
+                {
+                    return nestedValue;
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var nestedValue = FindStringProperty(item, propertyName);
+                if (!string.IsNullOrWhiteSpace(nestedValue))
+                {
+                    return nestedValue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? FindPreferredFormDisplay(JsonElement element)
+    {
+        var displayText = FindStringProperty(element, "form_percent_display")
+            ?? FindStringProperty(element, "form_display")
+            ?? FindStringProperty(element, "tsb_percent_display");
+
+        if (!string.IsNullOrWhiteSpace(displayText))
+        {
+            return displayText;
+        }
+
+        var directDisplayValue = FindNumericProperty(element, "form_percent_display")
+            ?? FindNumericProperty(element, "tsb_percent_display");
+
+        if (directDisplayValue is not null)
+        {
+            return FormatPercentValue(directDisplayValue.Value);
+        }
+
+        var percentValue = FindNumericProperty(element, "form_percent")
+            ?? FindNumericProperty(element, "form_pct")
+            ?? FindNumericProperty(element, "tsb_percent");
+
+        if (percentValue is null)
+        {
+            return null;
+        }
+
+        return FormatPercentValue(percentValue.Value * 100);
+    }
+
+    private static bool TryReadDouble(JsonElement value, out double result)
+    {
+        if (value.ValueKind == JsonValueKind.Number)
+        {
+            return value.TryGetDouble(out result);
+        }
+
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            return double.TryParse(value.GetString(), CultureInfo.InvariantCulture, out result);
+        }
+
+        result = default;
+        return false;
+    }
+
+    private static string FormatKpiValue(double value)
+    {
+        return value.ToString("0.0", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatSignedKpiValue(double value)
+    {
+        var prefix = value >= 0 ? "+" : string.Empty;
+        return $"{prefix}{value.ToString("0.0", CultureInfo.InvariantCulture)}";
+    }
+
+    private static string FormatPercentValue(double value)
+    {
+        var prefix = value >= 0 ? "+" : string.Empty;
+        return $"{prefix}{value.ToString("0.0", CultureInfo.InvariantCulture)} %";
+    }
+
+    private static string FormatTsbDisplay(FitnessKpiSnapshot snapshot)
+    {
+        return string.IsNullOrWhiteSpace(snapshot.FormPercentDisplay)
+            ? FormatSignedKpiValue(snapshot.Tsb)
+            : snapshot.FormPercentDisplay;
+    }
+
+    private static string GetTsbZoneCssClass(FitnessKpiSnapshot snapshot)
+    {
+        return NormalizeFormZone(snapshot.FormZone) switch
+        {
+            "transition" => "coach-metrics-kpi-value--transition",
+            "fresh" => "coach-metrics-kpi-value--fresh",
+            "grey_zone" => "coach-metrics-kpi-value--grey-zone",
+            "optimal" => "coach-metrics-kpi-value--optimal",
+            "high_risk" => "coach-metrics-kpi-value--high-risk",
+            _ => string.Empty
+        };
+    }
+
+    private static string? DetermineFormZone(double? formPercent)
+    {
+        if (formPercent is null)
+        {
+            return null;
+        }
+
+        return formPercent.Value switch
+        {
+            > 0.20 => "transition",
+            >= 0.05 => "fresh",
+            >= -0.10 => "grey_zone",
+            >= -0.30 => "optimal",
+            _ => "high_risk"
+        };
+    }
+
+    private static string? NormalizeFormZone(string? formZone)
+    {
+        if (string.IsNullOrWhiteSpace(formZone))
+        {
+            return null;
+        }
+
+        return formZone.Trim().ToLowerInvariant();
     }
 
     private static string FormatMetricValue(JsonElement? value, string? unit = null)
