@@ -80,8 +80,38 @@
                                 </div>
 
                                 <button class="btn btn-outline-primary btn-sm" @onclick="ReloadUsageAsync">Refresh</button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="RefreshGlobalUsageAsync"
+                                        disabled="@_usageRefreshInProgress">
+                                    @(_usageRefreshInProgress ? "Refreshing global…" : "Refresh Global")
+                                </button>
                                 <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">Clear</button>
                             </div>
+
+                            <div class="text-secondary small mb-2">
+                                Last global refresh:
+                                @if (LastGlobalRefreshAt is DateTime lastGlobalRefreshAt)
+                                {
+                                    @lastGlobalRefreshAt.ToString("yyyy-MM-dd HH:mm")
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_usageActionError))
+                            {
+                                <div class="alert alert-danger py-2 mb-3" role="alert">
+                                    @_usageActionError
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(_usageActionMessage))
+                            {
+                                <div class="alert alert-success py-2 mb-3" role="status">
+                                    @_usageActionMessage
+                                </div>
+                            }
 
                             <div class="text-secondary small mb-2">
                                 Showing @FilteredUsageRows.Count of @_allUsageRows.Count records
@@ -448,6 +478,9 @@
     private string _athleteFilter = string.Empty;
     private string _periodFilter = string.Empty;
     private string _actionFilter = string.Empty;
+    private bool _usageRefreshInProgress;
+    private string? _usageActionMessage;
+    private string? _usageActionError;
     private IReadOnlyList<UsageGridRow>? _filteredUsageRows;
 
     private string ScopeFilter
@@ -488,6 +521,12 @@
         .Where(MatchesAction)
         .ToList();
 
+    private DateTime? LastGlobalRefreshAt => _allUsageRows
+        .Where(row => string.Equals(row.AthleteId, "__GLOBAL__", StringComparison.Ordinal))
+        .Select(row => (DateTime?)row.UpdatedAt)
+        .OrderByDescending(updatedAt => updatedAt)
+        .FirstOrDefault();
+
     protected override async Task OnInitializedAsync()
     {
         if (!RendererInfo.IsInteractive)
@@ -519,7 +558,31 @@
 
     private async Task ReloadUsageAsync()
     {
+        _usageActionError = null;
+        _usageActionMessage = null;
         await LoadUsageAsync();
+    }
+
+    private async Task RefreshGlobalUsageAsync()
+    {
+        _usageRefreshInProgress = true;
+        _usageActionError = null;
+        _usageActionMessage = null;
+
+        try
+        {
+            await UsageCounterRepository.RefreshGlobalCountersAsync();
+            _usageActionMessage = "Global usage counters were refreshed.";
+            await LoadUsageAsync();
+        }
+        catch (Exception ex)
+        {
+            _usageActionError = $"Global usage counters could not be refreshed: {ex.Message}";
+        }
+        finally
+        {
+            _usageRefreshInProgress = false;
+        }
     }
 
     private async Task LoadLevelsAsync()

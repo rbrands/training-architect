@@ -45,4 +45,10 @@ public class HttpUsageCounterRepository(HttpClient http) : IUsageCounterReposito
         string monthlyPeriodKey,
         string weeklyPeriodKey) =>
         throw new NotSupportedException("GetByAthleteAndPeriodsAsync is not supported in the WASM client.");
+
+    public async Task RefreshGlobalCountersAsync(CancellationToken ct = default)
+    {
+        var response = await http.PostAsync("/api/admin/usage/refresh", content: null, ct);
+        response.EnsureSuccessStatusCode();
+    }
 }

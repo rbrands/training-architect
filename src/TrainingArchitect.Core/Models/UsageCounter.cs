@@ -7,7 +7,8 @@ public sealed class UsageCounter : CosmosDocument
 {
     public const string MonthlyUsageType = "monthly_usage";
     public const string WeeklyUsageType = "weekly_usage";
-    public const int TimeToLiveSeconds = 365 * 24 * 60 * 60;
+    public const int MonthlyTimeToLiveSeconds = 365 * 24 * 60 * 60;
+    public const int WeeklyTimeToLiveSeconds = 30 * 24 * 60 * 60;
 
     /// <summary>
     /// Cosmos DB partition/type value, for example "monthly_usage" or "weekly_usage".
@@ -27,4 +28,14 @@ public sealed class UsageCounter : CosmosDocument
     public int TotalCachedTokens { get; set; }
 
     public int TotalOutputTokens { get; set; }
+
+    /// <summary>
+    /// Resolves the TTL to apply for a specific usage type.
+    /// </summary>
+    public static int GetTimeToLiveSeconds(string usageType)
+    {
+        return string.Equals(usageType, WeeklyUsageType, StringComparison.Ordinal)
+            ? WeeklyTimeToLiveSeconds
+            : MonthlyTimeToLiveSeconds;
+    }
 }

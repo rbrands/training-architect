@@ -33,19 +33,15 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         int cachedTokens,
         int outputTokens)
     {
-        const string globalAthleteId = "__GLOBAL__";
-
         var now = DateTime.UtcNow;
         var isoWeek = ISOWeek.GetWeekOfYear(now);
         var isoYear = ISOWeek.GetYear(now);
 
         var monthlyPeriodKey = $"{now:yyyy-MM}";
         var monthlyId = $"{athleteId}_month_{monthlyPeriodKey}";
-        var globalMonthlyId = $"global_month_{monthlyPeriodKey}";
 
         var weeklyPeriodKey = $"{isoYear}-W{isoWeek:00}";
         var weeklyId = $"{athleteId}_week_{weeklyPeriodKey}";
-        var globalWeeklyId = $"global_week_{weeklyPeriodKey}";
 
         await Task.WhenAll(
             UpsertPatchAsync(
@@ -60,24 +56,6 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
             UpsertPatchAsync(
                 weeklyId,
                 athleteId,
-                UsageCounter.WeeklyUsageType,
-                weeklyPeriodKey,
-                action,
-                inputTokens,
-                cachedTokens,
-                outputTokens),
-            UpsertPatchAsync(
-                globalMonthlyId,
-                globalAthleteId,
-                UsageCounter.MonthlyUsageType,
-                monthlyPeriodKey,
-                action,
-                inputTokens,
-                cachedTokens,
-                outputTokens),
-            UpsertPatchAsync(
-                globalWeeklyId,
-                globalAthleteId,
                 UsageCounter.WeeklyUsageType,
                 weeklyPeriodKey,
                 action,
@@ -122,7 +100,7 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
     public async Task<UsageCounter> UpsertAsync(UsageCounter document)
     {
         document.UpdatedAt = DateTime.UtcNow;
-        document.TimeToLive = UsageCounter.TimeToLiveSeconds;
+        document.TimeToLive = UsageCounter.GetTimeToLiveSeconds(document.Type);
         var response = await _container.UpsertItemAsync(document, new PartitionKey(document.Type));
         return response.Resource;
     }
@@ -192,6 +170,46 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         return (await monthlyTask, await weeklyTask);
     }
 
+    /// <inheritdoc/>
+    public async Task RefreshGlobalCountersAsync(CancellationToken ct = default)
+    {
+        const string globalAthleteId = "__GLOBAL__";
+
+        var now = DateTime.UtcNow;
+        var monthlyPeriodKey = $"{now:yyyy-MM}";
+        var weeklyPeriodKey = $"{ISOWeek.GetYear(now)}-W{ISOWeek.GetWeekOfYear(now):00}";
+
+        var monthlyAthleteCounters = await GetCountersForPeriodAsync(
+            UsageCounter.MonthlyUsageType,
+            monthlyPeriodKey,
+            globalAthleteId,
+            ct);
+
+        var weeklyAthleteCounters = await GetCountersForPeriodAsync(
+            UsageCounter.WeeklyUsageType,
+            weeklyPeriodKey,
+            globalAthleteId,
+            ct);
+
+        var globalMonthly = BuildGlobalCounter(
+            id: $"global_month_{monthlyPeriodKey}",
+            usageType: UsageCounter.MonthlyUsageType,
+            periodKey: monthlyPeriodKey,
+            athleteCounters: monthlyAthleteCounters,
+            globalAthleteId: globalAthleteId);
+
+        var globalWeekly = BuildGlobalCounter(
+            id: $"global_week_{weeklyPeriodKey}",
+            usageType: UsageCounter.WeeklyUsageType,
+            periodKey: weeklyPeriodKey,
+            athleteCounters: weeklyAthleteCounters,
+            globalAthleteId: globalAthleteId);
+
+        await Task.WhenAll(
+            UpsertAsync(globalMonthly),
+            UpsertAsync(globalWeekly));
+    }
+
     private async Task UpsertPatchAsync(
         string id,
         string athleteId,
@@ -217,7 +235,7 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
                     UsageType = type,
                     PeriodKey = periodKey,
                     Counts = new Dictionary<string, int>(StringComparer.Ordinal),
-                    TimeToLive = UsageCounter.TimeToLiveSeconds
+                    TimeToLive = UsageCounter.GetTimeToLiveSeconds(type)
                 };
 
                 await _container.CreateItemAsync(seed, new PartitionKey(type));
@@ -246,7 +264,7 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
             PatchOperation.Increment("/totalInputTokens", inputTokens),
             PatchOperation.Increment("/totalCachedTokens", cachedTokens),
             PatchOperation.Increment("/totalOutputTokens", outputTokens),
-            PatchOperation.Set("/ttl", UsageCounter.TimeToLiveSeconds),
+            PatchOperation.Set("/ttl", UsageCounter.GetTimeToLiveSeconds(type)),
             PatchOperation.Set("/updatedAt", DateTime.UtcNow)
         };
 
@@ -266,7 +284,7 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
                 PatchOperation.Increment("/totalInputTokens", inputTokens),
                 PatchOperation.Increment("/totalCachedTokens", cachedTokens),
                 PatchOperation.Increment("/totalOutputTokens", outputTokens),
-                PatchOperation.Set("/ttl", UsageCounter.TimeToLiveSeconds),
+                PatchOperation.Set("/ttl", UsageCounter.GetTimeToLiveSeconds(type)),
                 PatchOperation.Set("/updatedAt", DateTime.UtcNow)
             };
 
@@ -281,6 +299,75 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
     {
         return value.Replace("~", "~0", StringComparison.Ordinal)
             .Replace("/", "~1", StringComparison.Ordinal);
+    }
+
+    private async Task<IReadOnlyList<UsageCounter>> GetCountersForPeriodAsync(
+        string usageType,
+        string periodKey,
+        string globalAthleteId,
+        CancellationToken ct)
+    {
+        var query = new QueryDefinition(
+            "SELECT * FROM c WHERE c.type = @type AND c.periodKey = @periodKey AND c.athleteId != @globalAthleteId")
+            .WithParameter("@type", usageType)
+            .WithParameter("@periodKey", periodKey)
+            .WithParameter("@globalAthleteId", globalAthleteId);
+
+        var options = new QueryRequestOptions { PartitionKey = new PartitionKey(usageType) };
+        var iterator = _container.GetItemQueryIterator<UsageCounter>(query, requestOptions: options);
+        var results = new List<UsageCounter>();
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(ct);
+            results.AddRange(page);
+        }
+
+        return results;
+    }
+
+    private static UsageCounter BuildGlobalCounter(
+        string id,
+        string usageType,
+        string periodKey,
+        IReadOnlyList<UsageCounter> athleteCounters,
+        string globalAthleteId)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var totalInputTokens = 0;
+        var totalCachedTokens = 0;
+        var totalOutputTokens = 0;
+
+        foreach (var counter in athleteCounters)
+        {
+            checked
+            {
+                totalInputTokens += counter.TotalInputTokens;
+                totalCachedTokens += counter.TotalCachedTokens;
+                totalOutputTokens += counter.TotalOutputTokens;
+            }
+
+            foreach (var (actionKey, actionCount) in counter.Counts)
+            {
+                counts[actionKey] = counts.TryGetValue(actionKey, out var existing)
+                    ? existing + actionCount
+                    : actionCount;
+            }
+        }
+
+        return new UsageCounter
+        {
+            Id = id,
+            AthleteId = globalAthleteId,
+            UsageType = usageType,
+            PeriodKey = periodKey,
+            Counts = counts,
+            TotalInputTokens = totalInputTokens,
+            TotalCachedTokens = totalCachedTokens,
+            TotalOutputTokens = totalOutputTokens,
+            TimeToLive = UsageCounter.GetTimeToLiveSeconds(usageType),
+            UpdatedAt = DateTime.UtcNow
+        };
     }
 
     private async Task<UsageCounter?> TryReadByIdAndTypeAsync(string id, string usageType)

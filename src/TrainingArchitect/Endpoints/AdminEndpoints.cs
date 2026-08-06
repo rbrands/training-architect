@@ -19,6 +19,12 @@ public static class AdminEndpoints
         group.MapGet("/usage/{athleteId}", async (string athleteId, IUsageCounterRepository repo) =>
             Results.Ok(await repo.GetByAthleteIdAsync(athleteId)));
 
+        group.MapPost("/usage/refresh", async (IUsageCounterRepository repo, CancellationToken ct) =>
+        {
+            await repo.RefreshGlobalCountersAsync(ct);
+            return Results.Ok(new { refreshed = true });
+        });
+
         group.MapGet("/athletes", async (IAthleteRepository repo) =>
             Results.Ok(await repo.GetAllAsync()));
 

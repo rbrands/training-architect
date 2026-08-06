@@ -39,4 +39,11 @@ public interface IUsageCounterRepository : IRepository<UsageCounter>
         string athleteId,
         string monthlyPeriodKey,
         string weeklyPeriodKey);
+
+    /// <summary>
+    /// Rebuilds the current global monthly and weekly counters from athlete-level documents.
+    /// Global documents keep their existing IDs (for example <c>global_month_yyyy-MM</c>).
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    Task RefreshGlobalCountersAsync(CancellationToken ct = default);
 }
