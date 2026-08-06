@@ -10,7 +10,7 @@ public sealed class GlobalUsageCounterRefreshService(
     IConfiguration configuration,
     ILogger<GlobalUsageCounterRefreshService> logger) : BackgroundService
 {
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(10);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
