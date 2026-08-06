@@ -7,12 +7,21 @@ namespace TrainingArchitect.Services;
 /// </summary>
 public sealed class GlobalUsageCounterRefreshService(
     IUsageCounterRepository usageCounterRepository,
+    IConfiguration configuration,
     ILogger<GlobalUsageCounterRefreshService> logger) : BackgroundService
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!IsGlobalRefreshEnabledForCurrentSlot())
+        {
+            logger.LogInformation(
+                "Global usage counter refresh service is disabled for non-production slot '{SlotName}'.",
+                ResolveSlotName() ?? "unknown");
+            return;
+        }
+
         // Run one refresh at startup so global counters are available quickly.
         await RefreshSafeAsync(stoppingToken);
 
@@ -37,5 +46,18 @@ public sealed class GlobalUsageCounterRefreshService(
         {
             logger.LogWarning(ex, "Global usage counter refresh failed.");
         }
+    }
+
+    private bool IsGlobalRefreshEnabledForCurrentSlot()
+    {
+        var slotName = ResolveSlotName();
+        return string.IsNullOrWhiteSpace(slotName)
+            || string.Equals(slotName, "production", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string? ResolveSlotName()
+    {
+        return configuration["WEBSITE_SLOT_NAME"]
+            ?? Environment.GetEnvironmentVariable("WEBSITE_SLOT_NAME");
     }
 }
