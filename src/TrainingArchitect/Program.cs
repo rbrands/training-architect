@@ -456,6 +456,8 @@ app.MapGet("/_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/{**rest}",
     () => Results.Content(string.Empty, "application/javascript"))
     .AllowAnonymous();
 
+app.MapSitemapEndpoints();
+
 app.MapGet("/logout", () =>
     Results.SignOut(
         new AuthenticationProperties { RedirectUri = "/" },
