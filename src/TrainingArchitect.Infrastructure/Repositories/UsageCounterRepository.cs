@@ -176,6 +176,22 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
         return await ExecuteQueryAsync(query, options: null);
     }
 
+    /// <inheritdoc/>
+    public async Task<(UsageCounter? Monthly, UsageCounter? Weekly)> GetByAthleteAndPeriodsAsync(
+        string athleteId,
+        string monthlyPeriodKey,
+        string weeklyPeriodKey)
+    {
+        var monthlyId = $"{athleteId}_month_{monthlyPeriodKey}";
+        var weeklyId = $"{athleteId}_week_{weeklyPeriodKey}";
+
+        var monthlyTask = TryReadByIdAndTypeAsync(monthlyId, UsageCounter.MonthlyUsageType);
+        var weeklyTask = TryReadByIdAndTypeAsync(weeklyId, UsageCounter.WeeklyUsageType);
+
+        await Task.WhenAll(monthlyTask, weeklyTask);
+        return (await monthlyTask, await weeklyTask);
+    }
+
     private async Task UpsertPatchAsync(
         string id,
         string athleteId,
@@ -265,6 +281,19 @@ public class UsageCounterRepository(CosmosClient client, IConfiguration configur
     {
         return value.Replace("~", "~0", StringComparison.Ordinal)
             .Replace("/", "~1", StringComparison.Ordinal);
+    }
+
+    private async Task<UsageCounter?> TryReadByIdAndTypeAsync(string id, string usageType)
+    {
+        try
+        {
+            var response = await _container.ReadItemAsync<UsageCounter>(id, new PartitionKey(usageType));
+            return response.Resource;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     private async Task<IReadOnlyList<UsageCounter>> ExecuteQueryAsync(

@@ -427,17 +427,16 @@ public static class CoachEndpoints
 
         try
         {
-            var usageCounters = await usageCounterRepository.GetByAthleteIdAsync(athleteId);
             var now = DateTime.UtcNow;
             var monthlyPeriodKey = $"{now:yyyy-MM}";
             var weeklyPeriodKey = $"{ISOWeek.GetYear(now)}-W{ISOWeek.GetWeekOfYear(now):00}";
 
-            var monthlyCounter = usageCounters.FirstOrDefault(counter =>
-                counter.UsageType == UsageCounter.MonthlyUsageType &&
-                string.Equals(counter.PeriodKey, monthlyPeriodKey, StringComparison.Ordinal));
-            var weeklyCounter = usageCounters.FirstOrDefault(counter =>
-                counter.UsageType == UsageCounter.WeeklyUsageType &&
-                string.Equals(counter.PeriodKey, weeklyPeriodKey, StringComparison.Ordinal));
+            var athleteCounters = await usageCounterRepository.GetByAthleteAndPeriodsAsync(
+                athleteId,
+                monthlyPeriodKey,
+                weeklyPeriodKey);
+            var monthlyCounter = athleteCounters.Monthly;
+            var weeklyCounter = athleteCounters.Weekly;
 
             var currentMonthlyTokens = (monthlyCounter?.TotalInputTokens ?? 0) + (monthlyCounter?.TotalOutputTokens ?? 0);
             var currentWeeklyTokens = (weeklyCounter?.TotalInputTokens ?? 0) + (weeklyCounter?.TotalOutputTokens ?? 0);
@@ -458,13 +457,12 @@ public static class CoachEndpoints
                 return null;
             }
 
-            var globalUsageCounters = await usageCounterRepository.GetByAthleteIdAsync(GlobalAthleteId);
-            var globalMonthlyCounter = globalUsageCounters.FirstOrDefault(counter =>
-                counter.UsageType == UsageCounter.MonthlyUsageType &&
-                string.Equals(counter.PeriodKey, monthlyPeriodKey, StringComparison.Ordinal));
-            var globalWeeklyCounter = globalUsageCounters.FirstOrDefault(counter =>
-                counter.UsageType == UsageCounter.WeeklyUsageType &&
-                string.Equals(counter.PeriodKey, weeklyPeriodKey, StringComparison.Ordinal));
+            var globalCounters = await usageCounterRepository.GetByAthleteAndPeriodsAsync(
+                GlobalAthleteId,
+                monthlyPeriodKey,
+                weeklyPeriodKey);
+            var globalMonthlyCounter = globalCounters.Monthly;
+            var globalWeeklyCounter = globalCounters.Weekly;
 
             var currentGlobalMonthlyTokens = (globalMonthlyCounter?.TotalInputTokens ?? 0) + (globalMonthlyCounter?.TotalOutputTokens ?? 0);
             var currentGlobalWeeklyTokens = (globalWeeklyCounter?.TotalInputTokens ?? 0) + (globalWeeklyCounter?.TotalOutputTokens ?? 0);

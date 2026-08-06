@@ -27,4 +27,16 @@ public interface IUsageCounterRepository : IRepository<UsageCounter>
     /// </summary>
     /// <param name="athleteId">Athlete identifier.</param>
     Task<IReadOnlyList<UsageCounter>> GetByAthleteIdAsync(string athleteId);
+
+    /// <summary>
+    /// Returns the monthly and weekly usage counters for a specific athlete and period keys.
+    /// Uses direct point reads by known document IDs to minimize RU consumption.
+    /// </summary>
+    /// <param name="athleteId">Athlete identifier.</param>
+    /// <param name="monthlyPeriodKey">Monthly period key in yyyy-MM format.</param>
+    /// <param name="weeklyPeriodKey">Weekly period key in ISO format yyyy-Www.</param>
+    Task<(UsageCounter? Monthly, UsageCounter? Weekly)> GetByAthleteAndPeriodsAsync(
+        string athleteId,
+        string monthlyPeriodKey,
+        string weeklyPeriodKey);
 }

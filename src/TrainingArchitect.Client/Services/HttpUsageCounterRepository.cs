@@ -39,4 +39,10 @@ public class HttpUsageCounterRepository(HttpClient http) : IUsageCounterReposito
         var encodedAthleteId = Uri.EscapeDataString(athleteId);
         return await http.GetFromJsonAsync<List<UsageCounter>>($"/api/admin/usage/{encodedAthleteId}") ?? [];
     }
+
+    public Task<(UsageCounter? Monthly, UsageCounter? Weekly)> GetByAthleteAndPeriodsAsync(
+        string athleteId,
+        string monthlyPeriodKey,
+        string weeklyPeriodKey) =>
+        throw new NotSupportedException("GetByAthleteAndPeriodsAsync is not supported in the WASM client.");
 }
