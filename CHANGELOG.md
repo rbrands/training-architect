@@ -18,15 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
-## [1.0.2] - 2026-08-06
+## [1.0.3] - 2026-08-06
 
 ### Added
 - Dynamic `/sitemap.xml` generation for canonical public URLs and published article pages.
 - `/robots.txt` now references the sitemap for search engine discovery.
 - CTL/ATL/Foram now as KPI on coach page as part of metrics.
+- Periodic global usage counter rebuild service (startup + every 5 minutes) was added.
+- Manual global usage refresh action was added to Admin (`POST /api/admin/usage/refresh`) with a new button in the Usage tab.
+- Admin Usage view now shows `Last global refresh` based on current global counter rows.
 
 ### Changed
--
+- Coach token limit checks now use point reads for current monthly/weekly usage documents instead of broader history reads.
+- Global usage counters are now rebuilt periodically into existing `global_month_*` and `global_week_*` documents (no new snapshot naming).
+- Usage TTL is now type-specific: `weekly_usage` = 30 days, `monthly_usage` = 365 days.
 
 ### Fixed
 -
