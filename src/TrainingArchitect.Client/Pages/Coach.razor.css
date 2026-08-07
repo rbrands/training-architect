@@ -63,6 +63,39 @@
     gap: 0.75rem;
 }
 
+.coach-status-copy-json {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border: 1px solid #d3dbe8;
+    border-radius: 8px;
+    background: #f8fafe;
+    color: #3b4f70;
+    cursor: pointer;
+}
+
+.coach-status-copy-json:hover,
+.coach-status-copy-json:focus-visible {
+    border-color: #9fb5d9;
+    background: #eef3fb;
+    color: #243754;
+    outline: none;
+}
+
+.coach-status-copy-json:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.coach-status-copy-feedback {
+    margin-top: 0.1rem;
+    color: #3b4f70;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
 .coach-status-badge {
     width: 2rem;
     height: 2rem;

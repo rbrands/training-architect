@@ -48,7 +48,22 @@
                                 @Session.LevelLabel
                             </span>
                         }
+                        @if (Session.State == CoachConnectionState.Connected)
+                        {
+                            <button type="button"
+                                    class="coach-status-copy-json"
+                                    title="Copy athlete JSON"
+                                    aria-label="Copy athlete JSON"
+                                    disabled="@(!CanViewData)"
+                                    @onclick="CopyAthleteJsonAsync">
+                                <i class="bi bi-clipboard" aria-hidden="true"></i>
+                            </button>
+                        }
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(_statusCopyFeedback))
+                    {
+                        <div class="coach-status-copy-feedback">@_statusCopyFeedback</div>
+                    }
                     @if (ShowRememberedNote)
                     {
                         <div class="coach-status-note">
@@ -831,6 +846,7 @@
     private bool _showCredentialHelp;
     private bool _showDataView;
     private string _dataViewFeedback = string.Empty;
+    private string? _statusCopyFeedback;
     private string? _initializationError;
 
     private bool ShowRememberedNote => _showRememberedHint;
@@ -2559,6 +2575,33 @@
         if (state.CopyFeedback is not null)
         {
             state.CopyFeedback = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyAthleteJsonAsync()
+    {
+        if (!CanViewData)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", DataParsedPrettyJson);
+            _statusCopyFeedback = "Copied";
+        }
+        catch
+        {
+            _statusCopyFeedback = "Copy failed";
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(1800);
+        if (_statusCopyFeedback is not null)
+        {
+            _statusCopyFeedback = null;
             StateHasChanged();
         }
     }
