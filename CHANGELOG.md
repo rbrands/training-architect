@@ -18,6 +18,27 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.0.4] - 2026-08-07
+
+### Added
+- Dedicated `/privacy` page covering the data controller, Azure and Cloudflare infrastructure, intervals.icu integration, AI processing, operational data, retention, legal bases, GDPR rights, and contact details.
+- Explicit consent notice with a Privacy Notice link before connecting an intervals.icu account.
+- Optional copyright link setting in the About editor.
+- Privacy page link in the footer and `/sitemap.xml`.
+- The curated athlete dataset now provides a direct copy button as soon as the data has been loaded.
+
+### Changed
+- Privacy disclosures now reflect the implemented browser storage, Cosmos DB usage counters, Application Insights telemetry, Azure processing regions, retention periods, and international data transfer safeguards.
+- Legal Notice was updated from the TMG to § 5 DDG, outdated TMG liability references were removed, and duplicated privacy details were replaced with a link to the Privacy Notice.
+- Legal editor now requests a complete service provider postal address, and owners are warned when required provider details are incomplete.
+- Footer navigation now presents `Legal | Privacy`, and the copyright text becomes a link when a copyright URL is configured.
+
+### Fixed
+- Preserved spacing between the copyright year and copyright name when the name is rendered as a link.
+
+### Removed
+- Duplicated cookie, hosting, and AI privacy disclosures from the Legal Notice.
+
 ## [1.0.3] - 2026-08-06
 
 ### Added
