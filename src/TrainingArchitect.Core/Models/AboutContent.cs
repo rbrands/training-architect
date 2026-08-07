@@ -15,6 +15,7 @@ public class AboutContent : CosmosDocument
     public string HeaderSubtitle { get; set; } = "Subtitle";
     public string HeaderText { get; set; } = string.Empty;
     public string FooterCopyright { get; set; } = "Brands Advisory";
+    public string FooterCopyrightLink { get; set; } = string.Empty;
     public string FooterLinkTitle { get; set; } = string.Empty;
     public string FooterLink { get; set; } = string.Empty;
     public string LegalServiceProviderName { get; set; } = string.Empty;
