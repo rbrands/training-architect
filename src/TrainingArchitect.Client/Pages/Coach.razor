@@ -284,12 +284,8 @@
         {
             var expandedPrompt = GetPromptCard(_expandedCard.Value);
             var expandedState = GetAssessCardState(expandedPrompt.CardType);
-            var metricsSnapshot = expandedPrompt.CardType == AssessCardType.MetricsWellness
-                ? BuildMetricsSnapshot()
-                : [];
-            var fitnessKpis = expandedPrompt.CardType == AssessCardType.MetricsWellness
-                ? BuildFitnessKpis()
-                : null;
+            var metricsSnapshot = BuildMetricsSnapshot();
+            var fitnessKpis = BuildFitnessKpis();
 
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
@@ -324,7 +320,7 @@
                 @if (!string.IsNullOrWhiteSpace(expandedState.ResultText))
                 {
                     <div class="coach-assess-result-block">
-                        @if (expandedPrompt.CardType == AssessCardType.MetricsWellness)
+                        @if (metricsSnapshot.Count > 0)
                         {
                             <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
                                 <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
