@@ -168,12 +168,21 @@
                         <span>Remember on this device</span>
                     </label>
 
+                    <p id="connect-consent" class="credential-consent">
+                        By connecting intervals.icu, you explicitly consent to the processing of the
+                        health-related training and wellness data described in the
+                        <a href="/privacy">Privacy Notice</a> for personalized coaching.
+                    </p>
+
                     @if (Session.State == CoachConnectionState.Error && !string.IsNullOrEmpty(Session.ErrorMessage))
                     {
                         <p class="error" role="alert">@DisplayConnectionError</p>
                     }
 
-                    <button class="connect coach-button-orange" disabled="@(!CanSubmit)" @onclick="ConnectAsync">
+                    <button class="connect coach-button-orange"
+                            aria-describedby="connect-consent"
+                            disabled="@(!CanSubmit)"
+                            @onclick="ConnectAsync">
                         @if (IsBusy)
                         {
                             <span class="spinner" aria-hidden="true"></span>

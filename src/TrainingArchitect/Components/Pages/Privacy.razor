@@ -1,0 +1,181 @@
+@page "/privacy"
+@inject IAboutRepository AboutRepo
+
+<PageTitle>Privacy · @_siteTitle</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="fw-bold mb-0">Privacy</h1>
+</div>
+
+<div class="card-dark p-4">
+    <p class="text-secondary small">Last updated: August 7, 2026</p>
+
+    <h5 class="fw-semibold mb-2">1. Data Controller</h5>
+    <p class="text-secondary small">
+        The controller responsible for data processing on this website is:
+    </p>
+    <p class="text-secondary small">
+        @if (!string.IsNullOrWhiteSpace(_about?.LegalServiceProviderName))
+        {
+            @_about.LegalServiceProviderName<br />
+        }
+        @if (!string.IsNullOrWhiteSpace(_about?.LegalServiceProviderLocation))
+        {
+            @_about.LegalServiceProviderLocation<br />
+        }
+        @if (!string.IsNullOrWhiteSpace(_about?.LegalContact))
+        {
+            <a href="@($"mailto:{_about.LegalContact}")" class="text-decoration-none">@_about.LegalContact</a>
+        }
+    </p>
+    <p class="text-secondary small">
+        The current controller details are also available in the <a href="/legal">Legal Notice</a>.
+    </p>
+
+    <h5 class="fw-semibold mb-2">2. Hosting and Infrastructure</h5>
+    <p class="text-secondary small">
+        This service uses Microsoft Azure for application hosting, database services, telemetry,
+        secure configuration, file storage, and AI-related processing. Cloudflare is used for DNS,
+        transport security, caching, and protective edge services. Depending on the request and
+        service configuration, these providers may process IP addresses, timestamps, requested URLs,
+        browser and device information, diagnostic data, and security-related request metadata.
+    </p>
+    <ul class="text-secondary small">
+        <li>Core application resources are configured for the Azure region Germany West Central.</li>
+        <li>Microsoft Foundry components used by the coaching workflow are configured for Sweden Central.</li>
+        <li>Application Insights records requests, dependencies, exceptions, and performance metrics.</li>
+    </ul>
+    <p class="text-secondary small">
+        If you sign in, Microsoft Entra ID processes authentication identifiers and related login data.
+        The website may set technically necessary ASP.NET Core authentication, antiforgery, OIDC nonce,
+        and OIDC correlation cookies. Cloudflare may set a <code>cf_clearance</code> cookie after a security
+        check. These cookies support authentication, request integrity, and platform security and are not
+        used by Training Architect for advertising. Their lifetime depends on the applicable service,
+        security configuration, and browser settings.
+    </p>
+    <p class="text-secondary small">
+        Microsoft and Cloudflare act as service providers under their applicable contractual terms.
+        Processing may involve group companies or subprocessors outside the European Economic Area.
+        Where required, such transfers must be protected by an adequacy decision, Standard Contractual
+        Clauses, or another safeguard recognized under Chapter V GDPR.
+    </p>
+
+    <h5 class="fw-semibold mb-2">3. intervals.icu Integration</h5>
+    <p class="text-secondary small">
+        When you connect an intervals.icu account, Training Architect uses the Athlete ID and API key
+        you provide to retrieve training, activity, fitness, recovery, and wellness data on demand.
+        This data is used to generate the assessment, recommendation, or training plan you request.
+        A plan is sent back to intervals.icu only when you actively request an upload.
+    </p>
+    <p class="text-secondary small">
+        The credentials are transmitted over HTTPS to the application and its configured athlete-data
+        and AI workflow services. The API key is not written to the Training Architect database.
+        The Athlete ID is stored separately for access configuration and usage accounting as described below.
+        intervals.icu processes data under its own privacy terms.
+    </p>
+    <p class="text-secondary small">
+        In your browser, the Athlete ID, API key, selected language, and athlete profile goal are stored
+        in session storage by default and removed when the browser tab is closed. If you choose the
+        remember option, they are stored in local storage until you disconnect and remove them or clear
+        the browser storage. These browser values are not encrypted by the application and are accessible
+        to scripts running for this website.
+    </p>
+
+    <h5 class="fw-semibold mb-2">4. Artificial Intelligence Services</h5>
+    <p class="text-secondary small">
+        Training Architect uses Microsoft Foundry and Azure OpenAI to generate assessments,
+        recommendations, and training plans. The data sent for an AI request may include your prompt,
+        Athlete ID, intervals.icu API key, selected settings, and the training and wellness context
+        required to produce the requested result.
+    </p>
+    <p class="text-secondary small">
+        Microsoft may temporarily retain request and response content for service operation and abuse
+        monitoring in accordance with the applicable Azure service configuration and contractual terms.
+        According to Microsoft's terms for Azure OpenAI, customer prompts, completions, and training data
+        are not used to train foundation models made available to other customers.
+    </p>
+    <p class="text-secondary small">
+        Training and wellness information may reveal information about health and is therefore capable
+        of constituting special-category data under Article 9 GDPR. Such data must be processed only with
+        your explicit consent under Article 9(2)(a) GDPR. You provide this consent by selecting Connect
+        after the consent notice shown in the intervals.icu connection form. You may withdraw consent at
+        any time for future processing by disconnecting the account and contacting the controller.
+    </p>
+
+    <h5 class="fw-semibold mb-2">5. Stored Operational Data</h5>
+    <p class="text-secondary small">
+        Training Architect does not write the retrieved intervals.icu training and wellness dataset to
+        its Cosmos DB application database. The dataset and generated output are nevertheless processed
+        transiently by the application, the athlete-data service, and the AI services involved in the request.
+        The following operational data is stored:
+    </p>
+    <ul class="text-secondary small">
+        <li>Athlete configuration: Athlete ID, access level, usage limits, lock status, and an optional account message.</li>
+        <li>Usage counters: Athlete ID, request type and count, accounting period, and input, cached-input, and output token totals.</li>
+        <li>Voluntary feedback: AI response ID, request type, positive or negative rating, and optional feedback tags.</li>
+        <li>Telemetry: HTTP requests, dependency calls, exceptions, failures, performance metrics, and related technical metadata.</li>
+    </ul>
+
+    <h5 class="fw-semibold mb-2">6. Data Retention</h5>
+    <ul class="text-secondary small">
+        <li>Weekly usage counters are automatically deleted after 30 days.</li>
+        <li>Monthly usage counters are automatically deleted after 365 days.</li>
+        <li>Application Insights telemetry, including submitted feedback events, is retained for 30 days under the current infrastructure configuration.</li>
+        <li>Athlete configuration is retained until it is no longer required for account access and usage limits or until a justified deletion request is fulfilled.</li>
+        <li>Browser session storage is cleared when the tab is closed; remembered local storage remains until it is actively removed.</li>
+        <li>Provider-side AI request and response retention is governed by the applicable Azure service configuration and contractual terms.</li>
+    </ul>
+
+    <h5 class="fw-semibold mb-2">7. Legal Basis for Processing</h5>
+    <ul class="text-secondary small">
+        <li>Article 6(1)(b) GDPR for processing necessary to provide a requested assessment, plan, upload, or account function.</li>
+        <li>Article 6(1)(f) GDPR for secure and reliable operation, rate limiting, abuse prevention, diagnostics, and service improvement.</li>
+        <li>Article 6(1)(a) and Article 9(2)(a) GDPR for consent-based processing of health-related training and wellness data.</li>
+    </ul>
+    <p class="text-secondary small">
+        Providing intervals.icu credentials and training data is voluntary. Without this information,
+        Training Architect cannot retrieve the dataset or generate personalized coaching results.
+        The service does not make decisions that produce legal or similarly significant effects solely by automated means.
+    </p>
+
+    <h5 class="fw-semibold mb-2">8. Your Rights under GDPR</h5>
+    <p class="text-secondary small">
+        Subject to the applicable legal conditions, you may request access to your personal data,
+        correction of inaccurate data, erasure, restriction of processing, and data portability.
+        You may object to processing based on Article 6(1)(f) GDPR. Where processing is based on consent,
+        you may withdraw that consent at any time with effect for the future. Withdrawal does not affect
+        the lawfulness of processing carried out before withdrawal.
+    </p>
+    <p class="text-secondary small">
+        You also have the right to lodge a complaint with the data protection supervisory authority
+        responsible for the controller or with the authority at your habitual residence or place of work.
+    </p>
+
+    <h5 class="fw-semibold mb-2">9. Contact</h5>
+    <p class="text-secondary small mb-0">
+        If you have questions about this privacy notice or the processing of personal data,
+        please contact
+        @if (!string.IsNullOrWhiteSpace(_about?.LegalContact))
+        {
+            <span>
+                <a href="@($"mailto:{_about.LegalContact}")" class="text-decoration-none">@_about.LegalContact</a>.
+            </span>
+        }
+        else
+        {
+            <span>the site operator using the contact details provided on the legal notice page.</span>
+        }
+    </p>
+</div>
+
+@code {
+    [CascadingParameter(Name = "SiteTitle")]
+    private string _siteTitle { get; set; } = "Brands Advisory";
+
+    private AboutContent? _about;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _about = await AboutRepo.GetOrCreateAsync();
+    }
+}

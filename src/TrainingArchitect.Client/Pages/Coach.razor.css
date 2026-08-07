@@ -373,6 +373,25 @@
     font-size: 0.9rem;
 }
 
+.credential-form .credential-consent {
+    max-width: 38rem;
+    margin: 0;
+    color: #5f7087;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.credential-form .credential-consent a {
+    color: #2e67bf;
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+}
+
+.credential-form .credential-consent a:hover,
+.credential-form .credential-consent a:focus-visible {
+    color: #244f91;
+}
+
 .credential-form .error {
     margin: 0;
     color: #a64141;
