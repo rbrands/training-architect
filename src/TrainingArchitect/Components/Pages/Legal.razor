@@ -11,9 +11,15 @@
     }
 </div>
 
-<div class="card-dark p-4">
+@if (_isOwner && !HasCompleteProviderDetails)
+{
+    <div class="alert alert-warning" role="alert">
+        Complete the provider name, full postal address, and email address before publishing this legal notice.
+    </div>
+}
 
-    <h5 class="fw-semibold mb-2">Service Provider (pursuant to § 5 TMG)</h5>
+<div class="card-dark p-4">
+    <h5 class="fw-semibold mb-2">Service Provider (pursuant to § 5 DDG)</h5>
     <p class="text-secondary">
         @if (!string.IsNullOrEmpty(_about?.LegalServiceProviderName))
         {
@@ -29,66 +35,14 @@
     <p class="text-secondary">
         @if (!string.IsNullOrEmpty(_about?.LegalContact))
         {
-            @($"E-Mail: {_about.LegalContact}")
+            <span>Email: <a href="@($"mailto:{_about.LegalContact}")">@_about.LegalContact</a></span>
         }
     </p>
 
-    <h5 class="fw-semibold mb-2">Cookies and Technical Storage</h5>
+    <h5 class="fw-semibold mb-2">Privacy</h5>
     <p class="text-secondary small">
-        This website uses technically necessary cookies to provide core security and
-        authentication features. In particular, ASP.NET Core may set an antiforgery
-        cookie (for CSRF protection) and an authentication/session cookie (to maintain
-        secure sign-in state). In addition, Cloudflare may set a <code>cf_clearance</code>
-        cookie to confirm that browser security checks were passed. These cookies are
-        required for secure operation and cannot be disabled without impacting site
-        functionality. The cookies listed above are session cookies and are not used
-        as long-term tracking cookies.
-    </p>
-
-    <p class="text-secondary small">
-        Access credentials for intervals.icu (Athlete ID and API key) and the selected
-        athlete profile are stored locally in the browser only if the user explicitly
-        chooses the remember option. This data is not stored on the server side.
-    </p>
-
-    <h5 class="fw-semibold mb-2">Artificial Intelligence</h5>
-    <p class="text-secondary small">
-        Training Architect uses Artificial Intelligence (AI) to generate training assessments, 
-        recommendations and training plans based on the data provided by the user.
-        AI-generated outputs may be incomplete, inaccurate, outdated or unsuitable for individual circumstances
-        and should be interpreted as supportive information rather than authoritative advice.
-    </p>
-
-    <p class="text-secondary small">
-        The training and wellness data described in
-        <a href="/blog/curated-dataset">The Curated Dataset – What the Coach Actually Sees</a>
-        is retrieved from intervals.icu on demand for the purpose of generating
-        the requested assessment or recommendation.
-
-        Training and wellness data is not permanently stored on the Training
-        Architect servers.
-
-        For technical operation and service improvement, the following information
-        may be stored:
-        <ul class="text-secondary small">
-            <li>Athlete ID</li>
-            <li>number of requests</li>
-            <li>token consumption statistics</li>
-            <li>voluntary user feedback</li>
-        </ul>
-    </p>
-
-
-    <h5 class="fw-semibold mb-2">Hosting and Processing Regions</h5>
-    <p class="text-secondary small">
-        Hosting and technical processing for this service takes place in Europe.
-        Core Azure resources, including the MCP server components, are operated in
-        the <strong>Germany West Central</strong> region. Azure Foundry components
-        used for agent functionality are operated in the <strong>Sweden Central</strong>
-        region.
-        Training data, wellness metrics and user instructions are processed by 
-        Azure AI services for the purpose of generating assessments and recommendations.
-        Customer data is not used by Microsoft to train foundation models.
+        Information about the processing of personal data, technically necessary cookies,
+        connected services, and your rights is available in the <a href="/privacy">Privacy Notice</a>.
     </p>
 
     <hr class="border-secondary" />
@@ -104,9 +58,8 @@
         The contents of this website have been compiled with the greatest possible care.
         However, no guarantee can be given for the accuracy, completeness, or timeliness
         of the content. As a service provider, we are responsible for our own content on
-        these pages in accordance with general law (§ 7 Para. 1 TMG). According to §§ 8
-        to 10 TMG, we are not obligated to monitor transmitted or stored third-party
-        information or to investigate circumstances that indicate illegal activity.
+        these pages in accordance with general law. Legal obligations to remove or block
+        the use of information remain unaffected.
     </p>
 
     <h5 class="fw-semibold mb-2">Liability for Links</h5>
@@ -140,4 +93,9 @@
     {
         _about = await AboutRepo.GetOrCreateAsync();
     }
+
+    private bool HasCompleteProviderDetails =>
+        !string.IsNullOrWhiteSpace(_about?.LegalServiceProviderName) &&
+        !string.IsNullOrWhiteSpace(_about?.LegalServiceProviderLocation) &&
+        !string.IsNullOrWhiteSpace(_about?.LegalContact);
 }
