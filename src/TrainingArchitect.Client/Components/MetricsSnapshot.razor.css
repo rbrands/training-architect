@@ -1,0 +1,132 @@
+
+.coach-metrics-snapshot {
+    margin: 0 0 0.85rem 0;
+    padding: 0.95rem 1rem 1rem;
+    border: 1px solid #cfe0f4;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f7fbff 0%, #eef7ff 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(71, 104, 143, 0.07);
+}
+
+.coach-metrics-snapshot-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.65rem 0;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: #dcefff;
+    color: #2c5d8f;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.coach-metrics-snapshot-banner-icon {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.coach-metrics-snapshot-title {
+    margin: 0 0 0.7rem 0;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: #314b73;
+    letter-spacing: 0.01em;
+}
+
+.coach-metrics-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.coach-metrics-kpi {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-height: 5.3rem;
+    padding: 0.8rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #dce4f2;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 2px rgba(90, 120, 160, 0.08);
+    text-align: center;
+}
+
+.coach-metrics-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.coach-metrics-kpi-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #1f2d42;
+}
+
+.coach-metrics-kpi--ctl .coach-metrics-kpi-value {
+    color: #3aa8f2;
+}
+
+.coach-metrics-kpi--atl .coach-metrics-kpi-value {
+    color: #6a4de0;
+}
+
+.coach-metrics-kpi--tsb .coach-metrics-kpi-value {
+    color: #52627a;
+}
+
+.coach-metrics-kpi-value--transition {
+    color: #d6a000 !important;
+}
+
+.coach-metrics-kpi-value--fresh {
+    color: #38a8f2 !important;
+}
+
+.coach-metrics-kpi-value--grey-zone {
+    color: #8c8f97 !important;
+}
+
+.coach-metrics-kpi-value--optimal {
+    color: #25c94b !important;
+}
+
+.coach-metrics-kpi-value--high-risk {
+    color: #ff1f1f !important;
+}
+
+.coach-metrics-snapshot-grid {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.7rem;
+}
+
+.coach-metrics-snapshot-item {
+    margin: 0;
+}
+
+.coach-metrics-snapshot-item dt {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #5a6780;
+}
+
+.coach-metrics-snapshot-item dd {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: #1f2d42;
+    word-break: break-word;
+}

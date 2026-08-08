@@ -322,40 +322,16 @@
                     <div class="coach-assess-result-block">
                         @if (metricsSnapshot.Count > 0)
                         {
-                            <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
-                                <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
-
-                                @if (fitnessKpis is not null)
-                                {
-                                    <div class="coach-metrics-kpis" aria-label="CTL ATL TSB summary">
-                                        <div class="coach-metrics-kpi coach-metrics-kpi--ctl">
-                                            <span class="coach-metrics-kpi-label">CTL (Fitness)</span>
-                                            <span class="coach-metrics-kpi-value">@FormatKpiValue(fitnessKpis.Ctl)</span>
-                                        </div>
-                                        <div class="coach-metrics-kpi coach-metrics-kpi--atl">
-                                            <span class="coach-metrics-kpi-label">ATL (Fatigue)</span>
-                                            <span class="coach-metrics-kpi-value">@FormatKpiValue(fitnessKpis.Atl)</span>
-                                        </div>
-                                        <div class="coach-metrics-kpi coach-metrics-kpi--tsb">
-                                            <span class="coach-metrics-kpi-label">TSB (Form)</span>
-                                            <span class="coach-metrics-kpi-value @GetTsbZoneCssClass(fitnessKpis)">@FormatTsbDisplay(fitnessKpis)</span>
-                                        </div>
-                                    </div>
-                                }
-
-                                <dl class="coach-metrics-snapshot-grid">
-                                    @foreach (var item in metricsSnapshot)
-                                    {
-                                        <div class="coach-metrics-snapshot-item">
-                                            <dt>@item.Label</dt>
-                                            <dd>@item.Value</dd>
-                                        </div>
-                                    }
-                                </dl>
-                            </div>
+                            <MetricsSnapshot Items="metricsSnapshot"
+                                             FitnessKpis="fitnessKpis" />
                         }
 
                         <div class="coach-assess-result-actions">
+                            <div class="coach-assess-badge" role="note">
+                                <span class="coach-assess-badge-icon">✦</span>
+                                <span>AI Coach assessment</span>
+                            </div>
+
                             <button type="button"
                                     class="coach-assess-copy"
                                     title="Copy Markdown"
@@ -796,7 +772,6 @@
         public string? CopyFeedback { get; set; }
     }
 
-    private sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
 
     private sealed class PlanWorkoutViewModel
     {
@@ -909,7 +884,6 @@
 
     private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
     private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson);
-    private sealed record MetricSnapshotItem(string Label, string Value);
 
     private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -1093,13 +1067,15 @@
         return current;
     }
 
-    private IReadOnlyList<MetricSnapshotItem> BuildMetricsSnapshot()
+    private IReadOnlyList<MetricsSnapshot.MetricSnapshotItem> BuildMetricsSnapshot()
     {
         var root = GetOverviewRoot();
         var metrics = GetObjectProperty(root, "metrics");
+        var weekSummary = GetObjectProperty(root, "week_summary");
+        var fuelingFormAnalysis = GetNestedProperty(weekSummary, "fueling_form_analysis");
 
-        return
-        [
+        var items = new List<MetricsSnapshot.MetricSnapshotItem>
+        {
             new("FTP", FormatMetricValue(GetAnyProperty(metrics, "ftp"), "W")),
             new("eFTP", FormatMetricValue(GetAnyProperty(metrics, "eftp"), "W")),
             new("FTP w/kg", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "w_per_kg"))),
@@ -1108,10 +1084,54 @@
             new("VO2max ml/kg/min", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "ml_per_kg_min"))),
             new("VO2max Age Group", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
             new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category")))
-        ];
+        };
+
+        if (fuelingFormAnalysis is not null)
+        {
+            AddSnapshotItem(items, fuelingFormAnalysis, "fatigue_status", "Fatigue Status");
+            AddSnapshotItem(items, fuelingFormAnalysis, "fueling_status", "Fueling Status");
+            AddSnapshotItem(items, fuelingFormAnalysis, "avg_carbs_per_hour", "Avg. Carbs/h");
+            AddSnapshotItem(items, fuelingFormAnalysis, "avg_fueling_ratio", "Avg. Fueling Ratio");
+            AddSnapshotItem(items, fuelingFormAnalysis, "underfueled_sessions", "Underfueled Sessions");
+            AddSnapshotItem(items, fuelingFormAnalysis, "number_of_long_rides", "Long Rides");
+            AddSnapshotItem(items, fuelingFormAnalysis, "durability_limited_by_fueling", "Durability Limited by Fueling");
+            AddSnapshotItem(items, fuelingFormAnalysis, "interpretation", "Interpretation");
+            AddSnapshotItem(items, fuelingFormAnalysis, "recommendation", "Recommendation");
+            AddSnapshotItem(items, fuelingFormAnalysis, "long_ride_advice", "Long Ride Advice");
+        }
+
+        return items;
     }
 
-    private FitnessKpiSnapshot? BuildFitnessKpis()
+    private static void AddSnapshotItem(ICollection<MetricsSnapshot.MetricSnapshotItem> items, JsonElement? parent, string propertyName, string label)
+    {
+        if (parent is null || parent.Value.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        if (!parent.Value.TryGetProperty(propertyName, out var value))
+        {
+            return;
+        }
+
+        var text = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => FormatNumber(value),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "n/a",
+            _ => value.GetRawText()
+        };
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            items.Add(new MetricsSnapshot.MetricSnapshotItem(label, text));
+        }
+    }
+
+    private MetricsSnapshot.FitnessKpiSnapshot? BuildFitnessKpis()
     {
         var root = GetOverviewRoot();
         if (root is null)
@@ -1133,7 +1153,7 @@
             return null;
         }
 
-        return new FitnessKpiSnapshot(
+        return new MetricsSnapshot.FitnessKpiSnapshot(
             ctl.Value,
             atl.Value,
             tsb ?? (ctl.Value - atl.Value),
@@ -1261,41 +1281,10 @@
         return false;
     }
 
-    private static string FormatKpiValue(double value)
-    {
-        return value.ToString("0.0", CultureInfo.InvariantCulture);
-    }
-
-    private static string FormatSignedKpiValue(double value)
-    {
-        var prefix = value >= 0 ? "+" : string.Empty;
-        return $"{prefix}{value.ToString("0.0", CultureInfo.InvariantCulture)}";
-    }
-
     private static string FormatPercentValue(double value)
     {
         var prefix = value >= 0 ? "+" : string.Empty;
         return $"{prefix}{value.ToString("0.0", CultureInfo.InvariantCulture)} %";
-    }
-
-    private static string FormatTsbDisplay(FitnessKpiSnapshot snapshot)
-    {
-        return string.IsNullOrWhiteSpace(snapshot.FormPercentDisplay)
-            ? FormatSignedKpiValue(snapshot.Tsb)
-            : snapshot.FormPercentDisplay;
-    }
-
-    private static string GetTsbZoneCssClass(FitnessKpiSnapshot snapshot)
-    {
-        return NormalizeFormZone(snapshot.FormZone) switch
-        {
-            "transition" => "coach-metrics-kpi-value--transition",
-            "fresh" => "coach-metrics-kpi-value--fresh",
-            "grey_zone" => "coach-metrics-kpi-value--grey-zone",
-            "optimal" => "coach-metrics-kpi-value--optimal",
-            "high_risk" => "coach-metrics-kpi-value--high-risk",
-            _ => string.Empty
-        };
     }
 
     private static string? DetermineFormZone(double? formPercent)

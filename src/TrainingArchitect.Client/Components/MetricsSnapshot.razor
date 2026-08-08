@@ -1,0 +1,94 @@
+@using System.Globalization
+@using System.Text.Json
+
+@if (Items.Count > 0)
+{
+    <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
+        <div class="coach-metrics-snapshot-banner" role="note">
+            <span class="coach-metrics-snapshot-banner-icon">●</span>
+            <span>Rule-based from intervals.icu data</span>
+        </div>
+        <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
+
+        @if (FitnessKpis is not null)
+        {
+            <div class="coach-metrics-kpis" aria-label="CTL ATL TSB summary">
+                <div class="coach-metrics-kpi coach-metrics-kpi--ctl">
+                    <span class="coach-metrics-kpi-label">CTL (Fitness)</span>
+                    <span class="coach-metrics-kpi-value">@FormatKpiValue(FitnessKpis.Ctl)</span>
+                </div>
+                <div class="coach-metrics-kpi coach-metrics-kpi--atl">
+                    <span class="coach-metrics-kpi-label">ATL (Fatigue)</span>
+                    <span class="coach-metrics-kpi-value">@FormatKpiValue(FitnessKpis.Atl)</span>
+                </div>
+                <div class="coach-metrics-kpi coach-metrics-kpi--tsb">
+                    <span class="coach-metrics-kpi-label">TSB (Form)</span>
+                    <span class="coach-metrics-kpi-value @GetTsbZoneCssClass(FitnessKpis)">@FormatTsbDisplay(FitnessKpis)</span>
+                </div>
+            </div>
+        }
+
+        <dl class="coach-metrics-snapshot-grid">
+            @foreach (var item in Items)
+            {
+                <div class="coach-metrics-snapshot-item">
+                    <dt>@item.Label</dt>
+                    <dd>@item.Value</dd>
+                </div>
+            }
+        </dl>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MetricSnapshotItem> Items { get; set; } = [];
+
+    [Parameter]
+    public FitnessKpiSnapshot? FitnessKpis { get; set; }
+
+    private static string FormatKpiValue(double value)
+    {
+        return value.ToString("0.0", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatTsbDisplay(FitnessKpiSnapshot snapshot)
+    {
+        return string.IsNullOrWhiteSpace(snapshot.FormPercentDisplay)
+            ? FormatSignedKpiValue(snapshot.Tsb)
+            : snapshot.FormPercentDisplay;
+    }
+
+    private static string FormatSignedKpiValue(double value)
+    {
+        var prefix = value >= 0 ? "+" : string.Empty;
+        return $"{prefix}{value.ToString("0.0", CultureInfo.InvariantCulture)}";
+    }
+
+    private static string GetTsbZoneCssClass(FitnessKpiSnapshot snapshot)
+    {
+        return NormalizeFormZone(snapshot.FormZone) switch
+        {
+            "transition" => "coach-metrics-kpi-value--transition",
+            "fresh" => "coach-metrics-kpi-value--fresh",
+            "grey_zone" => "coach-metrics-kpi-value--grey-zone",
+            "optimal" => "coach-metrics-kpi-value--optimal",
+            "high_risk" => "coach-metrics-kpi-value--high-risk",
+            _ => string.Empty
+        };
+    }
+
+    private static string? NormalizeFormZone(string? formZone)
+    {
+        if (string.IsNullOrWhiteSpace(formZone))
+        {
+            return null;
+        }
+
+        return formZone.Trim().ToLowerInvariant();
+    }
+
+    public sealed record MetricSnapshotItem(string Label, string Value);
+
+    public sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
+}
