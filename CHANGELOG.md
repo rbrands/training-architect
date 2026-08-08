@@ -18,6 +18,22 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.0.5] - 2026-08-08
+
+### Added
+- Metrics Snapshot is now rendered in all Coach assessment cards.
+- Snapshot context labels were added to distinguish rule-based intervals.icu data from the AI Coach assessment text.
+
+### Changed
+- Metrics Snapshot presentation was consolidated into a reusable component with dedicated styling and consistent KPI rendering.
+- Footer spacing and line behavior were optimized for iPhone screens, including tighter `Legal | Privacy` link spacing.
+
+### Fixed
+- Restored a clear light-blue card background for the Metrics Snapshot block after UI refactoring.
+
+### Removed
+-
+
 ## [1.0.4] - 2026-08-07
 
 ### Added
