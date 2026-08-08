@@ -80,7 +80,7 @@
 
 <footer class="border-top py-3 small premium-footer">
     <div class="container d-flex justify-content-between align-items-center" style="max-width: 900px;">
-        <span class="text-secondary">
+        <span class="text-secondary premium-footer-copy">
             &copy; @DateTime.UtcNow.Year<span aria-hidden="true">&nbsp;</span>
             @if (!string.IsNullOrWhiteSpace(_about?.FooterCopyrightLink))
             {
@@ -98,7 +98,7 @@
            title="Open changelog">
             @ApplicationVersionInfo.Current.Display
         </a>
-        <span class="text-secondary d-flex align-items-center gap-3">
+        <span class="text-secondary d-flex align-items-center gap-3 premium-footer-links">
             @if (!string.IsNullOrEmpty(_about?.FooterLink))
             {
                 <a href="@_about.FooterLink" class="text-secondary text-decoration-none">@(_about.FooterLinkTitle.Length > 0 ? _about.FooterLinkTitle : _about.FooterLink)</a>
