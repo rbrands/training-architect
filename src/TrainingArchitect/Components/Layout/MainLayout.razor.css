@@ -144,6 +144,12 @@
         align-items: center;
         gap: 0.4rem !important;
         flex-wrap: nowrap;
+        margin-left: auto;
+    }
+
+    ::deep .premium-footer-legal-group {
+        margin-left: auto;
+        justify-content: flex-end;
     }
 
     ::deep .brand-name {
