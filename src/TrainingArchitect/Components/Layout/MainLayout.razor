@@ -79,7 +79,7 @@
 </main>
 
 <footer class="border-top py-3 small premium-footer">
-    <div class="container d-flex justify-content-between align-items-center" style="max-width: 900px;">
+    <div class="container d-flex justify-content-between align-items-center premium-footer-row" style="max-width: 900px;">
         <span class="text-secondary premium-footer-copy">
             &copy; @DateTime.UtcNow.Year<span aria-hidden="true">&nbsp;</span>
             @if (!string.IsNullOrWhiteSpace(_about?.FooterCopyrightLink))
@@ -102,11 +102,13 @@
             @if (!string.IsNullOrEmpty(_about?.FooterLink))
             {
                 <a href="@_about.FooterLink" class="text-secondary text-decoration-none">@(_about.FooterLinkTitle.Length > 0 ? _about.FooterLinkTitle : _about.FooterLink)</a>
-                <span aria-hidden="true">&middot;</span>
+                <span aria-hidden="true" class="premium-footer-separator">&middot;</span>
             }
-            <a href="/legal" class="text-secondary text-decoration-none">Legal</a>
-            <span aria-hidden="true">|</span>
-            <a href="/privacy" class="text-secondary text-decoration-none">Privacy</a>
+            <span class="premium-footer-legal-group">
+                <a href="/legal" class="text-secondary text-decoration-none">Legal</a>
+                <span aria-hidden="true" class="premium-footer-separator">|</span>
+                <a href="/privacy" class="text-secondary text-decoration-none">Privacy</a>
+            </span>
         </span>
     </div>
 </footer>
