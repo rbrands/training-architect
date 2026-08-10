@@ -28,6 +28,39 @@
             </div>
         }
 
+        @if (TrainingLoadHistory.Count > 0)
+        {
+            <section class="coach-load-history" aria-labelledby="coach-load-history-title">
+                <div class="coach-load-history-header">
+                    <h5 id="coach-load-history-title">Weekly Training Load (TSS)</h5>
+                    <div class="coach-load-history-legend" aria-hidden="true">
+                        <span><i class="coach-load-history-legend-bar"></i>Load</span>
+                        <span><i class="coach-load-history-legend-target"></i>Target</span>
+                    </div>
+                </div>
+
+                <div class="coach-load-history-chart" role="img" aria-label="@BuildChartAriaLabel()">
+                    @foreach (var week in TrainingLoadHistory)
+                    {
+                        <div class="coach-load-history-week @(week.IsCurrentWeek ? "is-current" : string.Empty)">
+                            <span class="coach-load-history-achievement @GetAchievementCssClass(week)">
+                                @FormatAchievement(week)
+                            </span>
+                            <div class="coach-load-history-plot" style="@BuildPlotStyle(week)">
+                                @if (week.TargetLoad is > 0)
+                                {
+                                    <span class="coach-load-history-target" aria-hidden="true"></span>
+                                }
+                                <span class="coach-load-history-bar" aria-hidden="true"></span>
+                            </div>
+                            <span class="coach-load-history-week-label">@FormatWeekLabel(week)</span>
+                            <span class="coach-load-history-values">@FormatLoadValues(week)</span>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
         <dl class="coach-metrics-snapshot-grid">
             @foreach (var item in Items)
             {
@@ -46,6 +79,78 @@
 
     [Parameter]
     public FitnessKpiSnapshot? FitnessKpis { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<TrainingLoadWeekSnapshot> TrainingLoadHistory { get; set; } = [];
+
+    private double TrainingLoadChartMaximum
+    {
+        get
+        {
+            var maximum = TrainingLoadHistory
+                .SelectMany(week => week.TargetLoad is null
+                    ? new[] { week.ActualLoad }
+                    : new[] { week.ActualLoad, week.TargetLoad.Value })
+                .DefaultIfEmpty(1)
+                .Max();
+
+            return Math.Max(1, maximum * 1.1);
+        }
+    }
+
+    private string BuildPlotStyle(TrainingLoadWeekSnapshot week)
+    {
+        var actualHeight = Math.Clamp(week.ActualLoad / TrainingLoadChartMaximum * 100, 0, 100);
+        var targetPosition = Math.Clamp((week.TargetLoad ?? 0) / TrainingLoadChartMaximum * 100, 0, 100);
+
+        return FormattableString.Invariant($"--load-height: {actualHeight:0.##}%; --target-position: {targetPosition:0.##}%;");
+    }
+
+    private string BuildChartAriaLabel()
+    {
+        var weekDescriptions = TrainingLoadHistory.Select(week =>
+            $"{FormatWeekLabel(week)}: load {week.ActualLoad:0.#} TSS"
+            + (week.TargetLoad is > 0 ? $", target {week.TargetLoad.Value:0.#} TSS" : ", no target"));
+
+        return $"Weekly training load. {string.Join("; ", weekDescriptions)}.";
+    }
+
+    private static string FormatWeekLabel(TrainingLoadWeekSnapshot week)
+    {
+        return week.IsCurrentWeek
+            ? "Current"
+            : week.WeekStarting.ToString("dd MMM", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatLoadValues(TrainingLoadWeekSnapshot week)
+    {
+        var actual = week.ActualLoad.ToString("0.#", CultureInfo.InvariantCulture);
+        return week.TargetLoad is > 0
+            ? $"{actual} / {week.TargetLoad.Value.ToString("0.#", CultureInfo.InvariantCulture)}"
+            : actual;
+    }
+
+    private static string FormatAchievement(TrainingLoadWeekSnapshot week)
+    {
+        return week.AchievementPercent is null
+            ? "No target"
+            : $"{week.AchievementPercent.Value.ToString("0", CultureInfo.InvariantCulture)}%";
+    }
+
+    private static string GetAchievementCssClass(TrainingLoadWeekSnapshot week)
+    {
+        if (week.IsCurrentWeek || week.AchievementPercent is null)
+        {
+            return "is-neutral";
+        }
+
+        return week.AchievementPercent.Value switch
+        {
+            >= 90 and <= 110 => "is-on-target",
+            >= 70 and <= 140 => "is-moderate",
+            _ => "is-outlier"
+        };
+    }
 
     private static string FormatKpiValue(double value)
     {
@@ -91,4 +196,11 @@
     public sealed record MetricSnapshotItem(string Label, string Value);
 
     public sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
+
+    public sealed record TrainingLoadWeekSnapshot(
+        DateOnly WeekStarting,
+        double ActualLoad,
+        double? TargetLoad,
+        double? AchievementPercent,
+        bool IsCurrentWeek);
 }

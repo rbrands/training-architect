@@ -18,6 +18,21 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.1.0] - 2026-08-10
+
+### Added
+- Metrics Snapshot now includes a responsive five-week training-load chart that compares actual Ride TSS with weekly targets.
+- The chart distinguishes the incomplete current week and provides an accessible text description of load and target values.
+
+### Changed
+- Recent training-load history is combined with the current week directly in the Metrics Snapshot for immediate coaching context.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.0.5] - 2026-08-08
 
 ### Added

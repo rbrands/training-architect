@@ -105,6 +105,154 @@
     color: #ff1f1f !important;
 }
 
+.coach-load-history {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 0.8rem 0.7rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.coach-load-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+}
+
+.coach-load-history-header h5 {
+    margin: 0;
+    color: #314b73;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.coach-load-history-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.coach-load-history-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.coach-load-history-legend-bar {
+    width: 0.5rem;
+    height: 0.65rem;
+    border-radius: 2px 2px 0 0;
+    background: #3182ce;
+}
+
+.coach-load-history-legend-target {
+    width: 0.7rem;
+    height: 0;
+    border-top: 2px solid #253858;
+}
+
+.coach-load-history-chart {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(2.7rem, 1fr));
+    gap: clamp(0.25rem, 1.5vw, 0.7rem);
+    min-width: 0;
+}
+
+.coach-load-history-week {
+    display: grid;
+    grid-template-rows: 1.15rem 6.4rem auto auto;
+    min-width: 0;
+    text-align: center;
+}
+
+.coach-load-history-achievement {
+    align-self: center;
+    color: #52627a;
+    font-size: 0.67rem;
+    font-weight: 800;
+}
+
+.coach-load-history-achievement.is-on-target {
+    color: #16803a;
+}
+
+.coach-load-history-achievement.is-moderate {
+    color: #b45f06;
+}
+
+.coach-load-history-achievement.is-outlier {
+    color: #c53030;
+}
+
+.coach-load-history-achievement.is-neutral {
+    color: #52627a;
+}
+
+.coach-load-history-plot {
+    position: relative;
+    width: min(2.2rem, 72%);
+    height: 6.4rem;
+    margin: 0 auto;
+    border-bottom: 1px solid #aebdce;
+}
+
+.coach-load-history-bar {
+    position: absolute;
+    right: 14%;
+    bottom: 0;
+    left: 14%;
+    height: var(--load-height);
+    min-height: 2px;
+    border-radius: 4px 4px 1px 1px;
+    background: #3182ce;
+}
+
+.coach-load-history-week.is-current .coach-load-history-bar {
+    background: repeating-linear-gradient(
+        135deg,
+        #6f8eaa 0,
+        #6f8eaa 5px,
+        #a9bed0 5px,
+        #a9bed0 9px);
+}
+
+.coach-load-history-target {
+    position: absolute;
+    z-index: 1;
+    right: 0;
+    bottom: var(--target-position);
+    left: 0;
+    border-top: 2px solid #253858;
+    transform: translateY(1px);
+}
+
+.coach-load-history-week-label {
+    margin-top: 0.35rem;
+    overflow: hidden;
+    color: #42526b;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.coach-load-history-week.is-current .coach-load-history-week-label {
+    color: #253858;
+}
+
+.coach-load-history-values {
+    margin-top: 0.08rem;
+    color: #738196;
+    font-size: 0.62rem;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
 .coach-metrics-snapshot-grid {
     margin: 0;
     display: grid;
@@ -129,4 +277,38 @@
     font-weight: 700;
     color: #1f2d42;
     word-break: break-word;
+}
+
+@media (max-width: 430px) {
+    .coach-load-history {
+        padding-right: 0.55rem;
+        padding-left: 0.55rem;
+    }
+
+    .coach-load-history-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .coach-load-history-chart {
+        gap: 0.18rem;
+    }
+
+    .coach-load-history-week {
+        grid-template-rows: 1.15rem 5.4rem auto auto;
+    }
+
+    .coach-load-history-plot {
+        height: 5.4rem;
+    }
+
+    .coach-load-history-week-label,
+    .coach-load-history-achievement {
+        font-size: 0.61rem;
+    }
+
+    .coach-load-history-values {
+        font-size: 0.56rem;
+    }
 }
