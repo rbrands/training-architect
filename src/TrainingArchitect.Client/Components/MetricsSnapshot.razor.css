@@ -28,12 +28,45 @@
     line-height: 1;
 }
 
+.coach-metrics-snapshot-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+}
+
 .coach-metrics-snapshot-title {
-    margin: 0 0 0.7rem 0;
+    margin: 0;
     font-size: 0.93rem;
     font-weight: 700;
     color: #314b73;
     letter-spacing: 0.01em;
+}
+
+.coach-metrics-snapshot-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1px solid #bfd5f1;
+    border-radius: 50%;
+    background: #eaf3ff;
+    color: #2a5d8e;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(52, 91, 136, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.coach-metrics-snapshot-help:hover,
+.coach-metrics-snapshot-help:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(52, 91, 136, 0.15);
+    text-decoration: none;
 }
 
 .coach-metrics-kpis {

@@ -18,6 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.1.1] - 2026-08-14
+
+### Added
+- Metrics Snapshot now includes a direct help link with a question-mark icon to the training-load article covering TSS, CTL, ATL and TSB.
+
+### Changed
+- The Metrics Snapshot header was adjusted to keep the explanatory article link visible without cluttering the KPI summary.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.1.0] - 2026-08-10
 
 ### Added
