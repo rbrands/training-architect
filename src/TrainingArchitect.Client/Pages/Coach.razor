@@ -13,6 +13,7 @@
 @using System.Linq
 @using TrainingArchitect.Core.Constants
 @using TrainingArchitect.Core.Models
+@using TrainingArchitect.Core.Services
 @implements IDisposable
 
 
@@ -522,9 +523,13 @@
                                     {
                                         var hasConflict = HasPlanWorkoutDateConflict(workout);
 
-                                        <div class="coach-plan-week-row @(hasConflict ? "is-conflict" : string.Empty)">
+                                        <div class="coach-plan-week-row @(hasConflict ? "is-conflict" : string.Empty)"
+                                            @key="workout.Id">
                                             <div class="coach-plan-week-main">
                                                 <div class="coach-plan-week-title-row">
+                                                    <span class="coach-plan-week-date">
+                                                        @FormatPlanWorkoutShortDate(workout.Date)
+                                                    </span>
                                                     <h3 class="coach-plan-week-name">@workout.Name</h3>
 
                                                     @if (hasConflict)
@@ -558,8 +563,8 @@
                                             </div>
 
                                             <label class="coach-plan-week-select-wrap">
-                                                <span class="coach-plan-week-select-label">Day</span>
                                                 <select class="coach-plan-week-select"
+                                                        aria-label="Workout day"
                                                         value="@FormatPlanWorkoutDateValue(workout.Date)"
                                                         @onchange="args => OnPlanWorkoutDateChanged(args, workout.Id)">
                                                     @foreach (var option in _planWeekDayOptions)
@@ -1896,6 +1901,11 @@
         return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
+    private static string FormatPlanWorkoutShortDate(DateOnly date)
+    {
+        return date.ToDateTime(TimeOnly.MinValue).ToString("ddd dd", PlanWeekCulture);
+    }
+
     private bool HasPlanWorkoutDateConflict(PlanWorkoutViewModel workout)
     {
         return _planWorkouts.Count(item => item.Date == workout.Date) > 1;
@@ -2029,7 +2039,12 @@
             return;
         }
 
-        workout.Date = parsedDate;
+        PlanWorkoutDateOrdering.SwapAndSort(
+            _planWorkouts,
+            workout,
+            parsedDate,
+            item => item.Date,
+            (item, date) => item.Date = date);
         _planUploaded = false;
         _planUploadFeedback = null;
         _planCopyFeedback = null;

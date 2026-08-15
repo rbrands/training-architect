@@ -25,6 +25,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - The training-plan generation logic was refined to better prioritize week structure, load distribution, and overall training coherence.
+- UI ordering of planed workouts improved
 
 ### Fixed
 - Planning quality issues caused by the previous logic were addressed to reduce unrealistic scheduling patterns and improve the recommended plan flow.

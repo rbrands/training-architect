@@ -1261,6 +1261,20 @@
     flex-wrap: wrap;
 }
 
+.coach-plan-week-date {
+    flex: 0 0 auto;
+    min-width: 3.9rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    background: #eaf1fc;
+    color: #2d5ea7;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+}
+
 .coach-plan-week-name {
     margin: 0;
     font-size: 1rem;
@@ -1313,14 +1327,7 @@
 .coach-plan-week-select-wrap {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
     min-width: 10.5rem;
-}
-
-.coach-plan-week-select-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #5d5548;
 }
 
 .coach-plan-week-select {
