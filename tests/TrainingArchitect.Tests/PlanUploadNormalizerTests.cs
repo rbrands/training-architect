@@ -71,7 +71,7 @@ public class PlanUploadNormalizerTests
     }
 
     [Fact]
-    public void Normalize_WhenLibraryWorkoutIsReferenceOnly_RemovesGeneratedOverrides()
+    public void Normalize_WhenLibraryWorkoutHasNoSteps_PreservesCompleteWorkout()
     {
         const string planJson = """
             {
@@ -92,7 +92,10 @@ public class PlanUploadNormalizerTests
 
         Assert.Equal("2026-08-22", workout.GetProperty("date").GetString());
         Assert.Equal(7, workout.GetProperty("library_workout_id").GetInt32());
-        Assert.Equal(2, workout.EnumerateObject().Count());
+        Assert.Equal("Generated name", workout.GetProperty("name").GetString());
+        Assert.Equal(150, workout.GetProperty("duration_minutes").GetInt32());
+        Assert.Equal("Generated description. TSS: 80.", workout.GetProperty("description").GetString());
+        Assert.Equal("aerobic-threshold-high", workout.GetProperty("tags")[0].GetString());
     }
 
     [Fact]
