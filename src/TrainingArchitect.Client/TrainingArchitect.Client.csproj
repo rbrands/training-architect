@@ -17,11 +17,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.*" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.*" />
     <PackageReference Include="Markdig" Version="1.3.2" />
-    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="34.1.33" />
-    <PackageReference Include="Syncfusion.Blazor.Cards" Version="34.1.33" />
-    <PackageReference Include="Syncfusion.Blazor.Grid" Version="34.1.33" />
-    <PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="34.1.33" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="34.1.33" />
+    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.Blazor.Cards" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="34.2.3" />
   </ItemGroup>
 
 </Project>
