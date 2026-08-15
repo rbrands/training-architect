@@ -5,6 +5,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Services;
 using TrainingArchitect.Endpoints;
 
 namespace TrainingArchitect.Services;
@@ -147,23 +148,20 @@ public sealed class McpAthleteDataService(
             // The MCP tool contract requires a top-level argument named "plan_json".
             if (json.RootElement.TryGetProperty("plan_json", out var existingPlanJson))
             {
-                if (existingPlanJson.ValueKind == JsonValueKind.String)
-                {
-                    return new Dictionary<string, object?>
-                    {
-                        ["plan_json"] = existingPlanJson.GetString()
-                    };
-                }
+                var planJson = existingPlanJson.ValueKind == JsonValueKind.String
+                    ? existingPlanJson.GetString()
+                        ?? throw new McpToolExecutionException("Week plan JSON must not be null.")
+                    : existingPlanJson.GetRawText();
 
                 return new Dictionary<string, object?>
                 {
-                    ["plan_json"] = existingPlanJson.GetRawText()
+                    ["plan_json"] = PlanUploadNormalizer.Normalize(planJson)
                 };
             }
 
             return new Dictionary<string, object?>
             {
-                ["plan_json"] = json.RootElement.GetRawText()
+                ["plan_json"] = PlanUploadNormalizer.Normalize(json.RootElement.GetRawText())
             };
         }
         catch (JsonException ex)

@@ -519,6 +519,35 @@
                             @if (_planWorkouts.Count > 0)
                             {
                                 <div class="coach-plan-week-editor">
+                                    @if (_planWeekMetadata is not null)
+                                    {
+                                        <dl class="coach-plan-week-summary" aria-label="Weekly plan details">
+                                            @if (!string.IsNullOrWhiteSpace(_planWeekMetadata.Phase))
+                                            {
+                                                <div class="coach-plan-week-summary-item">
+                                                    <dt>Phase</dt>
+                                                    <dd>@_planWeekMetadata.Phase</dd>
+                                                </div>
+                                            }
+
+                                            @if (_planWeekMetadata.TargetLoad is not null)
+                                            {
+                                                <div class="coach-plan-week-summary-item">
+                                                    <dt>Target load</dt>
+                                                    <dd>@_planWeekMetadata.TargetLoad.Value.ToString("0.#", CultureInfo.InvariantCulture) TSS</dd>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(_planWeekMetadata.Note))
+                                            {
+                                                <div class="coach-plan-week-summary-item coach-plan-week-summary-note">
+                                                    <dt>Week note</dt>
+                                                    <dd>@_planWeekMetadata.Note</dd>
+                                                </div>
+                                            }
+                                        </dl>
+                                    }
+
                                     @foreach (var workout in _planWorkouts)
                                     {
                                         var hasConflict = HasPlanWorkoutDateConflict(workout);
@@ -801,6 +830,7 @@
     }
 
     private sealed record PlanWeekDayOption(string Value, string Label, DateOnly Date);
+    private sealed record PlanWeekMetadata(string? Phase, string? Note, double? TargetLoad);
 
     private string StatusText => Session.State switch
     {
@@ -878,6 +908,7 @@
     private JsonElement? _planUploadRoot;
     private readonly List<PlanWorkoutViewModel> _planWorkouts = [];
     private IReadOnlyList<PlanWeekDayOption> _planWeekDayOptions = [];
+    private PlanWeekMetadata? _planWeekMetadata;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
     private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight;
@@ -1916,6 +1947,7 @@
         _planUploadRoot = null;
         _planWorkouts.Clear();
         _planWeekDayOptions = [];
+        _planWeekMetadata = null;
     }
 
     private void LoadPlanWorkoutEditor()
@@ -1960,6 +1992,7 @@
             }
 
             _planWeekDayOptions = BuildPlanWeekDayOptions(_planWorkouts);
+            _planWeekMetadata = BuildPlanWeekMetadata(_planWeekDayOptions.FirstOrDefault()?.Date);
         }
         catch (JsonException)
         {
@@ -2023,6 +2056,72 @@
                 date.ToDateTime(TimeOnly.MinValue).ToString("ddd dd MMM", PlanWeekCulture),
                 date))
             .ToArray();
+    }
+
+    private PlanWeekMetadata? BuildPlanWeekMetadata(DateOnly? weekStarting)
+    {
+        var root = GetOverviewRoot();
+        if (root is null || weekStarting is null)
+        {
+            return null;
+        }
+
+        var metadataElement = FindWeekMetadata(root.Value, weekStarting.Value);
+        if (metadataElement is null)
+        {
+            return null;
+        }
+
+        var phase = GetStringProperty(metadataElement.Value, "phase");
+        var note = GetStringProperty(metadataElement.Value, "week_note")
+            ?? GetStringProperty(metadataElement.Value, "weekly_note");
+        var targetLoad = GetDoubleProperty(metadataElement.Value, "weekly_load_target")
+            ?? GetDoubleProperty(metadataElement.Value, "target_load")
+            ?? GetDoubleProperty(metadataElement.Value, "load_target");
+
+        return string.IsNullOrWhiteSpace(phase) && string.IsNullOrWhiteSpace(note) && targetLoad is null
+            ? null
+            : new PlanWeekMetadata(phase, note, targetLoad);
+    }
+
+    private static JsonElement? FindWeekMetadata(JsonElement element, DateOnly weekStarting)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var weekText = GetStringProperty(element, "week") ?? GetStringProperty(element, "week_starting");
+            if (DateOnly.TryParseExact(
+                    weekText,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var candidateWeek)
+                && candidateWeek == weekStarting)
+            {
+                return element;
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                var match = FindWeekMetadata(property.Value, weekStarting);
+                if (match is not null)
+                {
+                    return match;
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var match = FindWeekMetadata(item, weekStarting);
+                if (match is not null)
+                {
+                    return match;
+                }
+            }
+        }
+
+        return null;
     }
 
     private void OnPlanWorkoutDateChanged(Microsoft.AspNetCore.Components.ChangeEventArgs args, string workoutId)

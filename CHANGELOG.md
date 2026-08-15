@@ -22,6 +22,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Planning support now incorporates a significantly improved weekly planning logic to create more realistic and better-balanced training recommendations.
+- Weekly Plan now shows the training phase, target load, and the week note when available in the athlete dataset.
 
 ### Changed
 - The training-plan generation logic was refined to better prioritize week structure, load distribution, and overall training coherence.
@@ -29,6 +30,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Planning quality issues caused by the previous logic were addressed to reduce unrealistic scheduling patterns and improve the recommended plan flow.
+- Weekly plan uploads no longer duplicate workout duration and load while preserving the visible workout steps in Intervals.
 
 ### Removed
 -
