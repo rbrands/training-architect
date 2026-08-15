@@ -49,8 +49,10 @@ Workout library lookup (when `list_library_workouts` is available):
 3. Use a result only when its exact workout tag and dose fit the already planned
   session. Prefer the closest duration and TSS as soft ranking criteria; neither
   value needs to equal the planned value. Calendar placement and day constraints
-  are not library matching criteria. Preserve its
-  `library_workout_id`; do not recreate its steps.
+  are not library matching criteria. Preserve its `library_workout_id` and copy
+  every available workout field from the selected library result verbatim,
+  including name, duration, description, tags, steps, and TSS. Never replace
+  library values with newly generated duration, description, steps, or TSS.
 4. If there is no matching workout for a session, generate it normally without
   `library_workout_id`. Do not broaden or repeat the search.
 
@@ -77,8 +79,9 @@ Workout construction quality gate (CRITICAL):
 - Do not use compressed repetition notation inside `steps` (no implicit loops). Repetitions must be fully expanded as explicit step entries.
 - If the description states a structure such as `N x M min` with `R min rec`, the main set in `steps` must contain exactly `N` work intervals of `M` minutes and the corresponding recovery intervals in the steps.
 - `duration_minutes` must match the total step duration (sum of `duration_seconds`) within +/- 1 minute.
-- `description` must contain coaching context, session goal, TSS, and fueling guidance only. Do not include Intervals workout syntax, step lists, or repeat blocks in this field.
-- `steps` are the single source of truth for the workout structure. The uploader converts them to the format required by Intervals.
+- For generated workouts, `description` must contain coaching context, session goal, TSS, and fueling guidance only. Do not include Intervals workout syntax, step lists, or repeat blocks in this field.
+- For generated workouts, `steps` are the single source of truth for the workout structure. The uploader converts them to the format required by Intervals.
+- For selected library workouts, preserve the library result verbatim as required above; the generated-workout description and steps rules do not override library data.
 - Described key set and actual key set must be identical. Never describe `5x2 min` and then encode a different main set.
 
 Before finalizing, run a self-check per workout:

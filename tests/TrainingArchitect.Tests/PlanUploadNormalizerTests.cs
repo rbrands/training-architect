@@ -69,4 +69,52 @@ public class PlanUploadNormalizerTests
             "- 45m 55%",
             document.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
     }
+
+    [Fact]
+    public void Normalize_WhenLibraryWorkoutIsReferenceOnly_RemovesGeneratedOverrides()
+    {
+        const string planJson = """
+            {
+              "workouts": [{
+                "date": "2026-08-22",
+                "library_workout_id": 7,
+                "name": "Generated name",
+                "duration_minutes": 150,
+                "description": "Generated description. TSS: 80.",
+                "tags": ["aerobic-threshold-high"]
+              }]
+            }
+            """;
+
+        var normalized = PlanUploadNormalizer.Normalize(planJson);
+        using var document = JsonDocument.Parse(normalized);
+        var workout = document.RootElement.GetProperty("workouts")[0];
+
+        Assert.Equal("2026-08-22", workout.GetProperty("date").GetString());
+        Assert.Equal(7, workout.GetProperty("library_workout_id").GetInt32());
+        Assert.Equal(2, workout.EnumerateObject().Count());
+    }
+
+    [Fact]
+    public void Normalize_WhenLibraryWorkoutIsMaterialized_UploadsItsDataWithoutResolvingIdAgain()
+    {
+        const string planJson = """
+            {
+              "workouts": [{
+                "date": "2026-08-18",
+                "library_workout_id": 54,
+                "description": "Library VO2 workout. TSS: 42.",
+                "steps": [{ "duration_seconds": 30, "power_pct_ftp": 120 }]
+              }]
+            }
+            """;
+
+        var normalized = PlanUploadNormalizer.Normalize(planJson);
+        using var document = JsonDocument.Parse(normalized);
+        var workout = document.RootElement.GetProperty("workouts")[0];
+
+        Assert.False(workout.TryGetProperty("library_workout_id", out _));
+        Assert.False(workout.TryGetProperty("steps", out _));
+        Assert.Equal("Library VO2 workout. TSS: 42.\n- 30s 120%", workout.GetProperty("description").GetString());
+    }
 }

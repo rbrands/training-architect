@@ -25,11 +25,20 @@ public static partial class PlanUploadNormalizer
 
         foreach (var workout in workouts.OfType<JsonObject>())
         {
+            var isLibraryWorkout = workout["library_workout_id"] is not null;
+
             if (workout["steps"] is not JsonArray { Count: > 0 } steps)
             {
+                if (isLibraryWorkout)
+                {
+                    RemoveLibraryOverrides(workout);
+                }
+
                 continue;
             }
 
+            // Materialized library data must be uploaded exactly once instead of being resolved again by ID.
+            workout.Remove("library_workout_id");
             var coachingDescription = GetCoachingDescription(workout["description"]);
             var intervalsStructure = BuildIntervalsStructure(steps);
             workout["description"] = string.IsNullOrWhiteSpace(coachingDescription)
@@ -39,6 +48,15 @@ public static partial class PlanUploadNormalizer
         }
 
         return root.ToJsonString();
+    }
+
+    private static void RemoveLibraryOverrides(JsonObject workout)
+    {
+        workout.Remove("name");
+        workout.Remove("duration_minutes");
+        workout.Remove("description");
+        workout.Remove("tags");
+        workout.Remove("tss");
     }
 
     private static string GetCoachingDescription(JsonNode? descriptionNode)

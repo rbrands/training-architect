@@ -31,6 +31,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Planning quality issues caused by the previous logic were addressed to reduce unrealistic scheduling patterns and improve the recommended plan flow.
 - Weekly plan uploads no longer duplicate workout duration and load while preserving the visible workout steps in Intervals.
+- Library workout uploads now preserve the stored workout structure and TSS instead of overriding them with generated plan values.
 
 ### Removed
 -
