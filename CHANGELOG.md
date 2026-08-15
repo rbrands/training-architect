@@ -18,6 +18,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.2.0] - 2026-08-15
+
+### Added
+- Planning support now incorporates a significantly improved weekly planning logic to create more realistic and better-balanced training recommendations.
+
+### Changed
+- The training-plan generation logic was refined to better prioritize week structure, load distribution, and overall training coherence.
+
+### Fixed
+- Planning quality issues caused by the previous logic were addressed to reduce unrealistic scheduling patterns and improve the recommended plan flow.
+
+### Removed
+-
+
 ## [1.1.1] - 2026-08-14
 
 ### Added
