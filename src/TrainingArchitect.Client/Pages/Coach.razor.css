@@ -1276,6 +1276,7 @@
 }
 
 .coach-plan-week-duration,
+.coach-plan-week-library,
 .coach-plan-week-tag,
 .coach-plan-week-warning {
     display: inline-flex;
@@ -1292,6 +1293,11 @@
 .coach-plan-week-duration {
     background: #eef4ff;
     color: #2d5ea7;
+}
+
+.coach-plan-week-library {
+    background: #ecfdf5;
+    color: #1b7d58;
 }
 
 .coach-plan-week-tag {
