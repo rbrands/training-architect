@@ -42,19 +42,22 @@ Planning requirements:
 - Align weekly load to target and keep the week realistic for fatigue and availability.
 - Include fueling guidance and the TSS determined per the TSS Calculation rules (system prompt) per session.
 
-Workout library lookup (when `list_library_workouts` is available):
+Workout library lookup (REQUIRED because `list_library_workouts` is configured):
 1. Determine all planned sessions and their full canonical tags first.
-2. Call `list_library_workouts` exactly once with all distinct tags,
+2. Before creating any generated workout steps, call `list_library_workouts`
+  exactly once with all distinct tags,
   `match_mode="any"`, `include_untagged=false`, and `limit=100`.
 3. Use a result only when its exact workout tag and dose fit the already planned
   session. Prefer the closest duration and TSS as soft ranking criteria; neither
   value needs to equal the planned value. Calendar placement and day constraints
-  are not library matching criteria. Preserve its `library_workout_id` and copy
-  every available workout field from the selected library result verbatim,
-  including name, duration, description, tags, steps, and TSS. Never replace
-  library values with newly generated duration, description, steps, or TSS.
+  are not library matching criteria. If an exact tag-and-dose match exists, use
+  it instead of generating a replacement. Preserve its `library_workout_id`,
+  name, duration, description, tags, and TSS verbatim. In the upload JSON, omit
+  `steps` for a selected library workout as required by the system output
+  contract; the stored library workout is authoritative during upload.
 4. If there is no matching workout for a session, generate it normally without
-  `library_workout_id`. Do not broaden or repeat the search.
+  `library_workout_id`. Do not broaden or repeat the search. Never skip the
+  library call merely because a generated structure is easy to create.
 
 
 Workout structure and realism rules (CRITICAL):

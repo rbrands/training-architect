@@ -99,7 +99,7 @@ public class PlanUploadNormalizerTests
     }
 
     [Fact]
-    public void Normalize_WhenLibraryWorkoutIsMaterialized_UploadsItsDataWithoutResolvingIdAgain()
+    public void Normalize_WhenLibraryWorkoutContainsSteps_PreservesIdAndUsesStoredWorkout()
     {
         const string planJson = """
             {
@@ -116,8 +116,8 @@ public class PlanUploadNormalizerTests
         using var document = JsonDocument.Parse(normalized);
         var workout = document.RootElement.GetProperty("workouts")[0];
 
-        Assert.False(workout.TryGetProperty("library_workout_id", out _));
+        Assert.Equal(54, workout.GetProperty("library_workout_id").GetInt32());
         Assert.False(workout.TryGetProperty("steps", out _));
-        Assert.Equal("Library VO2 workout. TSS: 42.\n- 30s 120%", workout.GetProperty("description").GetString());
+        Assert.Equal("Library VO2 workout. TSS: 42.", workout.GetProperty("description").GetString());
     }
 }

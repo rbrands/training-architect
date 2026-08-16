@@ -30,8 +30,12 @@ public static partial class PlanUploadNormalizer
                 continue;
             }
 
-            // Materialized library data must be uploaded exactly once instead of being resolved again by ID.
-            workout.Remove("library_workout_id");
+            if (workout["library_workout_id"] is not null)
+            {
+                workout.Remove("steps");
+                continue;
+            }
+
             var coachingDescription = GetCoachingDescription(workout["description"]);
             var intervalsStructure = BuildIntervalsStructure(steps);
             workout["description"] = string.IsNullOrWhiteSpace(coachingDescription)
