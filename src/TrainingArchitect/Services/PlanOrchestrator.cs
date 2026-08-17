@@ -86,6 +86,11 @@ public sealed class PlanOrchestrator(
             var validation = await validator.ValidateAsync(uploadJson, request, intervalsAthleteId, intervalsApiKey, ct);
             findings = validation.Findings;
 
+            if (!string.IsNullOrWhiteSpace(validation.Summary))
+            {
+                yield return new PlanProgressEvent(PlanProgressStage.Validating, validation.Summary, round);
+            }
+
             if (validation.IsValid)
             {
                 break;

@@ -5,6 +5,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Models;
 using TrainingArchitect.Core.Services;
 using TrainingArchitect.Endpoints;
 
@@ -133,6 +134,78 @@ public sealed class McpAthleteDataService(
             McpToolNames.UploadWeekPlan,
             stopwatch.ElapsedMilliseconds,
             GetAthleteIdSuffix(athleteId));
+    }
+
+    public async Task<PlanTssCheckResult> CheckPlanTssAsync(
+        string athleteId,
+        string apiKey,
+        string planJson,
+        double loadTarget,
+        double? tolerancePct,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(planJson))
+        {
+            throw new ArgumentException("Plan JSON must not be empty.", nameof(planJson));
+        }
+
+        var endpointUri = ResolveEndpointUri();
+        var stopwatch = Stopwatch.StartNew();
+
+        var toolArguments = new Dictionary<string, object?>
+        {
+            ["plan_json"] = planJson,
+            ["load_target"] = loadTarget
+        };
+
+        if (tolerancePct.HasValue)
+        {
+            toolArguments["tolerance_pct"] = tolerancePct.Value;
+        }
+
+        logger.LogInformation(
+            "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix}.",
+            McpToolNames.CheckPlanTss,
+            endpointUri.Host,
+            GetAthleteIdSuffix(athleteId));
+
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Endpoint = endpointUri,
+            TransportMode = HttpTransportMode.AutoDetect,
+            AdditionalHeaders = new Dictionary<string, string>
+            {
+                [IntervalsHeaders.AthleteId] = athleteId,
+                [IntervalsHeaders.ApiKey] = apiKey
+            }
+        });
+
+        await using var client = await McpClient.CreateAsync(transport, new McpClientOptions(), null, ct);
+
+        var toolResult = await client.CallToolAsync(
+            McpToolNames.CheckPlanTss,
+            toolArguments,
+            progress: null,
+            options: new RequestOptions(),
+            cancellationToken: ct);
+
+        if (toolResult.IsError == true)
+        {
+            throw new McpToolExecutionException(
+                $"MCP tool '{McpToolNames.CheckPlanTss}' returned an error: {ExtractTextContent(toolResult)}");
+        }
+
+        logger.LogInformation(
+            "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
+            McpToolNames.CheckPlanTss,
+            stopwatch.ElapsedMilliseconds,
+            GetAthleteIdSuffix(athleteId));
+
+        var payload = NormalizeResultPayload(ExtractDataJson(toolResult));
+
+        return payload.Deserialize<PlanTssCheckResult>()
+            ?? throw new McpToolExecutionException(
+                $"MCP tool '{McpToolNames.CheckPlanTss}' returned an unexpected payload.");
     }
 
     private static Dictionary<string, object?> BuildUploadArguments(string weekPlanJson)

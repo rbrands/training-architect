@@ -2480,27 +2480,33 @@
         switch (progressEvent.Stage)
         {
             case PlanProgressStage.Completed:
+                FlushPlanProgressMessage();
                 ApplyPlanResult(progressEvent);
-                _planProgressMessage = null;
                 StateHasChanged();
                 return true;
 
             case PlanProgressStage.Failed:
+                FlushPlanProgressMessage();
                 _planErrorMessage = progressEvent.Message;
-                _planProgressMessage = null;
                 StateHasChanged();
                 return true;
 
             default:
-                if (!string.IsNullOrWhiteSpace(_planProgressMessage))
-                {
-                    _planProgressSteps.Add(_planProgressMessage);
-                }
-
+                FlushPlanProgressMessage();
                 _planProgressMessage = progressEvent.Message;
                 StateHasChanged();
                 return false;
         }
+    }
+
+    private void FlushPlanProgressMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(_planProgressMessage))
+        {
+            _planProgressSteps.Add(_planProgressMessage);
+        }
+
+        _planProgressMessage = null;
     }
 
     private void ApplyPlanResult(PlanProgressEvent progressEvent)

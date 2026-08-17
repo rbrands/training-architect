@@ -13,6 +13,11 @@ public record PlanValidationFinding(string Code, string Message);
 public record PlanValidationResult(IReadOnlyList<PlanValidationFinding> Findings)
 {
     /// <summary>
+    /// Gets an optional status text describing what the validator checked, shown to the athlete.
+    /// </summary>
+    public string? Summary { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the plan passed validation without findings.
     /// </summary>
     public bool IsValid => Findings.Count == 0;

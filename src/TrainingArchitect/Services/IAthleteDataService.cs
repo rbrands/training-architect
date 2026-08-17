@@ -1,3 +1,4 @@
+using TrainingArchitect.Core.Models;
 using TrainingArchitect.Endpoints;
 
 namespace TrainingArchitect.Services;
@@ -25,4 +26,22 @@ public interface IAthleteDataService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task representing the asynchronous upload operation.</returns>
     Task UploadWeekPlanAsync(string athleteId, string apiKey, string weekPlanJson, CancellationToken ct);
+
+    /// <summary>
+    /// Verifies the TSS of a generated weekly plan against the weekly load target.
+    /// </summary>
+    /// <param name="athleteId">Intervals athlete identifier.</param>
+    /// <param name="apiKey">Intervals API key.</param>
+    /// <param name="planJson">Weekly plan payload as JSON object text.</param>
+    /// <param name="loadTarget">Weekly TSS target the plan is checked against.</param>
+    /// <param name="tolerancePct">Optional tolerance in percent; the server default is used when omitted.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The TSS check result reported by the MCP tool.</returns>
+    Task<PlanTssCheckResult> CheckPlanTssAsync(
+        string athleteId,
+        string apiKey,
+        string planJson,
+        double loadTarget,
+        double? tolerancePct,
+        CancellationToken ct);
 }

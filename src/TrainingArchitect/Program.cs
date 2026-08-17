@@ -275,7 +275,7 @@ builder.Services.AddHostedService<GlobalUsageCounterRefreshService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IAthleteDataService, McpAthleteDataService>();
 builder.Services.AddScoped<ICoachingAgent, FoundryCoachingAgent>();
-builder.Services.AddScoped<IPlanValidator, StubPlanValidator>();
+builder.Services.AddScoped<IPlanValidator, TssPlanValidator>();
 builder.Services.AddScoped<IPlanOrchestrator, PlanOrchestrator>();
 
 // The /coach page is an InteractiveWebAssembly route, but the server still
