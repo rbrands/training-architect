@@ -212,7 +212,7 @@ public static class CoachEndpoints
     private static async Task<IResult> PlanAsync(
         HttpContext       httpContext,
         PlanRequest        request,
-        ICoachingAgent     agent,
+        IPlanOrchestrator  orchestrator,
         IAthleteRepository athleteRepository,
         ILevelRepository levelRepository,
         IUsageCounterRepository usageCounterRepository,
@@ -266,49 +266,30 @@ public static class CoachEndpoints
                 statusCode: StatusCodes.Status429TooManyRequests);
         }
 
-        var prompt = PromptBuilder.BuildPlanPrompt(request);
-        CoachingAgentResponse result;
+        // Everything that can still fail with an HTTP status must happen above this line.
+        await using var writer = ServerSentEventWriter.Start(httpContext, ct);
 
         try
         {
-            result = await agent.PromptAsync(
-                prompt,
-                request.DisciplineType,
-                request.Language,
-                ct,
-                intervalsAthleteId: athleteIdHeader,
-                intervalsApiKey: apiKeyHeader);
+            await foreach (var progressEvent in orchestrator.RunAsync(request, athleteIdHeader, apiKeyHeader, ct))
+            {
+                await writer.WriteEventAsync(progressEvent, ct);
+            }
         }
-        catch (InvalidOperationException ex)
+        catch (OperationCanceledException)
         {
-            logger.LogError(ex, "Agent configuration error in /api/coach/plan for athlete {AthleteId}.", athleteIdHeader);
-            return Results.Problem(
-                title: "Coaching agent configuration error.",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status502BadGateway);
+            logger.LogInformation("Plan stream cancelled for athlete {AthleteId}.", athleteIdHeader);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Agent request failed in /api/coach/plan for athlete {AthleteId}.", athleteIdHeader);
-            return Results.Problem(
-                title: "Coaching agent request failed.",
-                detail: "The coaching model request failed. Check server logs for details.",
-                statusCode: StatusCodes.Status502BadGateway);
+            logger.LogError(ex, "Plan stream failed for athlete {AthleteId}.", athleteIdHeader);
+
+            await writer.WriteEventAsync(
+                new PlanProgressEvent(PlanProgressStage.Failed, "Plan creation failed. Please try again."),
+                CancellationToken.None);
         }
 
-        var inputTokens = ToInt32NonNegative(result.InputTokens);
-        var outputTokens = ToInt32NonNegative(result.OutputTokens);
-
-        await RecordUsageBestEffortAsync(
-            usageCounterRepository,
-            logger,
-            athleteIdHeader,
-            "plan_create",
-            inputTokens,
-            ToInt32NonNegative(result.CachedInputTokens),
-            outputTokens);
-
-        return Results.Ok(new PlanResponse(result.Content, result.TotalTokens, result.ResponseId));
+        return Results.Empty;
     }
 
     private static async Task<IResult> UploadPlanAsync(

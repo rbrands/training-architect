@@ -42,4 +42,24 @@ public static class PromptBuilder
                 ? "{}"
                 : request.WeekDataJson);
     }
+
+    /// <summary>
+    /// Builds a follow-up prompt that asks the agent to fix the reported problems in its previous plan.
+    /// </summary>
+    public static string BuildPlanCorrectionPrompt(IReadOnlyList<PlanValidationFinding> findings)
+    {
+        var findingList = string.Join(
+            Environment.NewLine,
+            findings.Select(finding => $"- [{finding.Code}] {finding.Message}"));
+
+        return $"""
+            The plan you just produced did not pass validation. Fix the following problems:
+
+            {findingList}
+
+            Return the complete corrected plan again in the exact same format as before, including the
+            readable plan text and the upload JSON between BEGIN_UPLOAD_JSON and END_UPLOAD_JSON.
+            Do not comment on the corrections, only return the corrected plan.
+            """;
+    }
 }

@@ -21,6 +21,7 @@ public interface ICoachingAgent
     /// <param name="language">The requested response language.</param>
     /// <param name="intervalsAthleteId">Optional intervals.icu athlete ID used in a later workflow step.</param>
     /// <param name="intervalsApiKey">Optional intervals.icu API key used in a later workflow step.</param>
+    /// <param name="previousResponseId">Optional ID of a preceding response; continues that conversation instead of starting a new one.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The coaching agent response payload including output text and optional token usage metadata.</returns>
     Task<CoachingAgentResponse> PromptAsync(
@@ -29,5 +30,6 @@ public interface ICoachingAgent
         string language,
         CancellationToken ct = default,
         string? intervalsAthleteId = null,
-        string? intervalsApiKey = null);
+        string? intervalsApiKey = null,
+        string? previousResponseId = null);
 }

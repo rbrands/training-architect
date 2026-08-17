@@ -11,6 +11,7 @@
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @using System.Linq
+@using Microsoft.AspNetCore.Components.WebAssembly.Http
 @using TrainingArchitect.Core.Constants
 @using TrainingArchitect.Core.Models
 @using TrainingArchitect.Core.Services
@@ -382,6 +383,43 @@
                     @if (_planTotalTokens is not null)
                     {
                         <p class="coach-token-hint coach-token-hint--plan mb-0">Token usage: @_planTotalTokens.Value.ToString("N0")</p>
+                    }
+
+                    @if (_isPlanRequestInFlight || _planProgressSteps.Count > 0)
+                    {
+                        <div class="coach-plan-progress" aria-live="polite">
+                            @foreach (var step in _planProgressSteps)
+                            {
+                                <div class="coach-plan-progress-step is-done">
+                                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                                    <span>@step</span>
+                                </div>
+                            }
+
+                            @if (_isPlanRequestInFlight && !string.IsNullOrWhiteSpace(_planProgressMessage))
+                            {
+                                <div class="coach-plan-progress-step is-active">
+                                    <span class="coach-assess-spinner" aria-hidden="true"></span>
+                                    <span>@_planProgressMessage</span>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (_planWarnings.Count > 0)
+                    {
+                        <div class="coach-plan-warnings" role="note">
+                            <div class="coach-plan-warnings-title">
+                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                <span>The plan still has open issues:</span>
+                            </div>
+                            <ul class="mb-0">
+                                @foreach (var warning in _planWarnings)
+                                {
+                                    <li>@warning</li>
+                                }
+                            </ul>
+                        </div>
                     }
                 </div>
 
@@ -902,6 +940,9 @@
     private string? _planResponseId;
     private string? _planCopyFeedback;
     private string? _planUploadFeedback;
+    private string? _planProgressMessage;
+    private readonly List<string> _planProgressSteps = [];
+    private readonly List<string> _planWarnings = [];
     private bool _planUploaded;
     private int _selectedPlanTabIndex;
     private int _selectedDataViewTabIndex;
@@ -939,6 +980,11 @@
         .Build();
 
     private static readonly CultureInfo PlanWeekCulture = CultureInfo.GetCultureInfo("en-GB");
+
+    private static readonly JsonSerializerOptions PlanProgressSerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
 
     private IReadOnlyList<JsonOverviewSection> OverviewSections => BuildOverviewSections();
     private string? _openOverviewSectionTitle;
@@ -2322,6 +2368,9 @@
         _planUploadJson = null;
         _planResponseId = null;
         _planCopyFeedback = null;
+        _planProgressMessage = null;
+        _planProgressSteps.Clear();
+        _planWarnings.Clear();
         _selectedPlanTabIndex = 0;
         ClearPlanWorkoutEditor();
         StateHasChanged();
@@ -2336,8 +2385,9 @@
             };
 
             AppendCredentialHeaders(httpRequest);
+            httpRequest.SetBrowserResponseStreamingEnabled(true);
 
-            using var response = await Http.SendAsync(httpRequest);
+            using var response = await Http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -2346,27 +2396,11 @@
                 return;
             }
 
-            var planResponse = await response.Content.ReadFromJsonAsync<PlanResponse>();
-            if (planResponse is null || string.IsNullOrWhiteSpace(planResponse.Content))
+            var completed = await ConsumePlanProgressStreamAsync(response);
+
+            if (!completed && _planErrorMessage is null)
             {
-                _planErrorMessage = "Plan request returned no content.";
-                return;
-            }
-
-            var coachResponse = NormalizeCoachResponse(planResponse.Content);
-            _planTotalTokens = planResponse.TotalTokens;
-            _planResponseId = planResponse.ResponseId;
-
-            var (planText, uploadJson) = SplitPlanAndUploadJson(coachResponse);
-
-            _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
-            _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
-            LoadPlanWorkoutEditor();
-            _selectedPlanTabIndex = 0;
-
-            if (_planReadableText is null && _planUploadJson is null)
-            {
-                _planErrorMessage = "Plan request returned no usable content.";
+                _planErrorMessage = "Plan request ended without a result.";
             }
 
             _isPlanExpanded = true;
@@ -2379,7 +2413,123 @@
         finally
         {
             _isPlanRequestInFlight = false;
+            _planProgressMessage = null;
             StateHasChanged();
+        }
+    }
+
+    private async Task<bool> ConsumePlanProgressStreamAsync(HttpResponseMessage response)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var reader = new StreamReader(stream);
+
+        var dataBuilder = new System.Text.StringBuilder();
+        var completed = false;
+
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            // Heartbeat comments keep the connection alive and carry no payload.
+            if (line.StartsWith(':'))
+            {
+                continue;
+            }
+
+            if (line.Length == 0)
+            {
+                if (dataBuilder.Length > 0)
+                {
+                    completed |= HandlePlanProgressEvent(dataBuilder.ToString());
+                    dataBuilder.Clear();
+                }
+
+                continue;
+            }
+
+            if (line.StartsWith("data:", StringComparison.Ordinal))
+            {
+                dataBuilder.Append(line[5..].TrimStart());
+            }
+        }
+
+        if (dataBuilder.Length > 0)
+        {
+            completed |= HandlePlanProgressEvent(dataBuilder.ToString());
+        }
+
+        return completed;
+    }
+
+    private bool HandlePlanProgressEvent(string json)
+    {
+        PlanProgressEvent? progressEvent;
+
+        try
+        {
+            progressEvent = JsonSerializer.Deserialize<PlanProgressEvent>(json, PlanProgressSerializerOptions);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (progressEvent is null)
+        {
+            return false;
+        }
+
+        switch (progressEvent.Stage)
+        {
+            case PlanProgressStage.Completed:
+                ApplyPlanResult(progressEvent);
+                _planProgressMessage = null;
+                StateHasChanged();
+                return true;
+
+            case PlanProgressStage.Failed:
+                _planErrorMessage = progressEvent.Message;
+                _planProgressMessage = null;
+                StateHasChanged();
+                return true;
+
+            default:
+                if (!string.IsNullOrWhiteSpace(_planProgressMessage))
+                {
+                    _planProgressSteps.Add(_planProgressMessage);
+                }
+
+                _planProgressMessage = progressEvent.Message;
+                StateHasChanged();
+                return false;
+        }
+    }
+
+    private void ApplyPlanResult(PlanProgressEvent progressEvent)
+    {
+        if (progressEvent.Warnings is { Count: > 0 })
+        {
+            _planWarnings.AddRange(progressEvent.Warnings);
+        }
+
+        var result = progressEvent.Result;
+        if (result is null || string.IsNullOrWhiteSpace(result.Content))
+        {
+            _planErrorMessage = "Plan request returned no content.";
+            return;
+        }
+
+        _planTotalTokens = result.TotalTokens;
+        _planResponseId = result.ResponseId;
+
+        var (planText, uploadJson) = PlanResponseParser.Split(NormalizeCoachResponse(result.Content));
+
+        _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
+        _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
+        LoadPlanWorkoutEditor();
+        _selectedPlanTabIndex = 0;
+
+        if (_planReadableText is null && _planUploadJson is null)
+        {
+            _planErrorMessage = "Plan request returned no usable content.";
         }
     }
 
@@ -2488,69 +2638,6 @@
         }
 
         return rawBody;
-    }
-
-    private static (string PlanText, string UploadJson) SplitPlanAndUploadJson(string responseText)
-    {
-        const string beginMarker = "BEGIN_UPLOAD_JSON";
-        const string endMarker = "END_UPLOAD_JSON";
-
-        if (string.IsNullOrWhiteSpace(responseText))
-        {
-            return (string.Empty, string.Empty);
-        }
-
-        var beginIndex = responseText.IndexOf(beginMarker, StringComparison.Ordinal);
-        var endIndex = responseText.IndexOf(endMarker, StringComparison.Ordinal);
-
-        if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex)
-        {
-            return (responseText.Trim(), string.Empty);
-        }
-
-        var planText = responseText[..beginIndex].Trim();
-        var markedSection = responseText[(beginIndex + beginMarker.Length)..endIndex].Trim();
-        var uploadJson = ExtractJsonFromMarkedSection(markedSection);
-
-        return (planText, uploadJson);
-    }
-
-    private static string ExtractJsonFromMarkedSection(string markedSection)
-    {
-        if (string.IsNullOrWhiteSpace(markedSection))
-        {
-            return string.Empty;
-        }
-
-        var fencedMatch = Regex.Match(
-            markedSection,
-            @"```json\s*(?<json>\{[\s\S]*\})\s*```",
-            RegexOptions.IgnoreCase);
-
-        if (fencedMatch.Success)
-        {
-            return fencedMatch.Groups["json"].Value.Trim();
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(markedSection);
-            return document.RootElement.GetRawText();
-        }
-        catch (JsonException)
-        {
-            // Fall through to brace-based extraction for mixed text responses.
-        }
-
-        var startBrace = markedSection.IndexOf('{');
-        var endBrace = markedSection.LastIndexOf('}');
-
-        if (startBrace >= 0 && endBrace > startBrace)
-        {
-            return markedSection[startBrace..(endBrace + 1)].Trim();
-        }
-
-        return markedSection.Trim();
     }
 
     private static MarkupString RenderFormattedJson(string? json, bool includeLineNumbers = true)
@@ -2765,6 +2852,9 @@
         _planErrorMessage = null;
         _planCopyFeedback = null;
         _planUploadFeedback = null;
+        _planProgressMessage = null;
+        _planProgressSteps.Clear();
+        _planWarnings.Clear();
         ClearPlanWorkoutEditor();
     }
 

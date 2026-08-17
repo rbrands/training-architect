@@ -28,7 +28,8 @@ public sealed class FoundryCoachingAgent(
         string language,
         CancellationToken ct = default,
         string? intervalsAthleteId = null,
-        string? intervalsApiKey = null)
+        string? intervalsApiKey = null,
+        string? previousResponseId = null)
     {
         var structuredInputs = new Dictionary<string, string>
         {
@@ -53,6 +54,11 @@ public sealed class FoundryCoachingAgent(
         var options = new CreateResponseOptions();
         options.InputItems.Add(ResponseItem.CreateUserMessageItem(prompt));
         options.Patch.Set("$.structured_inputs"u8, BinaryData.FromObjectAsJson(structuredInputs));
+
+        if (!string.IsNullOrWhiteSpace(previousResponseId))
+        {
+            options.Patch.Set("$.previous_response_id"u8, BinaryData.FromObjectAsJson(previousResponseId));
+        }
 
         try
         {

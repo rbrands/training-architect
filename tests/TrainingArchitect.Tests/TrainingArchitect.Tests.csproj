@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TrainingArchitect.Core\TrainingArchitect.Core.csproj" />
     <ProjectReference Include="..\..\src\TrainingArchitect.Infrastructure\TrainingArchitect.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\TrainingArchitect\TrainingArchitect.csproj" />
   </ItemGroup>
 
 </Project>
