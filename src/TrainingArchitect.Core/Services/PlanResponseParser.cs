@@ -24,9 +24,13 @@ public static partial class PlanResponseParser
         }
 
         var beginIndex = responseText.IndexOf(BeginMarker, StringComparison.Ordinal);
-        var endIndex = responseText.IndexOf(EndMarker, StringComparison.Ordinal);
+        if (beginIndex < 0)
+        {
+            return (responseText.Trim(), string.Empty);
+        }
 
-        if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex)
+        var endIndex = responseText.IndexOf(EndMarker, beginIndex + BeginMarker.Length, StringComparison.Ordinal);
+        if (endIndex < 0)
         {
             return (responseText.Trim(), string.Empty);
         }
