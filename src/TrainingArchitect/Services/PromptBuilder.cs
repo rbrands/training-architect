@@ -42,4 +42,18 @@ public static class PromptBuilder
                 ? "{}"
                 : request.WeekDataJson);
     }
+
+    /// <summary>
+    /// Builds a follow-up prompt that asks the agent to fix the reported problems in its previous plan.
+    /// </summary>
+    public static string BuildPlanCorrectionPrompt(IReadOnlyList<PlanValidationFinding> findings)
+    {
+        var template = PromptLoader.Load("plan_correction");
+        
+        var findingList = string.Join(
+            Environment.NewLine,
+            findings.Select(finding => $"- [{finding.Code}] {finding.Message}"));
+
+        return template.Replace("{{findings}}", findingList);   
+    }
 }

@@ -686,6 +686,48 @@ article img {
     box-sizing: border-box;
 }
 
+.coach-plan-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.75rem;
+}
+
+.coach-plan-progress-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.coach-plan-progress-step.is-done {
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.coach-plan-progress-step.is-done i {
+    color: #198754;
+}
+
+.coach-plan-progress-step.is-active {
+    font-weight: 600;
+}
+
+.coach-plan-warnings {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid #ffc107;
+    background: rgba(255, 193, 7, 0.08);
+    font-size: 0.875rem;
+}
+
+.coach-plan-warnings-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
 @media (max-width: 768px) {
     .coach-json-viewer {
         padding: 0.5rem 0;

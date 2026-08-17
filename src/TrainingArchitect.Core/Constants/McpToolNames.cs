@@ -7,4 +7,5 @@ public static class McpToolNames
 {
     public const string PrepareWeekData = "prepare_week_data";
     public const string UploadWeekPlan = "upload_week_plan";
+    public const string CheckPlanTss = "check_plan_tss";
 }

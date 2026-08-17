@@ -18,6 +18,21 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.3.0] - 2026-08-17
+
+### Added
+- Generated training plans are now verified against the weekly TSS target and automatically sent back for correction when the plan misses the target.
+- Plan creation shows the outcome of the TSS verification directly in the progress list, including the planned weekly load, the target, and the deviation.
+
+### Changed
+- The weekly load target and the day constraints are now read from the current dataset structure, so the planning logic uses the authoritative weekly target of the target week.
+
+### Fixed
+- The last status message of a plan run is no longer swallowed, so the validation step stays visible after the plan is finished.
+
+### Removed
+-
+
 ## [1.2.0] - 2026-08-15
 
 ### Added
