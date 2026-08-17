@@ -31,7 +31,9 @@ body {
 
 .article-card-image-link {
     display: block;
-    background: linear-gradient(180deg, #101725 0%, #182338 100%);
+    /* Letterbox bars for non-matching aspect ratios blend into the card instead of showing dark edges. */
+    background-color: var(--ba-card-bg);
+    border-bottom: 1px solid var(--ba-border);
 }
 
 .article-card-image {
@@ -41,6 +43,7 @@ body {
     object-fit: contain;
     object-position: center;
     background-color: transparent;
+    padding: 8px;
 }
 
 .tag-pill {
