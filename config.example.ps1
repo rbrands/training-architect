@@ -62,4 +62,8 @@ $config = @{
 
     # GitHub Actions OIDC
     AzureClientId        = "__AZURE_CLIENT_ID__"
+
+    # Intervals icu Athlete ID and API key for evaluations
+    IntervalsAthleteId = "your-athlete-id"
+    IntervalsApiKey    = "your-api-key"
 }
