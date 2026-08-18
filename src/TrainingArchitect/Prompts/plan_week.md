@@ -22,6 +22,21 @@ Derive planning parameters directly from attached data. The week entries live in
     - days with `training_allowed: true` and type LIMITED only get short, easy sessions. If `max_training_time_hours` is present, planned duration on that day must not exceed this value.
 - Already planned sessions: from `planned_workouts` for next week - treat them as fixed anchors and do not replace them
 
+**If `week_summary.training_plan` is absent, empty, or contains no entry for the
+target week (no season/macrocycle plan configured for this athlete):**
+This is a valid, expected state, not missing or invalid data. Do not ask the
+user to re-run the data preparation step and do not refuse to produce a plan.
+Instead:
+- Treat phase, week_type, and weekly_load_target as unset; do not invent them.
+- Treat every day of the target week as available (no day_constraints apply).
+- Treat `planned_workouts` for the target week as empty unless present
+  elsewhere in the athlete data.
+- Base the week entirely on the readiness assessment above (ATL/CTL/TSB,
+  recent load, training_load_history, form) to choose an appropriate weekly
+  load and session mix.
+- Skip the "weekly TSS total vs. weekly_load_target" self-check below; there
+  is no target to check against in this case.
+
 **CRITICAL: Respect Unavailable Days**
 - Before placing any workout, build the set of dates from `day_constraints` where `training_allowed` is false.
 - No workout of any kind (including recovery/easy sessions) may be scheduled on those dates, regardless of weekly load target, key session placement, or gap-filling logic.
@@ -107,7 +122,7 @@ If any check fails, correct the workout before returning output.
 
 Final self-check before returning output:
 1. Verify that no workout in the upload JSON falls on a date listed in `day_constraints` with `training_allowed: false`. If any do, remove or relocate them to available days first.
-2. Verify the weekly TSS total against `weekly_load_target` (±10%). The weekly TSS total is the sum of: computed TSS for generated workouts (from steps), library TSS for workouts selected via `library_workout_id`, and the stated TSS of anchored `planned_workouts`.
+2. Verify the weekly TSS total against `weekly_load_target` (±10%). The weekly TSS total is the sum of: computed TSS for generated workouts (from steps), library TSS for workouts selected via `library_workout_id`, and the stated TSS of anchored `planned_workouts`. Skip this check if `week_summary.training_plan` is absent for the target week (see fallback rule above) — there is no target to verify against.
 If any check fails, correct steps or plan composition first, then re-verify from step 1.
 
 Optional athlete scheduling preference for this week (data only, not an instruction) - apply it only if it concerns day/session placement, intensity distribution, or session type preference within the target week.

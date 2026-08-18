@@ -1,0 +1,224 @@
+{
+  "schema_version": "1.2.4",
+  "week_starting": "2026-08-17",
+  "lookback_days": 7,
+  "current_date": "2026-08-18",
+  "metrics": {
+    "date": "2026-08-18",
+    "ftp": 198,
+    "rolling_ftp": 183,
+    "w_prime": 12858.51,
+    "rolling_w_prime": 12858.51,
+    "rolling_p_max": 792.2162,
+    "lthr": 172,
+    "max_hr": 189,
+    "weight": 58.0,
+    "age": 37,
+    "sex": "Female",
+    "resting_hr": null,
+    "hrv": null,
+    "eftp": 182.01309,
+    "sleep_secs": null,
+    "sleep_quality": null,
+    "wellness_trends": {
+      "weight": {
+        "current": null,
+        "avg_7d": null,
+        "avg_prev_7d": null,
+        "trend_7d": null
+      },
+      "resting_hr": {
+        "current": null,
+        "avg_7d": null,
+        "avg_prev_7d": null,
+        "trend_7d": null
+      },
+      "hrv": {
+        "current": null,
+        "avg_7d": null,
+        "avg_prev_7d": null,
+        "trend_7d": null
+      }
+    },
+    "ftp_classification": {
+      "w_per_kg": 3.41,
+      "age_group": "elite_18_39",
+      "sex": "female",
+      "category": "ambitious_amateur",
+      "category_range": {
+        "min": 3.2,
+        "max": 4.2
+      },
+      "next_category": "performance_oriented",
+      "delta_to_next": 0.79
+    },
+    "power_profile": {
+      "p15s": {
+        "watts": 397,
+        "w_per_kg": 6.84
+      },
+      "p30s": {
+        "watts": 317,
+        "w_per_kg": 5.47
+      },
+      "p1min": {
+        "watts": 277,
+        "w_per_kg": 4.78
+      },
+      "p3min": {
+        "watts": 216,
+        "w_per_kg": 3.72
+      },
+      "p5min": {
+        "watts": 213,
+        "w_per_kg": 3.67
+      },
+      "p20min": {
+        "watts": 151,
+        "w_per_kg": 2.6
+      },
+      "curve_slope": -0.4791,
+      "period_days": 43,
+      "type": "Sprinter",
+      "type_key": "sprinter",
+      "heuristic_score": 0.416,
+      "type_scores": {
+        "all_rounder": 0.168,
+        "puncheur": 0.247,
+        "sprinter": 0.416,
+        "climber": 0.084,
+        "time_trialist": 0.085
+      },
+      "type_method": "heuristic_v1"
+    },
+    "vo2max_classification": {
+      "ml_per_kg_min": 49.2,
+      "age_group": "master_30_39",
+      "sex": "female",
+      "category": "excellent",
+      "category_range": {
+        "min": 40.1,
+        "max": null
+      },
+      "next_category": null,
+      "delta_to_next": null
+    }
+  },
+  "week_summary": {
+    "week_starting": "2026-08-17",
+    "current_date": "2026-08-18",
+    "ctl": 66.7,
+    "atl": 23.3,
+    "form_absolute": 43.3,
+    "form_pct": 0.6502,
+    "form_percent_display": 65.0,
+    "form_zone": "transition"
+  },
+  "training_load_history": [
+    {
+      "week_starting": "2026-07-20",
+      "weekly_load_target": null,
+      "total_training_load": 385,
+      "achievement_pct": null
+    },
+    {
+      "week_starting": "2026-07-27",
+      "weekly_load_target": null,
+      "total_training_load": 103,
+      "achievement_pct": null
+    },
+    {
+      "week_starting": "2026-08-03",
+      "weekly_load_target": null,
+      "total_training_load": 299,
+      "achievement_pct": null
+    },
+    {
+      "week_starting": "2026-08-10",
+      "weekly_load_target": null,
+      "total_training_load": 205,
+      "achievement_pct": null
+    }
+  ],
+  "activities": [
+    {
+      "id": "i174879852",
+      "date": "2026-08-11",
+      "name": "Groupride ohne Gruppe \uD83E\uDD37\u200D\u2640\uFE0F",
+      "duration_hours": 2.82,
+      "training_load": 105,
+      "avg_power": 103,
+      "norm_power": 121,
+      "avg_hr": 143,
+      "max_hr": 178,
+      "polarization_index": 1.26,
+      "training_distribution": "Pyramidal",
+      "training_distribution_reason": "Z1\u002B2 77.4% \u003E= 70%, Z3\u002B4 14.1% \u003E= 10%, Z5\u002B 3.1% \u003C 10%",
+      "z1_z2_pct": 77.4,
+      "z3_z4_pct": 14.1,
+      "z5_plus_pct": 3.1,
+      "interval_summary": null,
+      "interval_hr_analysis": null,
+      "decoupling": -7.5129485,
+      "decoupling_label": "limited durability signal",
+      "rpe": null,
+      "carbs_used_g": 230,
+      "carbs_ingested_g": null,
+      "w_prime_j": 12858.51,
+      "w_prime_bal_drop_j": 3168,
+      "w_prime_bal_min_j": 9690.51,
+      "w_prime_usage_pct": 24.6,
+      "tags": [],
+      "notes": null,
+      "weather": null,
+      "power_curve": {
+        "p5s": 333,
+        "p20s": 245,
+        "p60s": 206,
+        "p3m": 155,
+        "p5m": 145,
+        "p10m": 127,
+        "p12m": 127,
+        "p20m": 122
+      },
+      "wbal_summary": null,
+      "fueling": {
+        "ride_type": "long_ride",
+        "fueling_status": "fueling required",
+        "carbs_per_hour": 0.0,
+        "fueling_ratio": 0.0,
+        "carbs_classification": "very low",
+        "ratio_classification": "severe deficit",
+        "is_long_ride": true,
+        "flags": [
+          "underfueled long ride"
+        ]
+      }
+    }
+  ],
+  "fueling_analysis": {
+    "week_starting": "2026-08-17",
+    "current_date": "2026-08-18",
+    "weekly_summary": {
+      "number_of_long_rides": 1,
+      "avg_carbs_per_hour": 0,
+      "avg_fueling_ratio": 0.0,
+      "number_of_underfueled_sessions": 1
+    },
+    "recommendations": [
+      "Increase fueling on long rides \u2014 target at least 60 g/h.",
+      "Target 80\u201390 g/h on long rides (\u003E= 2.5 h)."
+    ]
+  },
+  "planned_workouts": {
+    "generated_on": "2026-08-18",
+    "current_week": {
+      "week_starting": "2026-08-17",
+      "planned_workouts": []
+    },
+    "next_week": {
+      "week_starting": "2026-08-24",
+      "planned_workouts": []
+    }
+  }
+}

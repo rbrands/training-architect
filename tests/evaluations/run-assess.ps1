@@ -18,7 +18,11 @@ $dataFolder    = Join-Path $PSScriptRoot "data"
 $timestamp     = Get-Date -Format "yyyy-MM-dd_HH-mm"
 $resultsFolder = Join-Path $PSScriptRoot "results\$timestamp"
 
-$allTestFiles = Get-ChildItem -Path $dataFolder -Filter "*.json"
+# data/ wird jetzt mit run-plan.ps1 geteilt. Plan-Testdaten tragen das Praefix
+# "plan__" (Schema: plan__<disciplineType>__<szenario>.json) und werden hier
+# bewusst ausgeschlossen -- die gehoeren zu run-plan.ps1.
+$allTestFiles = Get-ChildItem -Path $dataFolder -Filter "*.json" |
+    Where-Object { $_.BaseName -notlike "plan__*" }
 
 if ($PSBoundParameters.ContainsKey('DatasetName')) {
     $normalizedDatasetName = $DatasetName.Trim()
