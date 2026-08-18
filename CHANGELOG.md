@@ -18,6 +18,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.3.1] - 2026-08-18
+
+### Fixed
+- Fixed prompt configuration to improve training plan generation accuracy.
+
 ## [1.3.0] - 2026-08-17
 
 ### Added
