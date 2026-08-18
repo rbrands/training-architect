@@ -1,4 +1,7 @@
 # tests/evaluations/run-assess.ps1
+param(
+    [string]$DatasetName
+)
 
 # ---------------------------------------------------------------------------
 # Load config
@@ -15,6 +18,38 @@ $dataFolder    = Join-Path $PSScriptRoot "data"
 $timestamp     = Get-Date -Format "yyyy-MM-dd_HH-mm"
 $resultsFolder = Join-Path $PSScriptRoot "results\$timestamp"
 
+$allTestFiles = Get-ChildItem -Path $dataFolder -Filter "*.json"
+
+if ($PSBoundParameters.ContainsKey('DatasetName')) {
+    $normalizedDatasetName = $DatasetName.Trim()
+
+    if ([string]::IsNullOrWhiteSpace($normalizedDatasetName)) {
+        Write-Host "DatasetName darf nicht leer sein." -ForegroundColor Red
+        exit 1
+    }
+
+    $matchingFiles = @(
+        $allTestFiles | Where-Object {
+            $_.Name -ieq $normalizedDatasetName -or
+            $_.BaseName -ieq $normalizedDatasetName -or
+            $_.Name -ieq "$normalizedDatasetName.json"
+        }
+    )
+
+    if ($matchingFiles.Count -eq 0) {
+        Write-Host "Kein Datensatz gefunden fuer: $normalizedDatasetName" -ForegroundColor Red
+        Write-Host "Verfuegbare Dateien:" -ForegroundColor Yellow
+        $allTestFiles | ForEach-Object { Write-Host " - $($_.Name)" -ForegroundColor Yellow }
+        exit 1
+    }
+
+    $testFiles = $matchingFiles
+    Write-Host "Nur Datensatz: $normalizedDatasetName" -ForegroundColor Cyan
+}
+else {
+    $testFiles = $allTestFiles
+}
+
 New-Item -ItemType Directory -Path $resultsFolder -Force | Out-Null
 
 $language = "de"
@@ -25,8 +60,6 @@ $assessmentTypeMap = @{
     "week"     = 1
     "metrics"  = 2
 }
-
-$testFiles = Get-ChildItem -Path $dataFolder -Filter "*.json"
 
 foreach ($file in $testFiles) {
     Write-Host "=== $($file.Name) ===" -ForegroundColor Cyan

@@ -1,0 +1,507 @@
+{
+  "schema_version": "1.2.4",
+  "week_starting": "2026-08-17",
+  "lookback_days": 7,
+  "current_date": "2026-08-17",
+  "metrics": {
+    "date": "2026-08-17",
+    "ftp": 265,
+    "rolling_ftp": 246,
+    "w_prime": 20393,
+    "rolling_w_prime": 20291.72,
+    "rolling_p_max": 874.98846,
+    "lthr": 166,
+    "max_hr": 186,
+    "weight": 78.92,
+    "age": 65,
+    "sex": "Male",
+    "resting_hr": 41,
+    "hrv": 53.0,
+    "eftp": 245.754,
+    "sleep_secs": 27747,
+    "sleep_quality": "GOOD",
+    "wellness_trends": {
+      "weight": {
+        "current": 78.92,
+        "avg_7d": 78.9,
+        "avg_prev_7d": 78.4,
+        "trend_7d": "up"
+      },
+      "resting_hr": {
+        "current": 41.0,
+        "avg_7d": 42.29,
+        "avg_prev_7d": 41.43,
+        "trend_7d": "stable"
+      },
+      "hrv": {
+        "current": 53.0,
+        "avg_7d": 53.0,
+        "avg_prev_7d": 60.14,
+        "trend_7d": "down"
+      }
+    },
+    "ftp_classification": {
+      "w_per_kg": 3.36,
+      "age_group": "senior_60_plus",
+      "sex": "male",
+      "category": "ambitious_amateur",
+      "category_range": {
+        "min": 2.9,
+        "max": 3.9
+      },
+      "next_category": "performance_oriented",
+      "delta_to_next": 0.54
+    },
+    "power_profile": {
+      "p15s": {
+        "watts": 550,
+        "w_per_kg": 7.1
+      },
+      "p30s": {
+        "watts": 400,
+        "w_per_kg": 5.19
+      },
+      "p1min": {
+        "watts": 330,
+        "w_per_kg": 4.22
+      },
+      "p3min": {
+        "watts": 297,
+        "w_per_kg": 3.87
+      },
+      "p5min": {
+        "watts": 289,
+        "w_per_kg": 3.73
+      },
+      "p20min": {
+        "watts": 241,
+        "w_per_kg": 3.1
+      },
+      "curve_slope": -0.5731,
+      "period_days": 43,
+      "type": "All Rounder",
+      "type_key": "all_rounder",
+      "heuristic_score": 0.255,
+      "type_scores": {
+        "all_rounder": 0.255,
+        "puncheur": 0.254,
+        "sprinter": 0.21,
+        "climber": 0.14,
+        "time_trialist": 0.142
+      },
+      "type_method": "heuristic_v1"
+    },
+    "vo2max_classification": {
+      "ml_per_kg_min": 49.1,
+      "age_group": "senior_60_plus",
+      "sex": "male",
+      "category": "excellent",
+      "category_range": {
+        "min": 44.3,
+        "max": null
+      },
+      "next_category": null,
+      "delta_to_next": null
+    }
+  },
+  "week_summary": {
+    "week_starting": "2026-08-17",
+    "current_date": "2026-08-17",
+    "ctl": 59.1,
+    "atl": 53.0,
+    "form_absolute": 6.2,
+    "form_pct": 0.104,
+    "form_percent_display": 10.4,
+    "form_zone": "fresh",
+    "training_plan": [
+      {
+        "week": "2026-08-17",
+        "plan_name": "Training Plan",
+        "phase": "Build",
+        "start": "2026-07-27",
+        "end": "2026-10-19",
+        "weekly_load_target": 323,
+        "week_type": "RECOVERY",
+        "week_note": "Recovery Week",
+        "day_constraints": [
+          {
+            "date": "2026-08-19",
+            "type": "UNAVAILABLE",
+            "training_allowed": false,
+            "source_category": "NOTE",
+            "source_name": "Arbeit - Patch Day"
+          }
+        ]
+      },
+      {
+        "week": "2026-08-24",
+        "plan_name": "Training Plan",
+        "phase": "Build",
+        "start": "2026-07-27",
+        "end": "2026-10-19",
+        "weekly_load_target": 418,
+        "week_type": "NORMAL"
+      }
+    ]
+  },
+  "training_load_history": [
+    {
+      "week_starting": "2026-07-20",
+      "weekly_load_target": 400,
+      "total_training_load": 355,
+      "achievement_pct": 88.8
+    },
+    {
+      "week_starting": "2026-07-27",
+      "weekly_load_target": 399,
+      "total_training_load": 540,
+      "achievement_pct": 135.3
+    },
+    {
+      "week_starting": "2026-08-03",
+      "weekly_load_target": 418,
+      "total_training_load": 510,
+      "achievement_pct": 122.0
+    },
+    {
+      "week_starting": "2026-08-10",
+      "weekly_load_target": 439,
+      "total_training_load": 377,
+      "achievement_pct": 85.9
+    }
+  ],
+  "activities": [
+    {
+      "id": "i176458791",
+      "date": "2026-08-16",
+      "name": "Zwift Climb Portal - Poggio",
+      "duration_hours": 0.46,
+      "training_load": 33,
+      "avg_power": 198,
+      "norm_power": 224,
+      "avg_hr": 141,
+      "max_hr": 172,
+      "polarization_index": 1.88,
+      "training_distribution": "Unique",
+      "training_distribution_reason": "No pattern matched (Z1\u002B2=62.9%, Z3\u002B4=16.1%, Z5\u002B=19.2%)",
+      "z1_z2_pct": 62.9,
+      "z3_z4_pct": 16.1,
+      "z5_plus_pct": 19.2,
+      "interval_summary": [
+        "1x 9m22s 280w"
+      ],
+      "interval_hr_analysis": null,
+      "decoupling": 25.21961,
+      "decoupling_label": "limited durability signal",
+      "rpe": 5,
+      "carbs_used_g": 118,
+      "carbs_ingested_g": 30,
+      "w_prime_j": 20393,
+      "w_prime_bal_drop_j": 9228,
+      "w_prime_bal_min_j": 11165,
+      "w_prime_usage_pct": 45.3,
+      "tags": [],
+      "notes": "Nur kurz einen Anstieg auf Zwift gefahren. Hat Spa\u00DF gemacht. War jetzt etwas \u00FCber Schwelle.",
+      "weather": null,
+      "power_curve": {
+        "p5s": 345,
+        "p20s": 300,
+        "p60s": 291,
+        "p3m": 283,
+        "p5m": 281,
+        "p10m": 275,
+        "p12m": 255,
+        "p20m": 216
+      },
+      "wbal_summary": {
+        "w_prime_j": 20393.0,
+        "wbal_min_j": 12063.1,
+        "wbal_max_depletion_j": 8329.9,
+        "wbal_usage_pct": 40.8,
+        "seconds_below_30pct": 0,
+        "seconds_below_10pct": 0,
+        "min_wbal_at_second": 787,
+        "wbal_depletion_events": 0,
+        "wbal_recovery_ratio": null
+      },
+      "fueling": {
+        "ride_type": "endurance",
+        "fueling_status": "no fueling needed",
+        "carbs_per_hour": 65.2,
+        "fueling_ratio": 0.25,
+        "carbs_classification": "not required",
+        "ratio_classification": "not applicable",
+        "is_long_ride": false,
+        "flags": []
+      }
+    },
+    {
+      "id": "i175554112",
+      "date": "2026-08-13",
+      "name": "Steady Endurance Ride - Into the Nightride",
+      "duration_hours": 2.32,
+      "training_load": 74,
+      "avg_power": 125,
+      "norm_power": 150,
+      "avg_hr": 113,
+      "max_hr": 150,
+      "polarization_index": 0.89,
+      "training_distribution": "Base",
+      "training_distribution_reason": "Z1\u002B2 89.8% \u003E= 85%, Z3\u002B4 7.0% \u003C 10%, Z5\u002B 0.6% \u003C 5%",
+      "z1_z2_pct": 89.8,
+      "z3_z4_pct": 7.0,
+      "z5_plus_pct": 0.6,
+      "interval_summary": null,
+      "interval_hr_analysis": null,
+      "decoupling": 0.9850297,
+      "decoupling_label": "excellent durability",
+      "rpe": 4,
+      "carbs_used_g": 287,
+      "carbs_ingested_g": 80,
+      "w_prime_j": 20393,
+      "w_prime_bal_drop_j": 1796,
+      "w_prime_bal_min_j": 18597,
+      "w_prime_usage_pct": 8.8,
+      "tags": [
+        "aerobic-threshold-moderate"
+      ],
+      "notes": "Am Anfang brutal hei\u00DF, die 2. H\u00E4lfte dann etwas besser.",
+      "weather": {
+        "average_weather_temp": 32.053818,
+        "average_feels_like": 28.93118,
+        "max_rain": 0.0
+      },
+      "power_curve": {
+        "p5s": 395,
+        "p20s": 352,
+        "p60s": 234,
+        "p3m": 191,
+        "p5m": 187,
+        "p10m": 182,
+        "p12m": 175,
+        "p20m": 158
+      },
+      "wbal_summary": null,
+      "fueling": {
+        "ride_type": "endurance",
+        "fueling_status": "fueling required",
+        "carbs_per_hour": 34.5,
+        "fueling_ratio": 0.28,
+        "carbs_classification": "very low",
+        "ratio_classification": "severe deficit",
+        "is_long_ride": false,
+        "flags": []
+      }
+    },
+    {
+      "id": "i174897247",
+      "date": "2026-08-11",
+      "name": "Fl\u00E8che d\u0027Ahr",
+      "duration_hours": 6.12,
+      "training_load": 270,
+      "avg_power": 137,
+      "norm_power": 176,
+      "avg_hr": 122,
+      "max_hr": 165,
+      "polarization_index": 0.28,
+      "training_distribution": "Threshold",
+      "training_distribution_reason": "Z3\u002B4 24.5% \u003E= 20%",
+      "z1_z2_pct": 62.8,
+      "z3_z4_pct": 24.5,
+      "z5_plus_pct": 0.7,
+      "interval_summary": [
+        "1x 1m58s 288w",
+        "1x 26m20s 239w",
+        "2x 5m3s 214w",
+        "1x 4m5s 226w",
+        "3x 88s 241w",
+        "1x 4m38s 235w",
+        "1x 3m36s 222w"
+      ],
+      "interval_hr_analysis": null,
+      "decoupling": 13.068702,
+      "decoupling_label": "limited durability signal",
+      "rpe": 5,
+      "carbs_used_g": 698,
+      "carbs_ingested_g": 450,
+      "w_prime_j": 20393,
+      "w_prime_bal_drop_j": 3054,
+      "w_prime_bal_min_j": 17339,
+      "w_prime_usage_pct": 15.0,
+      "tags": [],
+      "notes": "Lange Tour mit ein paar Bergen, die man dann doch Z4 f\u00E4hrt.",
+      "weather": {
+        "average_weather_temp": 24.65825,
+        "average_feels_like": 21.706007,
+        "max_rain": 0.0
+      },
+      "power_curve": {
+        "p5s": 364,
+        "p20s": 330,
+        "p60s": 297,
+        "p3m": 268,
+        "p5m": 249,
+        "p10m": 248,
+        "p12m": 244,
+        "p20m": 241
+      },
+      "wbal_summary": null,
+      "fueling": {
+        "ride_type": "endurance_with_sprint",
+        "fueling_status": "fueling required",
+        "carbs_per_hour": 73.5,
+        "fueling_ratio": 0.64,
+        "carbs_classification": "moderate",
+        "ratio_classification": "acceptable",
+        "is_long_ride": false,
+        "flags": []
+      }
+    }
+  ],
+  "fueling_analysis": {
+    "week_starting": "2026-08-17",
+    "current_date": "2026-08-17",
+    "weekly_summary": {
+      "number_of_long_rides": 0,
+      "avg_carbs_per_hour": 57.7,
+      "avg_fueling_ratio": 0.39,
+      "number_of_underfueled_sessions": 0
+    },
+    "recommendations": [
+      "Short rides do not require fueling \u2014 focus on long sessions."
+    ]
+  },
+  "planned_workouts": {
+    "generated_on": "2026-08-17",
+    "current_week": {
+      "week_starting": "2026-08-17",
+      "planned_workouts": [
+        {
+          "date": "2026-08-18",
+          "time": "00:00",
+          "name": "Lactate-treshold 3x6m Z4",
+          "type": "Ride",
+          "tags": [
+            "lactate-threshold-low"
+          ],
+          "duration_hours": 0.78,
+          "planned_load": 45,
+          "description": "Warmup\n- 10m ramp 50-65%\n\nSweetSpot\n3x\n- SweetSot 6m  92%\n- Recovery 3m  56% 85rpm\n\nCooldown\n- 10m ramp 65-50%\n",
+          "zone_distribution": {
+            "z1_z2_pct": 44.6,
+            "z3_z4_pct": 27.7,
+            "z5_plus_pct": 0.0
+          },
+          "steps": [
+            {
+              "duration_min": 10.0,
+              "power_pct_ftp": null,
+              "power_watts": null
+            },
+            {
+              "duration_min": 27.0,
+              "power_pct_ftp": null,
+              "power_watts": null
+            },
+            {
+              "duration_min": 10.0,
+              "power_pct_ftp": null,
+              "power_watts": null
+            }
+          ]
+        },
+        {
+          "date": "2026-08-20",
+          "time": "00:00",
+          "name": "Flughafen geht immer",
+          "type": "Ride",
+          "tags": [
+            "aerobic-threshold-moderate"
+          ],
+          "duration_hours": 2.0,
+          "planned_load": 70,
+          "description": "",
+          "zone_distribution": null,
+          "steps": null
+        },
+        {
+          "date": "2026-08-21",
+          "time": "00:00",
+          "name": "Regenerative Ausdauerfahrt",
+          "type": "Ride",
+          "tags": [
+            "recovery-low"
+          ],
+          "duration_hours": 1.0,
+          "planned_load": 23,
+          "description": "Sehr lockere regenerative Einheit in Z1 zur F\u00F6rderung der Durchblutung und Vorbereitung auf die lange Ausfahrt. TSS: 23. Keine gezielte Kohlenhydratzufuhr erforderlich; nach Durst trinken.\n- 10m 45%\n- 40m 50%\n- 10m 45%",
+          "zone_distribution": {
+            "z1_z2_pct": 100.0,
+            "z3_z4_pct": 0.0,
+            "z5_plus_pct": 0.0
+          },
+          "steps": [
+            {
+              "duration_min": 10.0,
+              "power_pct_ftp": 45,
+              "power_watts": null
+            },
+            {
+              "duration_min": 40.0,
+              "power_pct_ftp": 50,
+              "power_watts": null
+            },
+            {
+              "duration_min": 10.0,
+              "power_pct_ftp": 45,
+              "power_watts": null
+            }
+          ]
+        },
+        {
+          "date": "2026-08-22",
+          "time": "00:00",
+          "name": "WTT",
+          "type": "Ride",
+          "tags": [
+            "aerobic-threshold-high",
+            "lactate-threshold-low"
+          ],
+          "duration_hours": 4.0,
+          "planned_load": 160,
+          "description": "",
+          "zone_distribution": null,
+          "steps": null
+        },
+        {
+          "date": "2026-08-23",
+          "time": "00:00",
+          "name": "Regeneration Spin",
+          "type": "Ride",
+          "tags": [
+            "recovery-low"
+          ],
+          "duration_hours": 1.0,
+          "planned_load": 25,
+          "description": "Sehr lockere aktive Erholung in Z1 zur F\u00F6rderung der Durchblutung nach der langen Ausfahrt. TSS: 25. Keine Kohlenhydratzufuhr w\u00E4hrend der Einheit erforderlich; trinken nach Durst.\n- 1h 50%",
+          "zone_distribution": {
+            "z1_z2_pct": 100.0,
+            "z3_z4_pct": 0.0,
+            "z5_plus_pct": 0.0
+          },
+          "steps": [
+            {
+              "duration_min": 60.0,
+              "power_pct_ftp": 50,
+              "power_watts": null
+            }
+          ]
+        }
+      ]
+    },
+    "next_week": {
+      "week_starting": "2026-08-24",
+      "planned_workouts": []
+    }
+  }
+}
