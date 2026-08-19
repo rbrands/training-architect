@@ -2,13 +2,10 @@
 #
 # SSE-Pendant zu run-assess.ps1. Der Plan-Endpoint liefert keine einzelne
 # JSON-Response, sondern einen text/event-stream mit laufenden Status-Events
-# (siehe UI: "Preparing plan request." -> ... -> "Correcting the plan (round X of 2)."
-# -> ...). Invoke-WebRequest puffert das komplett und eignet sich dafuer nicht,
-# deshalb hier HttpClient mit ResponseHeadersRead + zeilenweisem Lesen.
-#
-# WICHTIG: Endpoint-Pfad und Body-Felder unten sind Annahmen (analog zu
-# /api/coach/assess). Bitte gegenpruefen/anpassen -- der Rohlog zeigt beim
-# ersten Lauf ohnehin sofort das tatsaechliche Event-Format.
+# ("Preparing plan request." -> ... -> "Correcting the plan (round X of 2)."
+# -> ... -> "Completed"/"Failed"). Invoke-WebRequest puffert das komplett und
+# eignet sich dafuer nicht, deshalb hier HttpClient mit ResponseHeadersRead +
+# zeilenweisem Lesen.
 #
 # data/ wird mit run-assess.ps1 geteilt. Namensschema fuer Plan-Testdaten:
 # plan__<disciplineType>__<szenario>.json (z.B. plan__climber__notargets.json).
@@ -81,9 +78,6 @@ New-Item -ItemType Directory -Path $resultsFolder -Force | Out-Null
 
 $language = "de"
 
-# Fuer den Plan-Flow braucht es (anders als bei assess) vermutlich keinen
-# assessmentType. Namensschema: plan__<disciplineType>__<szenario>.json
-
 foreach ($file in $testFiles) {
     Write-Host "=== $($file.Name) ===" -ForegroundColor Cyan
 
@@ -103,9 +97,7 @@ foreach ($file in $testFiles) {
 
     # PlanRequest verlangt Scope und Constraints zwingend (kein Default in C#) --
     # ohne diese Felder bindet .NET sie stillschweigend auf CLR-Defaults
-    # (Scope=0, Constraints=null), was zu einem ganz anderen Fehler fuehren kann
-    # als dem eigentlich gesuchten Live-Bug. Deshalb hier explizit mitschicken,
-    # analog zur PlanConstraints-Struktur (WeeklyTssTarget, DayConstraints).
+    # (Scope=0, Constraints=null).
     $bodyObj = @{
         weekDataJson         = $weekDataJson
         disciplineType       = $disciplineType
@@ -119,18 +111,8 @@ foreach ($file in $testFiles) {
     }
     $bodyJson = $bodyObj | ConvertTo-Json -Depth 10
 
-    # Diagnose: exakt sichern, was tatsaechlich rausgeschickt wird -- damit
-    # sich "Daten kommen leer an" zweifelsfrei auf Client- oder Serverseite
-    # verorten laesst.
-    Write-Host "  weekDataJson: $($weekDataJson.Length) Zeichen" -ForegroundColor DarkGray
-    Write-Host "  bodyJson gesamt: $($bodyJson.Length) Zeichen" -ForegroundColor DarkGray
-    Set-Content -Path (Join-Path $resultsFolder "$baseName.request.json") -Value $bodyJson -Encoding utf8
-
     $planUri = "$($config.SiteUrl)$PlanEndpointPath"
-
-    $rawLogPath   = Join-Path $resultsFolder "$baseName.raw.log"
-    $mdPath       = Join-Path $resultsFolder "$baseName.md"
-    $eventsJsonlPath = Join-Path $resultsFolder "$baseName.events.jsonl"
+    $outPath = Join-Path $resultsFolder "$baseName.md"
 
     $handler = New-Object System.Net.Http.HttpClientHandler
     $client  = New-Object System.Net.Http.HttpClient($handler)
@@ -143,8 +125,7 @@ foreach ($file in $testFiles) {
     $request.Headers.Accept.Add([System.Net.Http.Headers.MediaTypeWithQualityHeaderValue]::new("text/event-stream"))
     $request.Content = New-Object System.Net.Http.StringContent($bodyJson, [System.Text.Encoding]::UTF8, "application/json")
 
-    $rawLines = New-Object System.Collections.Generic.List[string]
-    $parsedEvents = New-Object System.Collections.Generic.List[object]
+    $lastEvent = $null
 
     try {
         $response = $client.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
@@ -152,7 +133,6 @@ foreach ($file in $testFiles) {
         if ([int]$response.StatusCode -ge 400) {
             $errBody = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
             Write-Host "Fehler ($([int]$response.StatusCode)): $errBody" -ForegroundColor Red
-            Set-Content -Path $rawLogPath -Value $errBody -Encoding utf8
             Write-Host ""
             continue
         }
@@ -162,34 +142,14 @@ foreach ($file in $testFiles) {
 
         while (-not $reader.EndOfStream) {
             $line = $reader.ReadLine()
-            if ($null -eq $line) { continue }
-            $rawLines.Add($line)
+            if ([string]::IsNullOrEmpty($line) -or -not $line.StartsWith("data:")) { continue }
 
-            if ($line.StartsWith("data:")) {
-                $jsonPart = $line.Substring(5).Trim()
-                if ($jsonPart.Length -gt 0) {
-                    try {
-                        $evt = $jsonPart | ConvertFrom-Json
-                        $parsedEvents.Add($evt)
+            $jsonPart = $line.Substring(5).Trim()
+            if ($jsonPart.Length -eq 0) { continue }
 
-                        # Best-effort Live-Anzeige -- Feldnamen sind Annahmen
-                        # (stage/message/status), ggf. nach erstem Lauf anpassen.
-                        $label = $null
-                        foreach ($prop in @('stage', 'status', 'message', 'step')) {
-                            if ($evt.PSObject.Properties.Name -contains $prop) {
-                                $label = $evt.$prop
-                                break
-                            }
-                        }
-                        if ($label) {
-                            Write-Host "  -> $label" -ForegroundColor DarkGray
-                        }
-                    }
-                    catch {
-                        Write-Host "  (raw, nicht JSON-parsbar): $jsonPart" -ForegroundColor DarkYellow
-                    }
-                }
-            }
+            $evt = $jsonPart | ConvertFrom-Json
+            $lastEvent = $evt
+            Write-Host "  -> $($evt.message)" -ForegroundColor DarkGray
         }
         $reader.Dispose()
     }
@@ -200,23 +160,19 @@ foreach ($file in $testFiles) {
         $client.Dispose()
     }
 
-    # Rohen Stream immer sichern -- das ist der wichtigste Output hier.
-    Set-Content -Path $rawLogPath -Value ($rawLines -join "`n") -Encoding utf8
-    if ($parsedEvents.Count -gt 0) {
-        $parsedEvents | ForEach-Object { $_ | ConvertTo-Json -Depth 10 -Compress } | Set-Content -Path $eventsJsonlPath -Encoding utf8
-    }
-
-    $fullText = $rawLines -join "`n"
-    $hasUploadJson = $fullText -match "BEGIN_UPLOAD_JSON" -and $fullText -match "END_UPLOAD_JSON"
-
-    if ($hasUploadJson) {
-        Write-Host "-> Upload-JSON-Block gefunden." -ForegroundColor Green
+    if ($null -eq $lastEvent -or $lastEvent.stage -eq "Failed") {
+        Write-Host "-> Fehlgeschlagen: $($lastEvent.message)" -ForegroundColor Red
     }
     else {
-        Write-Host "-> KEIN Upload-JSON-Block im Stream gefunden." -ForegroundColor Red
+        Set-Content -Path $outPath -Value $lastEvent.result.content -Encoding utf8
+        Write-Host "-> $outPath" -ForegroundColor Green
+
+        if ($lastEvent.warnings) {
+            Write-Host "-> Offene Punkte:" -ForegroundColor Yellow
+            $lastEvent.warnings | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
+        }
     }
 
-    Write-Host "-> Rohlog: $rawLogPath" -ForegroundColor Green
     Write-Host ""
 }
 

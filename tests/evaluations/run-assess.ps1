@@ -101,8 +101,8 @@ foreach ($file in $testFiles) {
     $response = Invoke-WebRequest -Method Post -Uri "$($config.SiteUrl)/api/coach/assess" `
         -ContentType "application/json" `
         -Headers @{
-            "X-Intervals-Athlete-Id" = $config.IntervalsAthleteId
-            "X-Intervals-Api-Key"    = $config.IntervalsApiKey
+            "X-Intervals-Athlete-Id" = "eval-test-id"
+            "X-Intervals-Api-Key"    = "eval-test-key"
             "Origin"                 = $config.SiteUrl
         } `
         -Body $body `
