@@ -632,6 +632,11 @@
                                                         <span class="coach-plan-week-duration">@workout.DurationMinutes min</span>
                                                     }
 
+                                                    @if (workout.TargetTss is not null)
+                                                    {
+                                                        <span class="coach-plan-week-tss">TSS @workout.TargetTss.Value.ToString("0.#", CultureInfo.InvariantCulture)</span>
+                                                    }
+
                                                     @if (workout.IsLibraryWorkout)
                                                     {
                                                         <span class="coach-plan-week-library" title="Selected from the workout library.">
@@ -645,6 +650,11 @@
                                                         <span class="coach-plan-week-tag">@tag</span>
                                                     }
                                                 </div>
+
+                                                @if (!string.IsNullOrWhiteSpace(workout.Description))
+                                                {
+                                                    <p class="coach-plan-week-description">@workout.Description</p>
+                                                }
                                             </div>
 
                                             <label class="coach-plan-week-select-wrap">
@@ -882,6 +892,8 @@
         public required DateOnly Date { get; set; }
         public required string Name { get; init; }
         public int? DurationMinutes { get; init; }
+        public double? TargetTss { get; init; }
+        public string? Description { get; init; }
         public IReadOnlyList<string> Tags { get; init; } = [];
         public required JsonElement OriginalWorkout { get; init; }
     }
@@ -2099,6 +2111,8 @@
             Date = date,
             Name = GetStringProperty(workout, "name") ?? $"Workout {index + 1}",
             DurationMinutes = GetIntProperty(workout, "duration_minutes"),
+            TargetTss = GetDoubleProperty(workout, "tss"),
+            Description = GetStringProperty(workout, "description"),
             Tags = tags,
             OriginalWorkout = workout.Clone()
         };

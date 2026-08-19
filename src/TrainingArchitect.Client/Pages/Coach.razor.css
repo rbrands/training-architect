@@ -1330,7 +1330,15 @@
     flex-wrap: wrap;
 }
 
+.coach-plan-week-description {
+    margin: 0;
+    color: #6d665d;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
 .coach-plan-week-duration,
+.coach-plan-week-tss,
 .coach-plan-week-library,
 .coach-plan-week-tag,
 .coach-plan-week-warning {
@@ -1348,6 +1356,11 @@
 .coach-plan-week-duration {
     background: #eef4ff;
     color: #2d5ea7;
+}
+
+.coach-plan-week-tss {
+    background: #e5f6f1;
+    color: #167568;
 }
 
 .coach-plan-week-library {
