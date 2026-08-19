@@ -47,6 +47,19 @@ Evaluate each area below. For each one, report a status (`OK`, `Warning`, or
 - Impact when `Warning` or `Missing`: recent-load and intensity-distribution
   interpretations are based on very little data and have low confidence.
 
+**Activity feedback tracking**
+- For activities within the `lookback_days` window, check `rpe` and
+  `carbs_ingested_g`.
+- `OK` if every activity has a non-null `rpe` and a non-null
+  `carbs_ingested_g`. A value of `0` for `carbs_ingested_g` counts as recorded.
+- `Missing` if there are no activities, `rpe` is null for every activity, or
+  `carbs_ingested_g` is null for every activity.
+- `Warning` if either value is missing for one or more, but not all,
+  activities.
+- Impact when `Warning` or `Missing`: subjective exertion and actual fueling
+  cannot be reliably compared with objective training load for future
+  assessments and plans.
+
 **Load target history**
 - Check `weekly_load_target` across all entries in `training_load_history`.
 - `OK` if at least one entry has a non-null `weekly_load_target`.
