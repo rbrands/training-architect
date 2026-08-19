@@ -10,6 +10,7 @@ public static class PromptBuilder
             AssessmentType.Activity => PromptLoader.Load("assess_activity"),
             AssessmentType.Week => PromptLoader.Load("assess_week"),
             AssessmentType.Metrics => PromptLoader.Load("assess_metrics"),
+            AssessmentType.Consistency => PromptLoader.Load("assess_consistency"),
             _ => throw new ArgumentOutOfRangeException()
         };
 

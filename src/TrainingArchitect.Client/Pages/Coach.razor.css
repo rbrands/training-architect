@@ -1112,6 +1112,14 @@
     line-height: 1.45;
 }
 
+.coach-prompt-workflow-link {
+    display: inline-block;
+    margin-top: 0.65rem;
+    color: #d95d39;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
 .coach-token-hint {
     color: #737c88;
     font-size: 0.8rem;

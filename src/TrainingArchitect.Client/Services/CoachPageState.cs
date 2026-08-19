@@ -12,17 +12,21 @@ public sealed class CoachPageState
     public string? MetricsResultText { get; set; }
     public string? LastTrainingResultText { get; set; }
     public string? WeekResultText { get; set; }
+    public string? ConsistencyResultText { get; set; }
     public string? MetricsResponseId { get; set; }
     public string? LastTrainingResponseId { get; set; }
     public string? WeekResponseId { get; set; }
+    public string? ConsistencyResponseId { get; set; }
 
     public long? MetricsTotalTokens { get; set; }
     public long? LastTrainingTotalTokens { get; set; }
     public long? WeekTotalTokens { get; set; }
+    public long? ConsistencyTotalTokens { get; set; }
 
     public string? MetricsErrorMessage { get; set; }
     public string? LastTrainingErrorMessage { get; set; }
     public string? WeekErrorMessage { get; set; }
+    public string? ConsistencyErrorMessage { get; set; }
 
     public bool IsPlanExpanded { get; set; }
     public string? PlanReadableText { get; set; }

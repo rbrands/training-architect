@@ -249,6 +249,15 @@
                                     <h3 class="coach-prompt-title">@prompt.Title</h3>
                                 </div>
                                 <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                                @if (!string.IsNullOrWhiteSpace(prompt.WorkflowUrl))
+                                {
+                                    <a class="coach-prompt-workflow-link"
+                                       href="@prompt.WorkflowUrl"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        The Workflow · Training Architect
+                                    </a>
+                                }
 
                                 @if (cardState.TotalTokens is not null)
                                 {
@@ -301,6 +310,15 @@
                                 <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
                             </div>
                             <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                            @if (!string.IsNullOrWhiteSpace(expandedPrompt.WorkflowUrl))
+                            {
+                                <a class="coach-prompt-workflow-link"
+                                   href="@expandedPrompt.WorkflowUrl"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    The Workflow · Training Architect
+                                </a>
+                            }
 
                             @if (expandedState.TotalTokens is not null)
                             {
@@ -841,7 +859,8 @@
     {
         MetricsWellness,
         LastTraining,
-        Week
+        Week,
+        Consistency
     }
 
     private sealed class AssessCardState
@@ -926,7 +945,8 @@
     {
         [AssessCardType.MetricsWellness] = new AssessCardState(),
         [AssessCardType.LastTraining] = new AssessCardState(),
-        [AssessCardType.Week] = new AssessCardState()
+        [AssessCardType.Week] = new AssessCardState(),
+        [AssessCardType.Consistency] = new AssessCardState()
     };
     private AssessCardType? _expandedCard;
     private bool _isAssessRequestInFlight;
@@ -968,10 +988,16 @@
     [
         new(AssessCardType.MetricsWellness, "bi bi-speedometer2", "Metrics & Wellness", "Complete view of CTL/ATL/TSB and wellness data."),
         new(AssessCardType.LastTraining, "bi bi-bicycle", "Last Training", "Assessment of the latest workout in context."),
-        new(AssessCardType.Week, "bi bi-calendar3", "Week", "Training week summarized and put into context.")
+        new(AssessCardType.Week, "bi bi-calendar3", "Week", "Training week summarized and put into context."),
+        new(AssessCardType.Consistency, "bi bi-check2-circle", "Data Consistency", "Check the data for internal consistency.", "/blog/workflow")
     ];
 
-    private sealed record PromptCardModel(AssessCardType CardType, string IconClass, string Title, string Description);
+    private sealed record PromptCardModel(
+        AssessCardType CardType,
+        string IconClass,
+        string Title,
+        string Description,
+        string? WorkflowUrl = null);
     private sealed record JsonOverviewSection(string Title, string Summary, string PrettyJson);
 
     private static readonly MarkdownPipeline AssessMarkdownPipeline = new MarkdownPipelineBuilder()
@@ -2804,6 +2830,7 @@
         AssessCardType.MetricsWellness => AssessmentType.Metrics,
         AssessCardType.LastTraining => AssessmentType.Activity,
         AssessCardType.Week => AssessmentType.Week,
+        AssessCardType.Consistency => AssessmentType.Consistency,
         _ => AssessmentType.Metrics
     };
 
@@ -2812,6 +2839,7 @@
         AssessCardType.MetricsWellness => "assess.metrics",
         AssessCardType.LastTraining => "assess.lastTraining",
         AssessCardType.Week => "assess.week",
+        AssessCardType.Consistency => "assess.consistency",
         _ => "assess.metrics"
     };
 

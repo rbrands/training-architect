@@ -473,6 +473,7 @@ public static class CoachEndpoints
             AssessmentType.Metrics => "assess_metrics",
             AssessmentType.Activity => "assess_last_training",
             AssessmentType.Week => "assess_week",
+            AssessmentType.Consistency => "assess_consistency",
             _ => "assess_week"
         };
     }

@@ -18,6 +18,22 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ### Removed
 -
 
+## [1.4.0] - 2026-08-19
+
+### Added
+- Added the `assess_consistency` prompt to check athlete data for completeness and internal consistency before coaching assessments and plan generation.
+- Added a Data Consistency assessment card with a link to [The Workflow · Training Architect](https://training-architect.com/blog/workflow).
+- Metrics assessments now check whether the athlete's current power profile matches the demands of the selected discipline.
+
+### Changed
+- Assessment prompt evaluation support now includes the consistency assessment.
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.3.1] - 2026-08-18
 
 ### Fixed

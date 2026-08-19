@@ -1,7 +1,7 @@
 // TrainingArchitect.Core/Models/AssessRequest.cs
 namespace TrainingArchitect.Core.Models;
 
-public enum AssessmentType { Activity, Week, Metrics }
+public enum AssessmentType { Activity, Week, Metrics, Consistency }
 
 public record AssessRequest(
     string         WeekDataJson,

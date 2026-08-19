@@ -58,11 +58,12 @@ New-Item -ItemType Directory -Path $resultsFolder -Force | Out-Null
 
 $language = "de"
 
-# AssessmentType-Enum: Activity=0, Week=1, Metrics=2
+# AssessmentType-Enum: Activity=0, Week=1, Metrics=2, Consistency=3
 $assessmentTypeMap = @{
-    "activity" = 0
-    "week"     = 1
-    "metrics"  = 2
+    "activity"    = 0
+    "week"        = 1
+    "metrics"     = 2
+    "consistency" = 3
 }
 
 foreach ($file in $testFiles) {
@@ -81,7 +82,7 @@ foreach ($file in $testFiles) {
     $disciplineTypeName = $parts[1]
 
     if (-not $assessmentTypeMap.ContainsKey($assessmentTypeName)) {
-        Write-Host "Unbekannter assessmentType '$assessmentTypeName' (erlaubt: activity, week, metrics)" -ForegroundColor Red
+        Write-Host "Unbekannter assessmentType '$assessmentTypeName' (erlaubt: activity, week, metrics, consistency)" -ForegroundColor Red
         Write-Host ""
         continue
     }
