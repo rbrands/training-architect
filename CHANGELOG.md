@@ -27,6 +27,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Assessment prompt evaluation support now includes the consistency assessment.
+- Presentation of plan with more details and it's now possible to delete a planned workout.
 
 ### Fixed
 -

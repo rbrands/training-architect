@@ -657,7 +657,7 @@
                                                 }
                                             </div>
 
-                                            <label class="coach-plan-week-select-wrap">
+                                            <div class="coach-plan-week-select-wrap">
                                                 <select class="coach-plan-week-select"
                                                         aria-label="Workout day"
                                                         value="@FormatPlanWorkoutDateValue(workout.Date)"
@@ -667,7 +667,14 @@
                                                         <option value="@option.Value">@option.Label</option>
                                                     }
                                                 </select>
-                                            </label>
+                                                <button type="button"
+                                                        class="coach-plan-week-delete"
+                                                        title="Delete workout"
+                                                        aria-label="Delete @workout.Name"
+                                                        @onclick="() => DeletePlanWorkout(workout.Id)">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -2230,6 +2237,24 @@
             parsedDate,
             item => item.Date,
             (item, date) => item.Date = date);
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        _planCopyFeedback = null;
+        SyncPlanWorkoutsToUploadJson();
+        StateHasChanged();
+    }
+
+    private void DeletePlanWorkout(string workoutId)
+    {
+        var workout = _planWorkouts.FirstOrDefault(item => string.Equals(item.Id, workoutId, StringComparison.Ordinal));
+        if (workout is null)
+        {
+            return;
+        }
+
+        _planWorkouts.Remove(workout);
+        _planWeekDayOptions = BuildPlanWeekDayOptions(_planWorkouts);
+        _planWeekMetadata = BuildPlanWeekMetadata(_planWeekDayOptions.FirstOrDefault()?.Date);
         _planUploaded = false;
         _planUploadFeedback = null;
         _planCopyFeedback = null;
