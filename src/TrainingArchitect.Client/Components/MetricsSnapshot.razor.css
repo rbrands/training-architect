@@ -198,7 +198,7 @@
 
 .coach-load-history-week {
     display: grid;
-    grid-template-rows: 1.15rem 6.4rem auto auto;
+    grid-template-rows: 1.15rem 6.4rem auto auto auto;
     min-width: 0;
     text-align: center;
 }
@@ -286,6 +286,51 @@
     white-space: nowrap;
 }
 
+.coach-load-history-fitness {
+    margin-top: 0.15rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.coach-load-history-fitness span + span::before {
+    content: " · ";
+    color: #9aa7ba;
+}
+
+.coach-load-history-fitness-ctl {
+    color: #3aa8f2;
+}
+
+.coach-load-history-fitness-atl {
+    color: #6a4de0;
+}
+
+.coach-load-history-fitness-form {
+    color: #52627a;
+}
+
+.coach-load-history-fitness-form--transition {
+    color: #d6a000;
+}
+
+.coach-load-history-fitness-form--fresh {
+    color: #38a8f2;
+}
+
+.coach-load-history-fitness-form--grey-zone {
+    color: #8c8f97;
+}
+
+.coach-load-history-fitness-form--optimal {
+    color: #25c94b;
+}
+
+.coach-load-history-fitness-form--high-risk {
+    color: #ff1f1f;
+}
+
 .coach-metrics-snapshot-grid {
     margin: 0;
     display: grid;
@@ -329,7 +374,7 @@
     }
 
     .coach-load-history-week {
-        grid-template-rows: 1.15rem 5.4rem auto auto;
+        grid-template-rows: 1.15rem 5.4rem auto auto auto;
     }
 
     .coach-load-history-plot {
@@ -343,5 +388,9 @@
 
     .coach-load-history-values {
         font-size: 0.56rem;
+    }
+
+    .coach-load-history-fitness {
+        font-size: 0.54rem;
     }
 }

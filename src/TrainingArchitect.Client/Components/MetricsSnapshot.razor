@@ -63,6 +63,14 @@
                             </div>
                             <span class="coach-load-history-week-label">@FormatWeekLabel(week)</span>
                             <span class="coach-load-history-values">@FormatLoadValues(week)</span>
+                            @if (HasFitnessTrend(week))
+                            {
+                                <span class="coach-load-history-fitness">
+                                    <span class="coach-load-history-fitness-ctl">CTL @FormatCtlValue(week)</span>
+                                    <span class="coach-load-history-fitness-atl">ATL @FormatAtlValue(week)</span>
+                                    <span class="@GetFormValueCssClass(week)">Form @FormatFormValue(week)</span>
+                                </span>
+                            }
                         </div>
                     }
                 </div>
@@ -145,6 +153,45 @@
             : $"{week.AchievementPercent.Value.ToString("0", CultureInfo.InvariantCulture)}%";
     }
 
+    private static bool HasFitnessTrend(TrainingLoadWeekSnapshot week)
+    {
+        return week.Ctl is not null || week.Atl is not null || week.FormPercentDisplay is not null;
+    }
+
+    private static string FormatCtlValue(TrainingLoadWeekSnapshot week) =>
+        week.Ctl is null ? "–" : week.Ctl.Value.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private static string FormatAtlValue(TrainingLoadWeekSnapshot week) =>
+        week.Atl is null ? "–" : week.Atl.Value.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private static string FormatFormValue(TrainingLoadWeekSnapshot week) =>
+        week.FormPercentDisplay is null ? "–" : FormatSignedKpiValue(week.FormPercentDisplay.Value) + "%";
+
+    private static string GetFormValueCssClass(TrainingLoadWeekSnapshot week)
+    {
+        const string baseClass = "coach-load-history-fitness-form";
+        var zone = DetermineFormZone(week.FormPercentDisplay);
+        return zone is null ? baseClass : $"{baseClass} {baseClass}--{zone.Replace('_', '-')}";
+    }
+
+    private static string? DetermineFormZone(double? formPercentDisplay)
+    {
+        if (formPercentDisplay is null)
+        {
+            return null;
+        }
+
+        var fraction = formPercentDisplay.Value / 100;
+        return fraction switch
+        {
+            > 0.20 => "transition",
+            >= 0.05 => "fresh",
+            >= -0.10 => "grey_zone",
+            >= -0.30 => "optimal",
+            _ => "high_risk"
+        };
+    }
+
     private static string GetAchievementCssClass(TrainingLoadWeekSnapshot week)
     {
         if (week.IsCurrentWeek || week.AchievementPercent is null)
@@ -210,5 +257,8 @@
         double ActualLoad,
         double? TargetLoad,
         double? AchievementPercent,
-        bool IsCurrentWeek);
+        bool IsCurrentWeek,
+        double? Ctl = null,
+        double? Atl = null,
+        double? FormPercentDisplay = null);
 }

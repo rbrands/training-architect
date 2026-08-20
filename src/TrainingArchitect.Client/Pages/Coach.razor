@@ -838,9 +838,72 @@
                                             @if (isOpen)
                                             {
                                                 <div class="coach-overview-section-panel">
-                                                    <div class="coach-json-viewer coach-json-viewer--compact">
-                                                        @RenderFormattedJson(overviewSection.PrettyJson, includeLineNumbers: false)
-                                                    </div>
+                                                    @if (IsTrainingLoadHistorySection(overviewSection) && HasTrainingLoadHistoryTrend)
+                                                    {
+                                                        <div class="coach-overview-table-wrap">
+                                                            <table class="coach-overview-table coach-overview-trends-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th scope="col">Metric</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <th scope="col">@FormatOverviewWeekLabel(week.WeekStarting)</th>
+                                                                        }
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <th scope="row">CTL</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewMetricValue(week.Ctl)</td>
+                                                                        }
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th scope="row">ATL</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewMetricValue(week.Atl)</td>
+                                                                        }
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th scope="row">Form</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewFormValue(week)</td>
+                                                                        }
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th scope="row">Load (TSS)</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewMetricValue(week.TotalTrainingLoad)</td>
+                                                                        }
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th scope="row">Target (TSS)</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewMetricValue(week.WeeklyLoadTarget)</td>
+                                                                        }
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th scope="row">Achievement</th>
+                                                                        @foreach (var week in TrainingLoadHistoryTrend)
+                                                                        {
+                                                                            <td>@FormatOverviewAchievementValue(week.AchievementPct)</td>
+                                                                        }
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="coach-json-viewer coach-json-viewer--compact">
+                                                            @RenderFormattedJson(overviewSection.PrettyJson, includeLineNumbers: false)
+                                                        </div>
+                                                    }
                                                 </div>
                                             }
                                         </div>
@@ -1130,6 +1193,74 @@
             SerializePretty(value)));
     }
 
+    private sealed record OverviewTrainingLoadWeek(
+        DateOnly WeekStarting,
+        double? Ctl,
+        double? Atl,
+        double? FormPercentDisplay,
+        double? TotalTrainingLoad,
+        double? WeeklyLoadTarget,
+        double? AchievementPct);
+
+    private IReadOnlyList<OverviewTrainingLoadWeek> TrainingLoadHistoryTrend => BuildTrainingLoadHistoryTrend();
+
+    private bool HasTrainingLoadHistoryTrend =>
+        TrainingLoadHistoryTrend.Any(week => week.Ctl is not null || week.Atl is not null);
+
+    private static bool IsTrainingLoadHistorySection(JsonOverviewSection section) =>
+        string.Equals(section.Title, "Training Load History", StringComparison.Ordinal);
+
+    private IReadOnlyList<OverviewTrainingLoadWeek> BuildTrainingLoadHistoryTrend()
+    {
+        var root = GetOverviewRoot();
+        var history = GetAnyProperty(root, "training_load_history");
+        if (history is null || history.Value.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var result = new List<OverviewTrainingLoadWeek>();
+
+        foreach (var entry in history.Value.EnumerateArray())
+        {
+            if (!TryGetDateProperty(entry, "week_starting", out var weekStarting))
+            {
+                continue;
+            }
+
+            result.Add(new OverviewTrainingLoadWeek(
+                weekStarting,
+                GetDoubleProperty(entry, "ctl"),
+                GetDoubleProperty(entry, "atl"),
+                GetDoubleProperty(entry, "form_percent_display"),
+                GetDoubleProperty(entry, "total_training_load"),
+                GetDoubleProperty(entry, "weekly_load_target"),
+                GetDoubleProperty(entry, "achievement_pct")));
+        }
+
+        return result;
+    }
+
+    private static string FormatOverviewWeekLabel(DateOnly weekStarting) =>
+        weekStarting.ToString("dd MMM", CultureInfo.InvariantCulture);
+
+    private static string FormatOverviewMetricValue(double? value) =>
+        value is null ? "n/a" : value.Value.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private static string FormatOverviewFormValue(OverviewTrainingLoadWeek week)
+    {
+        if (week.FormPercentDisplay is null)
+        {
+            return "n/a";
+        }
+
+        var prefix = week.FormPercentDisplay.Value >= 0 ? "+" : string.Empty;
+        return $"{prefix}{week.FormPercentDisplay.Value.ToString("0.0", CultureInfo.InvariantCulture)} %";
+    }
+
+    private static string FormatOverviewAchievementValue(double? value) =>
+        value is null ? "n/a" : $"{value.Value.ToString("0", CultureInfo.InvariantCulture)}%";
+
     private static string BuildSectionSummary(JsonElement value)
     {
         return value.ValueKind switch
@@ -1270,7 +1401,10 @@
                     actualLoad,
                     GetDoubleProperty(entry, "weekly_load_target"),
                     GetDoubleProperty(entry, "achievement_pct"),
-                    IsCurrentWeek: false));
+                    IsCurrentWeek: false,
+                    Ctl: GetDoubleProperty(entry, "ctl"),
+                    Atl: GetDoubleProperty(entry, "atl"),
+                    FormPercentDisplay: GetDoubleProperty(entry, "form_percent_display")));
             }
         }
 
@@ -1289,7 +1423,10 @@
                 actualLoad,
                 targetLoad,
                 achievementPercent,
-                IsCurrentWeek: true));
+                IsCurrentWeek: true,
+                Ctl: GetDoubleProperty(weekSummary.Value, "ctl"),
+                Atl: GetDoubleProperty(weekSummary.Value, "atl"),
+                FormPercentDisplay: GetDoubleProperty(weekSummary.Value, "form_percent_display")));
         }
 
         return result;
