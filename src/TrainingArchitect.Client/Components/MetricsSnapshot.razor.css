@@ -287,16 +287,17 @@
 }
 
 .coach-load-history-fitness {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-top: 0.15rem;
     font-size: 0.6rem;
     font-weight: 600;
-    line-height: 1.2;
-    white-space: nowrap;
+    line-height: 1.25;
 }
 
-.coach-load-history-fitness span + span::before {
-    content: " · ";
-    color: #9aa7ba;
+.coach-load-history-fitness span {
+    white-space: nowrap;
 }
 
 .coach-load-history-fitness-ctl {
