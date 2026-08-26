@@ -184,9 +184,26 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Rate limiting for the /api/coach endpoint to prevent abuse and ensure fair usage.
+// Rate limiting configuration to prevent abuse and ensure fair usage.
 builder.Services.AddRateLimiter(options =>
 {
+    // Global rate limiter applied to all incoming requests (100 requests per 10s per IP)
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var clientIp = ResolveClientIp(httpContext) ?? "unknown-ip";
+        return RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: clientIp,
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromSeconds(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+
+    // Endpoint-specific policy for the /api/coach endpoint
     options.AddPolicy("coach", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
             partitionKey: ResolveCoachRateLimitKey(httpContext),
@@ -200,6 +217,22 @@ builder.Services.AddRateLimiter(options =>
             }));
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers["Retry-After"] = "10";
+
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("RateLimiting");
+
+        var clientIp = ResolveClientIp(context.HttpContext) ?? "unknown-ip";
+        var path = context.HttpContext.Request.Path;
+
+        logger.LogWarning("Rate limit exceeded for IP {ClientIp} on path {Path}", clientIp, path);
+
+        await Task.CompletedTask;
+    };
 });
 
 static string ResolveCoachRateLimitKey(HttpContext context)
@@ -432,6 +465,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -465,7 +499,7 @@ app.MapGet("/logout", () =>
         [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]))
     .AllowAnonymous();
 
-app.MapStaticAssets();
+app.MapStaticAssets().DisableRateLimiting();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
