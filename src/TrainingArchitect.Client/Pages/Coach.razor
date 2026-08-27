@@ -1355,7 +1355,12 @@
             new("Power Profile Type", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "type"))),
             new("VO2max ml/kg/min", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "ml_per_kg_min"))),
             new("VO2max Age Group", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
-            new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category")))
+            new("VO2Max Power", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "p5min", "watts"), "W")),
+            new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category"))),
+            new("HRV", FormatMetricValue(GetAnyProperty(metrics, "hrv")), FormatMetricValue(GetNestedProperty(metrics, "wellness_trends", "hrv", "trend_7d"))),
+            new("Resting HR", FormatMetricValue(GetAnyProperty(metrics, "resting_hr"), "bpm"), FormatMetricValue(GetNestedProperty(metrics, "wellness_trends", "resting_hr", "trend_7d"))),
+            new("Weight", FormatMetricValue(GetAnyProperty(metrics, "weight"), "kg"), FormatMetricValue(GetNestedProperty(metrics, "wellness_trends", "weight", "trend_7d"))),
+            new("Sleep", FormatSleepDuration(GetAnyProperty(metrics, "sleep_secs")))
         };
 
         if (fuelingFormAnalysis is not null)
@@ -1697,6 +1702,17 @@
         return string.IsNullOrWhiteSpace(unit)
             ? text
             : $"{text} {unit}";
+    }
+
+    private static string FormatSleepDuration(JsonElement? value)
+    {
+        if (value is null || !TryReadDouble(value.Value, out var seconds) || seconds < 0)
+        {
+            return "n/a";
+        }
+
+        var duration = TimeSpan.FromSeconds(seconds);
+        return $"{(int)duration.TotalHours}h {duration.Minutes}m";
     }
 
     private static string FormatNumber(JsonElement numberElement)
