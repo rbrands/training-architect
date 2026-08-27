@@ -1354,7 +1354,7 @@
             new("FTP Category", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "category"))),
             new("Power Profile Type", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "type"))),
             new("VO2max ml/kg/min", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "ml_per_kg_min"))),
-            new("VO2max Age Group", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
+            new("VO2max Age Group", FormatVo2MaxAgeGroup(GetNestedProperty(metrics, "vo2max_classification", "age_group"))),
             new("VO2Max Power", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "p5min", "watts"), "W")),
             new("VO2max Category", FormatMetricValue(GetNestedProperty(metrics, "vo2max_classification", "category"))),
             new("HRV", FormatMetricValue(GetAnyProperty(metrics, "hrv")), FormatMetricValue(GetNestedProperty(metrics, "wellness_trends", "hrv", "trend_7d"))),
@@ -1713,6 +1713,21 @@
 
         var duration = TimeSpan.FromSeconds(seconds);
         return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+    }
+
+    private static string FormatVo2MaxAgeGroup(JsonElement? value)
+    {
+        var ageGroup = FormatMetricValue(value);
+        return ageGroup.ToLowerInvariant() switch
+        {
+            "teen_13_19" => "Teen 13-19",
+            "adult_20_29" => "Adult 20-29",
+            "master_30_39" => "Master 30-39",
+            "master_40_49" => "Master 40-49",
+            "grand_master_50_59" => "Grand master 50-59",
+            "senior_60_plus" => "Senior 60 plus",
+            _ => ageGroup
+        };
     }
 
     private static string FormatNumber(JsonElement numberElement)

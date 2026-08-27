@@ -784,6 +784,21 @@
         gap: 0.1rem;
     }
 
+    .coach-vo2max-category-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-vo2max-category-metrics div {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.5rem;
+    }
+
+    .coach-vo2max-category-metrics dd {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        text-align: right;
+    }
+
     .coach-wellness-metrics dl {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
