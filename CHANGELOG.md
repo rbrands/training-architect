@@ -6,11 +6,16 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-27
+
 ### Added
--
+- Added FTP and VO2max classification gauges with category legends and supporting performance metrics.
+- Added a Wellness Metrics section for HRV, resting heart rate, weight, and sleep, including seven-day trend indicators.
+- Added a Fueling & Form Analysis section covering carbohydrate intake, fatigue status, fueling details, and coaching guidance.
+- Added a Power Profile Type section that explains and highlights the athlete's current profile.
 
 ### Changed
--
+- Reorganized the Metrics Snapshot into focused performance, wellness, fueling, form, and power-profile sections.
 
 ### Fixed
 -

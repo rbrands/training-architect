@@ -19,5 +19,5 @@ public static class ApplicationVersionInfo
     /// <summary>
     /// Current release shown in the client UI and aligned with CHANGELOG.md.
     /// </summary>
-    public static readonly ApplicationVersion Current = new("1.4.0", new DateOnly(2026, 8, 19));
+    public static readonly ApplicationVersion Current = new("1.5.0", new DateOnly(2026, 8, 27));
 }
