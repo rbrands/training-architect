@@ -1,15 +1,16 @@
 @using System.Globalization
 @using System.Text.Json
+@using Syncfusion.Blazor.CircularGauge
 
 @if (Items.Count > 0)
 {
     <div class="coach-metrics-snapshot" aria-label="Metrics Snapshot">
         <div class="coach-metrics-snapshot-banner" role="note">
             <span class="coach-metrics-snapshot-banner-icon">●</span>
-            <span>Rule-based from intervals.icu data</span>
+            <span>Dashboard</span>
         </div>
         <div class="coach-metrics-snapshot-title-row">
-            <h4 class="coach-metrics-snapshot-title">Metrics Snapshot</h4>
+            <h4 class="coach-metrics-snapshot-title">Fitness & Training Load</h4>
             <a class="coach-metrics-snapshot-help"
                href="/blog/training-load-metrics"
                aria-label="Mehr zu TSS, CTL, ATL und TSB"
@@ -77,13 +78,186 @@
             </section>
         }
 
-        <dl class="coach-metrics-snapshot-grid">
-            @foreach (var item in Items)
-            {
-                <div class="coach-metrics-snapshot-item">
-                    <dt>@item.Label</dt>
-                    <dd>@item.Value</dd>
+        @if (FtpCategory is not null)
+        {
+            <section class="coach-ftp-category" aria-labelledby="coach-ftp-category-title">
+                <div class="coach-ftp-category-header">
+                    <h5 id="coach-ftp-category-title">FTP Category</h5>
+                    <a class="coach-ftp-category-help"
+                       href="/blog/ftp"
+                       aria-label="Learn more about FTP categories"
+                       title="Learn more about FTP categories">
+                        ?
+                    </a>
                 </div>
+                <div class="coach-ftp-category-layout">
+                    <dl class="coach-ftp-category-metrics">
+                        @foreach (var item in FtpMetricItems)
+                        {
+                            <div><dt>@item.Label</dt><dd>@item.Value</dd></div>
+                        }
+                    </dl>
+                    <div class="coach-ftp-category-gauge-slot" role="img" aria-label="@FtpCategory.AriaLabel">
+                        <SfCircularGauge Width="100%" Height="180px">
+                            <CircularGaugeAxes><CircularGaugeAxis Minimum="1" Maximum="6" StartAngle="210" EndAngle="150" Radius="90%">
+                                <CircularGaugeAxisLineStyle Width="14" Color="#e6edf5"></CircularGaugeAxisLineStyle>
+                                <CircularGaugeAxisMajorTicks Height="0" Width="0" Interval="1"></CircularGaugeAxisMajorTicks>
+                                <CircularGaugeAxisMinorTicks Height="0" Width="0" Interval="1"></CircularGaugeAxisMinorTicks>
+                                <CircularGaugeAxisLabelStyle><CircularGaugeAxisLabelFont Color="transparent"></CircularGaugeAxisLabelFont></CircularGaugeAxisLabelStyle>
+                                <CircularGaugeRanges>
+                                    @foreach (var category in FtpCategories)
+                                    {
+                                        <CircularGaugeRange Start="@(category.Level - 0.45)" End="@(category.Level + 0.35)" Radius="100%" Color="@category.Color" StartWidth="14" EndWidth="14"></CircularGaugeRange>
+                                    }
+                                </CircularGaugeRanges>
+                                <CircularGaugePointers><CircularGaugePointer Value="@FtpCategory.Level" Radius="76%" Color="#1f2d42" PointerWidth="10"><CircularGaugeCap Radius="7" Color="#1f2d42"></CircularGaugeCap></CircularGaugePointer></CircularGaugePointers>
+                            </CircularGaugeAxis></CircularGaugeAxes>
+                        </SfCircularGauge>
+                    </div>
+                    <ul class="coach-ftp-category-legend" aria-label="FTP category legend">
+                        @foreach (var category in FtpCategories)
+                        {
+                            <li class="@(category.Level == FtpCategory.Level ? "is-active" : string.Empty)"><span class="coach-ftp-category-legend-line" style="background-color: @category.Color" aria-hidden="true"></span><span>@category.DisplayName</span></li>
+                        }
+                    </ul>
+                </div>
+            </section>
+        }
+
+        @if (Vo2MaxCategory is not null)
+        {
+            <section class="coach-ftp-category" aria-labelledby="coach-vo2max-category-title">
+                <div class="coach-ftp-category-header">
+                    <h5 id="coach-vo2max-category-title">VO2max Category</h5>
+                </div>
+                <div class="coach-ftp-category-layout">
+                    <dl class="coach-ftp-category-metrics">
+                        @foreach (var item in Vo2MaxMetricItems)
+                        {
+                            <div><dt>@item.Label</dt><dd>@item.Value</dd></div>
+                        }
+                    </dl>
+                    <div class="coach-ftp-category-gauge-slot" role="img" aria-label="@Vo2MaxCategory.AriaLabel">
+                        <SfCircularGauge Width="100%" Height="180px">
+                            <CircularGaugeAxes><CircularGaugeAxis Minimum="1" Maximum="5" StartAngle="210" EndAngle="150" Radius="90%">
+                                <CircularGaugeAxisLineStyle Width="14" Color="#e6edf5"></CircularGaugeAxisLineStyle>
+                                <CircularGaugeAxisMajorTicks Height="0" Width="0" Interval="1"></CircularGaugeAxisMajorTicks>
+                                <CircularGaugeAxisMinorTicks Height="0" Width="0" Interval="1"></CircularGaugeAxisMinorTicks>
+                                <CircularGaugeAxisLabelStyle><CircularGaugeAxisLabelFont Color="transparent"></CircularGaugeAxisLabelFont></CircularGaugeAxisLabelStyle>
+                                <CircularGaugeRanges>
+                                    @foreach (var category in Vo2MaxCategories)
+                                    {
+                                        <CircularGaugeRange Start="@(category.Level - 0.45)" End="@(category.Level + 0.35)" Radius="100%" Color="@category.Color" StartWidth="14" EndWidth="14"></CircularGaugeRange>
+                                    }
+                                </CircularGaugeRanges>
+                                <CircularGaugePointers><CircularGaugePointer Value="@Vo2MaxCategory.Level" Radius="76%" Color="#1f2d42" PointerWidth="10"><CircularGaugeCap Radius="7" Color="#1f2d42"></CircularGaugeCap></CircularGaugePointer></CircularGaugePointers>
+                            </CircularGaugeAxis></CircularGaugeAxes>
+                        </SfCircularGauge>
+                    </div>
+                    <ul class="coach-ftp-category-legend" aria-label="VO2max category legend">
+                        @foreach (var category in Vo2MaxCategories)
+                        {
+                            <li class="@(category.Level == Vo2MaxCategory.Level ? "is-active" : string.Empty)"><span class="coach-ftp-category-legend-line" style="background-color: @category.Color" aria-hidden="true"></span><span>@category.DisplayName</span></li>
+                        }
+                    </ul>
+                </div>
+            </section>
+        }
+
+        @if (WellnessMetricItems.Any())
+        {
+            <section class="coach-wellness-metrics" aria-labelledby="coach-wellness-metrics-title">
+                <h5 id="coach-wellness-metrics-title">Wellness Metrics</h5>
+                <dl>
+                    @foreach (var item in WellnessMetricItems)
+                    {
+                        <div>
+                            <dt>@item.Label</dt>
+                            <dd>
+                                <span>@item.Value</span>
+                                @if (item.Trend is not null)
+                                {
+                                    <i class="@GetTrendIconCssClass(item.Trend)" aria-label="@GetTrendLabel(item.Trend)"></i>
+                                }
+                            </dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+
+        @if (FuelingStatus is not null || FatigueStatus is not null)
+        {
+            <section class="coach-fueling-status" aria-labelledby="coach-fueling-status-title">
+                <div class="coach-fueling-status-header">
+                    <h5 id="coach-fueling-status-title">Fueling & Form Analysis</h5>
+                    @if (AverageCarbsPerHour is not null)
+                    {
+                        <span class="coach-fueling-status-value">@AverageCarbsPerHour g/h</span>
+                    }
+                </div>
+                @if (FuelingStatus is not null)
+                {
+                    <ol class="coach-fueling-status-ranges">
+                        @foreach (var category in FuelingCategories)
+                        {
+                            <li class="@(category.Value == FuelingStatus.Value ? "is-active" : string.Empty)">
+                                <span class="coach-fueling-status-range-name">@category.DisplayName</span>
+                                <span class="coach-fueling-status-range-threshold">@category.Threshold</span>
+                                <span class="coach-fueling-status-range-description">@category.Description</span>
+                            </li>
+                        }
+                    </ol>
+                }
+                @if (FatigueStatus is not null)
+                {
+                    <h6 class="coach-fatigue-status-title">Fatigue Status</h6>
+                    <ol class="coach-fueling-status-ranges coach-fatigue-status-ranges">
+                        @foreach (var category in FatigueCategories)
+                        {
+                            <li class="@(category.Value == FatigueStatus ? "is-active" : string.Empty)">
+                                <span class="coach-fueling-status-range-name">@category.DisplayName</span>
+                                <span class="coach-fueling-status-range-threshold">@category.Threshold</span>
+                                <span class="coach-fueling-status-range-description">@category.Description</span>
+                            </li>
+                        }
+                    </ol>
+                }
+                @if (FuelingDetailItems.Any())
+                {
+                    <dl class="coach-fueling-status-details">
+                        @foreach (var item in FuelingDetailItems)
+                        {
+                            <div class="@(IsFuelingNarrative(item) ? "is-narrative" : string.Empty)">
+                                <dt>@item.Label</dt>
+                                <dd>@item.Value</dd>
+                            </div>
+                        }
+                    </dl>
+                }
+            </section>
+        }
+
+        @if (PowerProfileType is not null)
+        {
+            <section class="coach-power-profile" aria-labelledby="coach-power-profile-title">
+                <h5 id="coach-power-profile-title">Power Profile Type</h5>
+                <ol>
+                    @foreach (var profile in PowerProfiles)
+                    {
+                        <li class="@(profile.Value == PowerProfileType.Value ? "is-active" : string.Empty)">
+                            <span class="coach-power-profile-name">@profile.DisplayName</span>
+                            <span class="coach-power-profile-description">@profile.Description</span>
+                        </li>
+                    }
+                </ol>
+            </section>
+        }
+
+        <dl class="coach-metrics-snapshot-grid">
+            @foreach (var item in SnapshotItems)
+            {
+                <div class="coach-metrics-snapshot-item"><dt>@item.Label</dt><dd>@item.Value</dd></div>
             }
         </dl>
     </div>
@@ -98,6 +272,140 @@
 
     [Parameter]
     public IReadOnlyList<TrainingLoadWeekSnapshot> TrainingLoadHistory { get; set; } = [];
+
+    private static readonly IReadOnlyList<FtpCategorySnapshot> FtpCategories =
+    [
+        new("beginner", "Beginner", 1, "#6f8eaa"),
+        new("recreational", "Recreational", 2, "#45a6d8"),
+        new("ambitious_amateur", "Ambitious amateur", 3, "#35a981"),
+        new("performance_oriented", "Performance oriented", 4, "#a5b34d"),
+        new("elite", "Elite", 5, "#e19b3d"),
+        new("pro", "Pro", 6, "#ce5951")
+    ];
+
+    private FtpCategorySnapshot? FtpCategory => FtpCategories.FirstOrDefault(category =>
+        string.Equals(category.Value, GetFtpCategoryValue(), StringComparison.OrdinalIgnoreCase));
+
+    private static readonly string[] FtpMetricLabels = ["FTP", "FTP w/kg", "eFTP"];
+
+    private static readonly string[] Vo2MaxMetricLabels = ["VO2max ml/kg/min", "VO2max Age Group", "VO2Max Power"];
+
+    private static readonly string[] WellnessMetricLabels = ["HRV", "Resting HR", "Weight", "Sleep"];
+
+    private static readonly IReadOnlyList<PowerProfileSnapshot> PowerProfiles =
+    [
+        new("All Rounder", "All Rounder", "Balanced profile across different power durations"),
+        new("Puncheur", "Puncheur", "Strong on short, intense climbs and explosive efforts"),
+        new("Sprinter", "Sprinter", "Above-average short-duration and sprint power"),
+        new("Climber", "Climber", "Strong at sustained efforts with especially high W/kg"),
+        new("Time Trialist", "Time Trialist", "Strong at steady, longer threshold efforts")
+    ];
+
+    private static readonly IReadOnlyList<FuelingCategorySnapshot> FuelingCategories =
+    [
+        new("low", "Low", "< 50 g/h", "Low intake, possible fueling deficit"),
+        new("moderate", "Moderate", "50 to < 70 g/h", "Moderate or partly sufficient intake"),
+        new("good", "Good", ">= 70 g/h", "Good average carbohydrate intake")
+    ];
+
+    private static readonly IReadOnlyList<FuelingCategorySnapshot> FatigueCategories =
+    [
+        new("high", "High", "Form < -30 %", "High fatigue, possible overload risk"),
+        new("optimal", "Optimal", "-30 % to < -10 %", "Productive training range; fatigue is expected"),
+        new("low", "Low", "Form >= -10 %", "Low fatigue or a normal, fresh training state")
+    ];
+
+    private static readonly string[] FuelingDetailLabels =
+    [
+        "Avg. Fueling Ratio",
+        "Underfueled Sessions",
+        "Long Rides",
+        "Durability Limited by Fueling",
+        "Interpretation",
+        "Recommendation",
+        "Long Ride Advice"
+    ];
+
+    private static readonly IReadOnlyList<FtpCategorySnapshot> Vo2MaxCategories =
+    [
+        new("very_poor", "Very poor", 1, "#ce5951"),
+        new("poor", "Poor", 2, "#e19b3d"),
+        new("average", "Average", 3, "#a5b34d"),
+        new("very_good", "Very good", 4, "#45a6d8"),
+        new("excellent", "Excellent", 5, "#35a981")
+    ];
+
+    private IEnumerable<MetricSnapshotItem> FtpMetricItems => Items.Where(item => FtpMetricLabels.Contains(item.Label, StringComparer.Ordinal));
+
+    private Vo2MaxCategorySnapshot? Vo2MaxCategory => Vo2MaxCategories
+        .Select(category => new Vo2MaxCategorySnapshot(category.Value, category.DisplayName, category.Level, category.Color))
+        .FirstOrDefault(category => string.Equals(category.Value, GetVo2MaxCategoryValue(), StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<MetricSnapshotItem> Vo2MaxMetricItems => Items.Where(item => Vo2MaxMetricLabels.Contains(item.Label, StringComparer.Ordinal));
+
+    private IEnumerable<MetricSnapshotItem> WellnessMetricItems => Items.Where(item => WellnessMetricLabels.Contains(item.Label, StringComparer.Ordinal));
+
+    private PowerProfileSnapshot? PowerProfileType => PowerProfiles.FirstOrDefault(profile =>
+        string.Equals(profile.Value, GetMetricValue("Power Profile Type"), StringComparison.OrdinalIgnoreCase));
+
+    private FuelingCategorySnapshot? FuelingStatus => FuelingCategories.FirstOrDefault(category =>
+        string.Equals(category.Value, GetMetricValue("Fueling Status"), StringComparison.OrdinalIgnoreCase));
+
+    private string? AverageCarbsPerHour => GetMetricValue("Avg. Carbs/h");
+
+    private IEnumerable<MetricSnapshotItem> FuelingDetailItems => Items.Where(item =>
+        FuelingDetailLabels.Contains(item.Label, StringComparer.Ordinal));
+
+    private IEnumerable<MetricSnapshotItem> SnapshotItems => Items.Where(item =>
+        (FtpCategory is null || (!FtpMetricLabels.Contains(item.Label, StringComparer.Ordinal)
+            && !string.Equals(item.Label, "FTP Category", StringComparison.Ordinal)))
+        && (Vo2MaxCategory is null || (!Vo2MaxMetricLabels.Contains(item.Label, StringComparer.Ordinal)
+            && !string.Equals(item.Label, "VO2max Category", StringComparison.Ordinal)))
+        && !WellnessMetricLabels.Contains(item.Label, StringComparer.Ordinal)
+        && !string.Equals(item.Label, "Power Profile Type", StringComparison.Ordinal)
+        && !string.Equals(item.Label, "Fueling Status", StringComparison.Ordinal)
+        && !string.Equals(item.Label, "Avg. Carbs/h", StringComparison.Ordinal)
+        && !FuelingDetailLabels.Contains(item.Label, StringComparer.Ordinal)
+        && !string.Equals(item.Label, "Fatigue Status", StringComparison.Ordinal));
+
+    private static bool IsFuelingNarrative(MetricSnapshotItem item) => item.Label is
+        "Interpretation" or "Recommendation" or "Long Ride Advice";
+
+    private static string GetTrendIconCssClass(string trend) => trend.Trim().ToLowerInvariant() switch
+    {
+        "up" => "bi bi-arrow-up coach-wellness-trend coach-wellness-trend--up",
+        "down" => "bi bi-arrow-down coach-wellness-trend coach-wellness-trend--down",
+        _ => "bi bi-arrow-right coach-wellness-trend coach-wellness-trend--stable"
+    };
+
+    private static string GetTrendLabel(string trend) => trend.Trim().ToLowerInvariant() switch
+    {
+        "up" => "Increasing over the last 7 days",
+        "down" => "Decreasing over the last 7 days",
+        _ => "Stable over the last 7 days"
+    };
+
+    private string? FatigueStatus => Items
+        .FirstOrDefault(item => string.Equals(item.Label, "Fatigue Status", StringComparison.Ordinal))?.Value;
+
+    private string? GetFtpCategoryValue()
+    {
+        return Items.FirstOrDefault(item => string.Equals(item.Label, "FTP Category", StringComparison.Ordinal))?.Value;
+    }
+
+    private string? GetVo2MaxCategoryValue()
+    {
+        return Items.FirstOrDefault(item => string.Equals(item.Label, "VO2max Category", StringComparison.Ordinal))?.Value;
+    }
+
+    private string? GetMetricValue(string label)
+    {
+        return Items.FirstOrDefault(item => string.Equals(item.Label, label, StringComparison.Ordinal))?.Value;
+    }
+
+    private static double GetFtpCategoryLabelAngle(double level) => 210 + (level - 1) * 60;
+
+    private static string GetFtpCategoryLabelRadius(double level) => level is 1 or 6 ? "116%" : "110%";
 
     private double TrainingLoadChartMaximum
     {
@@ -248,7 +556,21 @@
         return formZone.Trim().ToLowerInvariant();
     }
 
-    public sealed record MetricSnapshotItem(string Label, string Value);
+    public sealed record MetricSnapshotItem(string Label, string Value, string? Trend = null);
+
+    private sealed record FtpCategorySnapshot(string Value, string DisplayName, double Level, string Color)
+    {
+        public string AriaLabel => $"FTP category: {DisplayName}, level {Level.ToString(CultureInfo.InvariantCulture)} of 6";
+    }
+
+    private sealed record Vo2MaxCategorySnapshot(string Value, string DisplayName, double Level, string Color)
+    {
+        public string AriaLabel => $"VO2max category: {DisplayName}, level {Level.ToString(CultureInfo.InvariantCulture)} of 5";
+    }
+
+    private sealed record FuelingCategorySnapshot(string Value, string DisplayName, string Threshold, string Description);
+
+    private sealed record PowerProfileSnapshot(string Value, string DisplayName, string Description);
 
     public sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
 

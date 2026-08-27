@@ -358,6 +358,377 @@
     word-break: break-word;
 }
 
+.coach-ftp-category {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 0.8rem 0.65rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.coach-ftp-category-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.coach-ftp-category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.coach-ftp-category-header h5 {
+    margin: 0;
+    color: #314b73;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.coach-ftp-category-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1px solid #bfd5f1;
+    border-radius: 50%;
+    background: #eaf3ff;
+    color: #2a5d8e;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.coach-ftp-category-help:hover,
+.coach-ftp-category-help:focus-visible {
+    color: #2a5d8e;
+    text-decoration: none;
+}
+
+.coach-ftp-category-layout {
+    display: grid;
+    grid-template-columns: minmax(8rem, 0.8fr) minmax(12rem, 1.25fr) minmax(10rem, 1fr);
+    align-items: center;
+    gap: 1rem;
+}
+
+.coach-ftp-category-metrics {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+}
+
+.coach-ftp-category-metrics div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.coach-ftp-category-metrics dt {
+    color: #5a6780;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.coach-ftp-category-metrics dd {
+    margin: 0;
+    color: #1f2d42;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.coach-ftp-category-gauge-slot {
+    height: 180px;
+    min-height: 180px;
+}
+
+.coach-ftp-category-legend {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.coach-ftp-category-legend li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #5a6780;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.coach-ftp-category-legend li.is-active {
+    color: #1f2d42;
+    font-weight: 800;
+}
+
+.coach-ftp-category-legend-line {
+    flex: 0 0 1.25rem;
+    height: 0.25rem;
+    border-radius: 2px;
+}
+
+.coach-wellness-metrics {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.coach-wellness-metrics h5 {
+    margin: 0 0 0.65rem;
+    color: #314b73;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.coach-wellness-metrics dl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 0;
+}
+
+.coach-wellness-metrics dl > div {
+    min-width: 0;
+}
+
+.coach-wellness-metrics dt {
+    color: #5a6780;
+    font-size: 0.73rem;
+    font-weight: 600;
+}
+
+.coach-wellness-metrics dd {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0.15rem 0 0;
+    color: #1f2d42;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.coach-wellness-trend {
+    font-size: 0.8rem;
+}
+
+.coach-wellness-trend--up {
+    color: #16803a;
+}
+
+.coach-wellness-trend--down {
+    color: #c53030;
+}
+
+.coach-wellness-trend--stable {
+    color: #64748b;
+}
+
+.coach-fueling-status {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.coach-fueling-status-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.coach-fueling-status-header h5 {
+    margin: 0;
+    color: #314b73;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.coach-fueling-status-value {
+    color: #1f2d42;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.coach-fueling-status-ranges {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.coach-fueling-status-ranges li {
+    min-width: 0;
+    padding: 0.55rem 0.6rem;
+    border: 1px solid #dce4f2;
+    border-left: 4px solid #8c8f97;
+    background: #f8fafc;
+}
+
+.coach-fueling-status-ranges li:nth-child(1) {
+    border-left-color: #ce5951;
+}
+
+.coach-fueling-status-ranges li:nth-child(2) {
+    border-left-color: #e19b3d;
+}
+
+.coach-fueling-status-ranges li:nth-child(3) {
+    border-left-color: #35a981;
+}
+
+.coach-fueling-status-ranges li.is-active {
+    border-color: #7186a3;
+    background: #eef5fc;
+    box-shadow: 0 1px 3px rgba(49, 75, 115, 0.14);
+}
+
+.coach-fueling-status-range-name,
+.coach-fueling-status-range-threshold,
+.coach-fueling-status-range-description {
+    display: block;
+}
+
+.coach-fueling-status-range-name {
+    color: #1f2d42;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.coach-fueling-status-range-threshold {
+    margin-top: 0.1rem;
+    color: #42526b;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.coach-fueling-status-range-description {
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.66rem;
+    line-height: 1.3;
+}
+
+.coach-fatigue-status-title {
+    margin: 0.85rem 0 0.5rem;
+    color: #314b73;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.coach-fatigue-status-ranges li:nth-child(1) {
+    border-left-color: #ce5951;
+}
+
+.coach-fatigue-status-ranges li:nth-child(2) {
+    border-left-color: #e19b3d;
+}
+
+.coach-fatigue-status-ranges li:nth-child(3) {
+    border-left-color: #35a981;
+}
+
+.coach-fueling-status-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 0.8rem;
+    margin: 0.75rem 0 0;
+    padding-top: 0.7rem;
+    border-top: 1px solid #dce4f2;
+}
+
+.coach-fueling-status-details div {
+    min-width: 0;
+}
+
+.coach-fueling-status-details div.is-narrative {
+    grid-column: 1 / -1;
+}
+
+.coach-fueling-status-details dt {
+    color: #5a6780;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.coach-fueling-status-details dd {
+    margin: 0.12rem 0 0;
+    color: #1f2d42;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.coach-power-profile {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.coach-power-profile h5 {
+    margin: 0 0 0.65rem;
+    color: #314b73;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.coach-power-profile ol {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.coach-power-profile li {
+    min-width: 0;
+    padding: 0.55rem 0.6rem;
+    border: 1px solid #dce4f2;
+    border-left: 4px solid #6f8eaa;
+    background: #f8fafc;
+}
+
+.coach-power-profile li.is-active {
+    border-color: #7186a3;
+    background: #eef5fc;
+    box-shadow: 0 1px 3px rgba(49, 75, 115, 0.14);
+}
+
+.coach-power-profile-name,
+.coach-power-profile-description {
+    display: block;
+}
+
+.coach-power-profile-name {
+    color: #1f2d42;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.coach-power-profile-description {
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.66rem;
+    line-height: 1.3;
+}
+
 @media (max-width: 430px) {
     .coach-load-history {
         padding-right: 0.55rem;
@@ -393,5 +764,39 @@
 
     .coach-load-history-fitness {
         font-size: 0.54rem;
+    }
+
+    .coach-ftp-category-gauge-slot {
+        height: 165px;
+        min-height: 165px;
+    }
+
+    .coach-ftp-category-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-ftp-category-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .coach-ftp-category-metrics div {
+        grid-template-columns: 1fr;
+        gap: 0.1rem;
+    }
+
+    .coach-wellness-metrics dl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .coach-fueling-status-ranges {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-fueling-status-details {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-power-profile ol {
+        grid-template-columns: 1fr;
     }
 }
