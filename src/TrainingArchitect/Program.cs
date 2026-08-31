@@ -307,6 +307,25 @@ builder.Services.AddHostedService<GlobalUsageCounterRefreshService>();
 
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IAthleteDataService, McpAthleteDataService>();
+
+// MCP tool calls can run for several minutes. The default HttpClient timeout of 100s
+// aborts the TLS read mid-call and surfaces as TaskCanceledException, so the per-call
+// deadline is enforced by McpAthleteDataService instead.
+builder.Services.AddHttpClient(McpAthleteDataService.HttpClientName, client =>
+    {
+        client.Timeout = Timeout.InfiniteTimeSpan;
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+        ConnectTimeout = TimeSpan.FromSeconds(30),
+        KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+        KeepAlivePingTimeout = TimeSpan.FromSeconds(15),
+        KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
+        EnableMultipleHttp2Connections = true
+    });
+
 builder.Services.AddScoped<ICoachingAgent, FoundryCoachingAgent>();
 builder.Services.AddScoped<IPlanValidator, TssPlanValidator>();
 builder.Services.AddScoped<IPlanOrchestrator, PlanOrchestrator>();

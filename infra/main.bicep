@@ -94,6 +94,15 @@ param author string
 @description('Public MCP endpoint for athlete data tool calls, e.g. https://intervals-mcp.training-architect.com/mcp.')
 param mcpAthleteDataEndpoint string
 
+@description('Per tool-call deadline in seconds for MCP athlete data calls.')
+param mcpAthleteDataTimeoutSeconds string = '300'
+
+@description('Connection timeout in seconds for the MCP athlete data transport.')
+param mcpAthleteDataConnectionTimeoutSeconds string = '30'
+
+@description('Retry attempts for transient MCP transport failures on read-only tool calls.')
+param mcpAthleteDataMaxRetryAttempts string = '2'
+
 @description('Microsoft Foundry project endpoint for coaching agent invocation.')
 param foundryProjectEndpoint string
 
@@ -165,6 +174,9 @@ module appService 'modules/app-service.bicep' = {
     siteUrl: siteUrl
     author: author
     mcpAthleteDataEndpoint: mcpAthleteDataEndpoint
+    mcpAthleteDataTimeoutSeconds: mcpAthleteDataTimeoutSeconds
+    mcpAthleteDataConnectionTimeoutSeconds: mcpAthleteDataConnectionTimeoutSeconds
+    mcpAthleteDataMaxRetryAttempts: mcpAthleteDataMaxRetryAttempts
     foundryProjectEndpoint: foundryProjectEndpoint
     foundryProjectAgentName: foundryProjectAgentName
     tags: tags

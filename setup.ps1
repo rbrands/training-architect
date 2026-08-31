@@ -113,6 +113,9 @@ if ($Secrets -or $All) {
     dotnet user-secrets set "SiteUrl"                                                  $config.SiteUrl              -p $project
     dotnet user-secrets set "Author"                                                   $config.Author               -p $project
     dotnet user-secrets set "Mcp:AthleteData:Endpoint"                                $config.McpAthleteDataEndpoint -p $project
+    dotnet user-secrets set "Mcp:AthleteData:TimeoutSeconds"                          $config.McpAthleteDataTimeoutSeconds -p $project
+    dotnet user-secrets set "Mcp:AthleteData:ConnectionTimeoutSeconds"                $config.McpAthleteDataConnectionTimeoutSeconds -p $project
+    dotnet user-secrets set "Mcp:AthleteData:MaxRetryAttempts"                        $config.McpAthleteDataMaxRetryAttempts -p $project
     dotnet user-secrets set "FoundryProjectEndpoint"                                   $config.FoundryProjectEndpoint -p $project
     dotnet user-secrets set "FoundryProjectAgentName"                                  $config.FoundryProjectAgentName -p $project
 
@@ -154,6 +157,9 @@ if ($GitHub -or $All) {
     gh secret set SITE_URL               --body $config.SiteUrl
     gh secret set AUTHOR                 --body $config.Author
     gh secret set MCP_ATHLETE_DATA_ENDPOINT --body $config.McpAthleteDataEndpoint
+    gh secret set MCP_ATHLETE_DATA_TIMEOUT_SECONDS --body $config.McpAthleteDataTimeoutSeconds
+    gh secret set MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS --body $config.McpAthleteDataConnectionTimeoutSeconds
+    gh secret set MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS --body $config.McpAthleteDataMaxRetryAttempts
     gh secret set FOUNDRY_PROJECT_ENDPOINT --body $config.FoundryProjectEndpoint
     gh secret set FOUNDRY_PROJECT_AGENT_NAME --body $config.FoundryProjectAgentName
 
@@ -189,6 +195,9 @@ param foundryAccountName    = '$($config.FoundryAccountName)'
 param siteUrl               = '$($config.SiteUrl)'
 param author                = '$($config.Author)'
 param mcpAthleteDataEndpoint = '$($config.McpAthleteDataEndpoint)'
+param mcpAthleteDataTimeoutSeconds = '$($config.McpAthleteDataTimeoutSeconds)'
+param mcpAthleteDataConnectionTimeoutSeconds = '$($config.McpAthleteDataConnectionTimeoutSeconds)'
+param mcpAthleteDataMaxRetryAttempts = '$($config.McpAthleteDataMaxRetryAttempts)'
 param foundryProjectEndpoint = '$($config.FoundryProjectEndpoint)'
 param foundryProjectAgentName = '$($config.FoundryProjectAgentName)'
 "@

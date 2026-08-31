@@ -26,6 +26,9 @@
 # SITE_URL                   - Public site URL, e.g. https://www.example.com
 # AUTHOR                     - Global author name used for HTML metadata
 # MCP_ATHLETE_DATA_ENDPOINT  - Public MCP endpoint, e.g. https://intervals-mcp.training-architect.com/mcp
+# MCP_ATHLETE_DATA_TIMEOUT_SECONDS            - Per tool-call deadline in seconds
+# MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS - MCP transport connection timeout in seconds
+# MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS         - Retries for transient MCP transport failures
 # FOUNDRY_PROJECT_ENDPOINT   - Foundry project endpoint for agent invocation
 # FOUNDRY_PROJECT_AGENT_NAME - Foundry agent name for coaching calls
 # Note: SYNCFUSION_LICENSE_KEY is stored in Key Vault, not passed as Bicep parameter
@@ -85,6 +88,9 @@ jobs:
             "siteUrl": { "value": ${{ toJson(secrets.SITE_URL) }} },
             "author": { "value": ${{ toJson(secrets.AUTHOR) }} },
             "mcpAthleteDataEndpoint": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_ENDPOINT) }} },
+            "mcpAthleteDataTimeoutSeconds": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_TIMEOUT_SECONDS) }} },
+            "mcpAthleteDataConnectionTimeoutSeconds": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS) }} },
+            "mcpAthleteDataMaxRetryAttempts": { "value": ${{ toJson(secrets.MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS) }} },
             "foundryProjectEndpoint": { "value": ${{ toJson(secrets['FOUNDRY_PROJECT_ENDPOINT']) }} },
             "foundryProjectAgentName": { "value": ${{ toJson(secrets['FOUNDRY_PROJECT_AGENT_NAME']) }} }
           }

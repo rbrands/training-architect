@@ -62,6 +62,9 @@ Copy `main.bicepparam`, fill in all `__PLACEHOLDER__` values, and keep the copy 
 | `__SITE_URL__` | Public site URL used by the app for canonical/Open Graph metadata |
 | `__AUTHOR__` | Global author name used by the app for HTML metadata |
 | `__MCP_ATHLETE_DATA_ENDPOINT__` | Public MCP endpoint used for athlete-data tool calls |
+| `__MCP_ATHLETE_DATA_TIMEOUT_SECONDS__` | Per tool-call deadline for MCP athlete-data calls |
+| `__MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS__` | Connection timeout for the MCP transport |
+| `__MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS__` | Retries for transient MCP transport failures |
 | `__FOUNDRY_PROJECT_ENDPOINT__` | Foundry project endpoint used for coaching agent invocation |
 | `__FOUNDRY_PROJECT_AGENT_NAME__` | Foundry agent name used for coaching agent invocation |
 

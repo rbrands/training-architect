@@ -129,8 +129,16 @@ The curated dataset can be retrieved with a dedicated endpoint that returns only
 - Required request headers:
   - `X-Intervals-Athlete-Id`
   - `X-Intervals-Api-Key`
-- Required server configuration in `src/TrainingArchitect/appsettings.json`:
-  - `Mcp:AthleteData:Endpoint`
+- Required server configuration in `src/TrainingArchitect/appsettings.json`, all set via `config.ps1` / `setup.ps1`:
+  - `Mcp:AthleteData:Endpoint` (`__MCP_ATHLETE_DATA_ENDPOINT__`)
+  - `Mcp:AthleteData:TimeoutSeconds` (`__MCP_ATHLETE_DATA_TIMEOUT_SECONDS__`, default `300`) — per tool-call
+    deadline; MCP calls use a dedicated `HttpClient` without the 100 second default timeout, so this
+    value is the effective limit
+  - `Mcp:AthleteData:ConnectionTimeoutSeconds` (`__MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS__`, default `30`)
+  - `Mcp:AthleteData:MaxRetryAttempts` (`__MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS__`, default `2`) — retries for
+    transient transport failures on read-only tool calls; `upload_week_plan` is never retried
+
+Timeouts are reported as HTTP 504, transport failures as HTTP 502.
 
 For local development, set real values with user-secrets instead of committing non-placeholder values.
 

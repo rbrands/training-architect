@@ -51,6 +51,9 @@ param author = '__AUTHOR__'
 // MCP
 // Public MCP endpoint used by the app for athlete-data tool calls.
 param mcpAthleteDataEndpoint = '__MCP_ATHLETE_DATA_ENDPOINT__'
+param mcpAthleteDataTimeoutSeconds = '__MCP_ATHLETE_DATA_TIMEOUT_SECONDS__'
+param mcpAthleteDataConnectionTimeoutSeconds = '__MCP_ATHLETE_DATA_CONNECTION_TIMEOUT_SECONDS__'
+param mcpAthleteDataMaxRetryAttempts = '__MCP_ATHLETE_DATA_MAX_RETRY_ATTEMPTS__'
 
 // Foundry
 // Foundry project endpoint and agent name used by the coaching agent integration.

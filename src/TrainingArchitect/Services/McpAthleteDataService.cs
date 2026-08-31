@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -16,63 +17,25 @@ namespace TrainingArchitect.Services;
 /// </summary>
 public sealed class McpAthleteDataService(
     IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
     ILogger<McpAthleteDataService> logger) : IAthleteDataService
 {
+    /// <summary>Name of the pooled <see cref="HttpClient"/> used for MCP transport requests.</summary>
+    public const string HttpClientName = "mcp-athlete-data";
+
+    private const int DefaultTimeoutSeconds = 300;
+    private const int DefaultConnectionTimeoutSeconds = 30;
+    private const int DefaultMaxRetryAttempts = 2;
+
     public async Task<AthleteDataResponse> GetAsync(string athleteId, string apiKey, CancellationToken ct)
     {
-        var stopwatch = Stopwatch.StartNew();
-
-        var endpointUrl = configuration["Mcp:AthleteData:Endpoint"];
-        if (string.IsNullOrWhiteSpace(endpointUrl))
-        {
-            throw new InvalidOperationException(
-                "MCP endpoint is not configured. Set Mcp:AthleteData:Endpoint.");
-        }
-
-        if (!Uri.TryCreate(endpointUrl, UriKind.Absolute, out var endpointUri)
-            || (endpointUri.Scheme != Uri.UriSchemeHttp && endpointUri.Scheme != Uri.UriSchemeHttps))
-        {
-            throw new InvalidOperationException(
-                "MCP endpoint is invalid. Mcp:AthleteData:Endpoint must be an absolute HTTP/HTTPS URL.");
-        }
-
-        logger.LogInformation(
-            "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix}.",
+        var toolResult = await CallToolAsync(
             McpToolNames.PrepareWeekData,
-            endpointUri.Host,
-            GetAthleteIdSuffix(athleteId));
-
-        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
-        {
-            Endpoint = endpointUri,
-            TransportMode = HttpTransportMode.AutoDetect,
-            AdditionalHeaders = new Dictionary<string, string>
-            {
-                [IntervalsHeaders.AthleteId] = athleteId,
-                [IntervalsHeaders.ApiKey] = apiKey
-            }
-        });
-
-        await using var client = await McpClient.CreateAsync(transport, new McpClientOptions(), null, ct);
-
-        var toolResult = await client.CallToolAsync(
-            McpToolNames.PrepareWeekData,
+            athleteId,
+            apiKey,
             new Dictionary<string, object?>(),
-            progress: null,
-            options: new RequestOptions(),
-            cancellationToken: ct);
-
-        if (toolResult.IsError == true)
-        {
-            throw new McpToolExecutionException(
-                $"MCP tool '{McpToolNames.PrepareWeekData}' returned an error: {ExtractTextContent(toolResult)}");
-        }
-
-        logger.LogInformation(
-            "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
-            McpToolNames.PrepareWeekData,
-            stopwatch.ElapsedMilliseconds,
-            GetAthleteIdSuffix(athleteId));
+            allowRetry: true,
+            ct);
 
         var extractedData = ExtractDataJson(toolResult);
         var normalizedData = NormalizeResultPayload(extractedData);
@@ -93,47 +56,16 @@ public sealed class McpAthleteDataService(
             throw new ArgumentException("Week plan JSON must not be empty.", nameof(weekPlanJson));
         }
 
-        var endpointUri = ResolveEndpointUri();
-        var stopwatch = Stopwatch.StartNew();
         var toolArguments = BuildUploadArguments(weekPlanJson);
 
-        logger.LogInformation(
-            "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix}.",
+        // Uploading is not idempotent, so a failed attempt must never be retried automatically.
+        await CallToolAsync(
             McpToolNames.UploadWeekPlan,
-            endpointUri.Host,
-            GetAthleteIdSuffix(athleteId));
-
-        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
-        {
-            Endpoint = endpointUri,
-            TransportMode = HttpTransportMode.AutoDetect,
-            AdditionalHeaders = new Dictionary<string, string>
-            {
-                [IntervalsHeaders.AthleteId] = athleteId,
-                [IntervalsHeaders.ApiKey] = apiKey
-            }
-        });
-
-        await using var client = await McpClient.CreateAsync(transport, new McpClientOptions(), null, ct);
-
-        var toolResult = await client.CallToolAsync(
-            McpToolNames.UploadWeekPlan,
+            athleteId,
+            apiKey,
             toolArguments,
-            progress: null,
-            options: new RequestOptions(),
-            cancellationToken: ct);
-
-        if (toolResult.IsError == true)
-        {
-            throw new McpToolExecutionException(
-                $"MCP tool '{McpToolNames.UploadWeekPlan}' returned an error: {ExtractTextContent(toolResult)}");
-        }
-
-        logger.LogInformation(
-            "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
-            McpToolNames.UploadWeekPlan,
-            stopwatch.ElapsedMilliseconds,
-            GetAthleteIdSuffix(athleteId));
+            allowRetry: false,
+            ct);
     }
 
     public async Task<PlanTssCheckResult> CheckPlanTssAsync(
@@ -149,9 +81,6 @@ public sealed class McpAthleteDataService(
             throw new ArgumentException("Plan JSON must not be empty.", nameof(planJson));
         }
 
-        var endpointUri = ResolveEndpointUri();
-        var stopwatch = Stopwatch.StartNew();
-
         var toolArguments = new Dictionary<string, object?>
         {
             ["plan_json"] = planJson,
@@ -163,43 +92,13 @@ public sealed class McpAthleteDataService(
             toolArguments["tolerance_pct"] = tolerancePct.Value;
         }
 
-        logger.LogInformation(
-            "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix}.",
+        var toolResult = await CallToolAsync(
             McpToolNames.CheckPlanTss,
-            endpointUri.Host,
-            GetAthleteIdSuffix(athleteId));
-
-        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
-        {
-            Endpoint = endpointUri,
-            TransportMode = HttpTransportMode.AutoDetect,
-            AdditionalHeaders = new Dictionary<string, string>
-            {
-                [IntervalsHeaders.AthleteId] = athleteId,
-                [IntervalsHeaders.ApiKey] = apiKey
-            }
-        });
-
-        await using var client = await McpClient.CreateAsync(transport, new McpClientOptions(), null, ct);
-
-        var toolResult = await client.CallToolAsync(
-            McpToolNames.CheckPlanTss,
+            athleteId,
+            apiKey,
             toolArguments,
-            progress: null,
-            options: new RequestOptions(),
-            cancellationToken: ct);
-
-        if (toolResult.IsError == true)
-        {
-            throw new McpToolExecutionException(
-                $"MCP tool '{McpToolNames.CheckPlanTss}' returned an error: {ExtractTextContent(toolResult)}");
-        }
-
-        logger.LogInformation(
-            "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
-            McpToolNames.CheckPlanTss,
-            stopwatch.ElapsedMilliseconds,
-            GetAthleteIdSuffix(athleteId));
+            allowRetry: true,
+            ct);
 
         var payload = NormalizeResultPayload(ExtractDataJson(toolResult));
 
@@ -241,6 +140,127 @@ public sealed class McpAthleteDataService(
         {
             throw new McpToolExecutionException("Week plan JSON is invalid.", ex);
         }
+    }
+
+    /// <summary>
+    /// Executes a single MCP tool call with an explicit per-call timeout and bounded retries
+    /// for transient transport failures.
+    /// </summary>
+    private async Task<CallToolResult> CallToolAsync(
+        string toolName,
+        string athleteId,
+        string apiKey,
+        IReadOnlyDictionary<string, object?> arguments,
+        bool allowRetry,
+        CancellationToken ct)
+    {
+        var endpointUri = ResolveEndpointUri();
+        var callTimeout = TimeSpan.FromSeconds(GetPositiveInt("TimeoutSeconds", DefaultTimeoutSeconds));
+        var connectionTimeout = TimeSpan.FromSeconds(
+            GetPositiveInt("ConnectionTimeoutSeconds", DefaultConnectionTimeoutSeconds));
+        var maxAttempts = allowRetry
+            ? GetPositiveInt("MaxRetryAttempts", DefaultMaxRetryAttempts) + 1
+            : 1;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var stopwatch = Stopwatch.StartNew();
+            using var callCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            callCts.CancelAfter(callTimeout);
+
+            logger.LogInformation(
+                "Calling MCP tool {MethodName} at {Host} for athlete {AthleteIdSuffix} (attempt {Attempt}/{MaxAttempts}).",
+                toolName,
+                endpointUri.Host,
+                GetAthleteIdSuffix(athleteId),
+                attempt,
+                maxAttempts);
+
+            try
+            {
+                await using var transport = new HttpClientTransport(
+                    new HttpClientTransportOptions
+                    {
+                        Endpoint = endpointUri,
+                        TransportMode = HttpTransportMode.AutoDetect,
+                        ConnectionTimeout = connectionTimeout,
+                        AdditionalHeaders = new Dictionary<string, string>
+                        {
+                            [IntervalsHeaders.AthleteId] = athleteId,
+                            [IntervalsHeaders.ApiKey] = apiKey
+                        }
+                    },
+                    httpClientFactory.CreateClient(HttpClientName),
+                    loggerFactory: null,
+                    ownsHttpClient: true);
+
+                await using var client = await McpClient.CreateAsync(
+                    transport,
+                    new McpClientOptions(),
+                    null,
+                    callCts.Token);
+
+                var toolResult = await client.CallToolAsync(
+                    toolName,
+                    arguments,
+                    progress: null,
+                    options: new RequestOptions(),
+                    cancellationToken: callCts.Token);
+
+                if (toolResult.IsError == true)
+                {
+                    throw new McpToolExecutionException(
+                        $"MCP tool '{toolName}' returned an error: {ExtractTextContent(toolResult)}");
+                }
+
+                logger.LogInformation(
+                    "MCP tool {MethodName} finished in {ElapsedMs}ms for athlete {AthleteIdSuffix}.",
+                    toolName,
+                    stopwatch.ElapsedMilliseconds,
+                    GetAthleteIdSuffix(athleteId));
+
+                return toolResult;
+            }
+            catch (Exception ex) when (IsTransientTransportFailure(ex)
+                                       && !ct.IsCancellationRequested
+                                       && attempt < maxAttempts)
+            {
+                logger.LogWarning(
+                    ex,
+                    "MCP tool {MethodName} failed after {ElapsedMs}ms on attempt {Attempt}/{MaxAttempts}. Retrying.",
+                    toolName,
+                    stopwatch.ElapsedMilliseconds,
+                    attempt,
+                    maxAttempts);
+
+                await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), ct);
+            }
+            catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+            {
+                // The linked token fired, so this is our own timeout and not a caller-initiated abort.
+                throw new TimeoutException(
+                    $"MCP tool '{toolName}' did not complete within {callTimeout.TotalSeconds:0} seconds.",
+                    ex);
+            }
+        }
+    }
+
+    private static bool IsTransientTransportFailure(Exception exception) => exception switch
+    {
+        HttpRequestException => true,
+        SocketException => true,
+        IOException => true,
+        OperationCanceledException => true,
+        _ => exception.InnerException is not null && IsTransientTransportFailure(exception.InnerException)
+    };
+
+    // Falls back to the default when the value is still an unreplaced __PLACEHOLDER__.
+    private int GetPositiveInt(string key, int defaultValue)
+    {
+        var raw = configuration[$"Mcp:AthleteData:{key}"];
+        return int.TryParse(raw, out var value) && value > 0 ? value : defaultValue;
     }
 
     private Uri ResolveEndpointUri()

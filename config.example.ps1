@@ -54,6 +54,13 @@ $config = @{
     # MCP
     # Public endpoint for the athlete-data MCP server.
     McpAthleteDataEndpoint = "__MCP_ATHLETE_DATA_ENDPOINT__"
+    # Per tool-call deadline in seconds. MCP calls bypass the 100s HttpClient default,
+    # so this value is the effective limit.
+    McpAthleteDataTimeoutSeconds = "300"
+    # MCP transport connection timeout in seconds.
+    McpAthleteDataConnectionTimeoutSeconds = "30"
+    # Retries for transient transport failures on read-only tool calls.
+    McpAthleteDataMaxRetryAttempts = "2"
 
     # Foundry Agent
     # Endpoint + agent name used for coaching agent invocation.
