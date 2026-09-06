@@ -297,6 +297,7 @@
             var expandedState = GetAssessCardState(expandedPrompt.CardType);
             var metricsSnapshot = BuildMetricsSnapshot();
             var fitnessKpis = BuildFitnessKpis();
+            var trainingReadiness = BuildTrainingReadiness();
             var trainingLoadHistory = BuildTrainingLoadHistory();
 
             <div class="coach-prompt-expanded">
@@ -345,6 +346,7 @@
                         {
                             <MetricsSnapshot Items="metricsSnapshot"
                                              FitnessKpis="fitnessKpis"
+                                             TrainingReadiness="trainingReadiness"
                                              TrainingLoadHistory="trainingLoadHistory" />
                         }
 
@@ -1524,6 +1526,48 @@
             formPercentDisplay,
             formPercent,
             formZone ?? DetermineFormZone(formPercent));
+    }
+
+    private MetricsSnapshot.TrainingReadinessSnapshot? BuildTrainingReadiness()
+    {
+        var weekSummary = GetObjectProperty(GetOverviewRoot(), "week_summary");
+        var readiness = GetObjectProperty(weekSummary, "training_readiness");
+        if (readiness is null)
+        {
+            return null;
+        }
+
+        var status = GetStringProperty(readiness.Value, "status");
+        var recommendation = GetStringProperty(readiness.Value, "recommendation");
+        if (string.IsNullOrWhiteSpace(status) || string.IsNullOrWhiteSpace(recommendation))
+        {
+            return null;
+        }
+
+        return new MetricsSnapshot.TrainingReadinessSnapshot(
+            status,
+            recommendation,
+            GetIntProperty(readiness.Value, "score"),
+            GetStringProperty(readiness.Value, "confidence"),
+            GetStringArrayProperty(readiness.Value, "reasons"),
+            GetStringArrayProperty(readiness.Value, "safety_vetoes"));
+    }
+
+    private static IReadOnlyList<string> GetStringArrayProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty(propertyName, out var property)
+            || property.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return property.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .ToArray();
     }
 
     private static double? FindNumericProperty(JsonElement element, string propertyName)

@@ -12,6 +12,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Added FTP/eFTP delta reporting to the FTP Category section.
 - Added color-coded FTP/eFTP delta status: green below 10%, yellow from 10% through 20%, and red above 20%.
 - Added direction-aware notices when the FTP/eFTP delta reaches the warning thresholds.
+- Added a training readiness traffic light next to TSB with a visible recommendation and expandable score, confidence, reasons, and safety checks.
 
 ### Changed
 -

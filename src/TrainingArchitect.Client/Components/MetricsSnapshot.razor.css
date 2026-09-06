@@ -118,6 +118,177 @@
     color: #52627a;
 }
 
+.coach-metrics-kpi--readiness {
+    align-items: stretch;
+    text-align: left;
+}
+
+.coach-metrics-kpi--readiness .coach-metrics-kpi-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+}
+
+.coach-metrics-kpi-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    padding: 0;
+    border: 1px solid #bfd5f1;
+    border-radius: 50%;
+    background: #eaf3ff;
+    color: #2a5d8e;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.coach-metrics-kpi-help:hover,
+.coach-metrics-kpi-help:focus-visible {
+    background: #dcefff;
+    outline: 2px solid #8cb8e8;
+    outline-offset: 1px;
+}
+
+.coach-metrics-kpi-readiness-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+    color: #1f2d42;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.coach-readiness-traffic-light {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    padding: 0.28rem 0.24rem;
+    border: 1px solid #b7c5d6;
+    border-radius: 999px;
+    background: #e8eef5;
+    box-shadow: inset 0 1px 2px rgba(31, 45, 66, 0.14);
+}
+
+.coach-readiness-light {
+    width: 0.78rem;
+    height: 0.78rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.78);
+    opacity: 0.72;
+    box-shadow: inset 0 1px 2px rgba(31, 45, 66, 0.28);
+    transition: opacity 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.coach-readiness-light--green {
+    background: #238636;
+    color: #238636;
+}
+
+.coach-readiness-light--yellow {
+    background: #d6a000;
+    color: #d6a000;
+}
+
+.coach-readiness-light--red {
+    background: #ce5951;
+    color: #ce5951;
+}
+
+.coach-readiness-light.is-active {
+    opacity: 1;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 9px currentColor;
+    transform: scale(1.08);
+}
+
+.coach-readiness-traffic-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    justify-content: space-between;
+    min-height: 3.4rem;
+}
+
+.coach-readiness-traffic-label {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0.78;
+}
+
+.coach-readiness-traffic-label.is-active {
+    opacity: 1;
+}
+
+.coach-readiness-traffic-label--red.is-active {
+    color: #c53030;
+}
+
+.coach-readiness-traffic-label--yellow.is-active {
+    color: #a66b00;
+}
+
+.coach-readiness-traffic-label--green.is-active {
+    color: #238636;
+}
+
+.coach-metrics-kpi-recommendation {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.coach-readiness-details {
+    display: grid;
+    grid-template-columns: auto repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+    margin: -0.2rem 0 0.75rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #52627a;
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.coach-readiness-details-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 6rem;
+}
+
+.coach-readiness-details strong {
+    color: #1f2d42;
+}
+
+.coach-readiness-details h5 {
+    margin: 0 0 0.25rem;
+    color: #314b73;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.coach-readiness-details ul {
+    margin: 0;
+    padding-left: 1rem;
+}
+
+.coach-readiness-details li + li {
+    margin-top: 0.2rem;
+}
+
 .coach-metrics-kpi-value--transition {
     color: #d6a000 !important;
 }
@@ -820,6 +991,18 @@
 
     .coach-load-history-fitness {
         font-size: 0.54rem;
+    }
+
+    .coach-metrics-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .coach-metrics-kpi--readiness {
+        grid-column: 1 / -1;
+    }
+
+    .coach-readiness-details {
+        grid-template-columns: 1fr;
     }
 
     .coach-ftp-category-gauge-slot {

@@ -21,7 +21,7 @@
 
         @if (FitnessKpis is not null)
         {
-            <div class="coach-metrics-kpis" aria-label="CTL ATL TSB summary">
+            <div class="coach-metrics-kpis" aria-label="CTL ATL TSB and training readiness summary">
                 <div class="coach-metrics-kpi coach-metrics-kpi--ctl">
                     <span class="coach-metrics-kpi-label">CTL (Fitness)</span>
                     <span class="coach-metrics-kpi-value">@FormatKpiValue(FitnessKpis.Ctl)</span>
@@ -34,7 +34,76 @@
                     <span class="coach-metrics-kpi-label">TSB (Form)</span>
                     <span class="coach-metrics-kpi-value @GetTsbZoneCssClass(FitnessKpis)">@FormatTsbDisplay(FitnessKpis)</span>
                 </div>
+                @if (TrainingReadiness is not null)
+                {
+                    <div class="coach-metrics-kpi coach-metrics-kpi--readiness coach-metrics-kpi--@GetReadinessStatusClass(TrainingReadiness.Status)">
+                        <div class="coach-metrics-kpi-label-row">
+                            <span class="coach-metrics-kpi-label">Training Readiness</span>
+                            <button type="button"
+                                    class="coach-metrics-kpi-help"
+                                    aria-label="Show training readiness details"
+                                    aria-expanded="@TrainingReadiness.DetailsVisible"
+                                    @onclick="ToggleReadinessDetails">
+                                ?
+                            </button>
+                        </div>
+                        <div class="coach-metrics-kpi-readiness-status"
+                             aria-label="Current readiness: @GetReadinessLabel(TrainingReadiness.Status)">
+                            <span class="coach-readiness-traffic-light" aria-hidden="true">
+                                <span class="coach-readiness-light coach-readiness-light--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)"></span>
+                                <span class="coach-readiness-light coach-readiness-light--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)"></span>
+                                <span class="coach-readiness-light coach-readiness-light--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)"></span>
+                            </span>
+                            <span class="coach-readiness-traffic-labels">
+                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)">Caution</span>
+                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)">Adjust</span>
+                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)">Ready</span>
+                            </span>
+                        </div>
+                        <span class="coach-metrics-kpi-recommendation">@TrainingReadiness.Recommendation</span>
+                    </div>
+                }
             </div>
+
+            @if (TrainingReadiness is not null && TrainingReadiness.DetailsVisible)
+            {
+                <div class="coach-readiness-details" role="region" aria-label="Training readiness details">
+                    <div class="coach-readiness-details-summary">
+                        @if (TrainingReadiness.Score is not null)
+                        {
+                            <span>Score <strong>@TrainingReadiness.Score</strong></span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(TrainingReadiness.Confidence))
+                        {
+                            <span>Confidence <strong>@TrainingReadiness.Confidence</strong></span>
+                        }
+                    </div>
+                    @if (TrainingReadiness.Reasons.Count > 0)
+                    {
+                        <div>
+                            <h5>Reasons</h5>
+                            <ul>
+                                @foreach (var reason in TrainingReadiness.Reasons)
+                                {
+                                    <li>@reason</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    @if (TrainingReadiness.SafetyVetoes.Count > 0)
+                    {
+                        <div>
+                            <h5>Safety checks</h5>
+                            <ul>
+                                @foreach (var veto in TrainingReadiness.SafetyVetoes)
+                                {
+                                    <li>@veto</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
         }
 
         @if (TrainingLoadHistory.Count > 0)
@@ -281,6 +350,9 @@
     public FitnessKpiSnapshot? FitnessKpis { get; set; }
 
     [Parameter]
+    public TrainingReadinessSnapshot? TrainingReadiness { get; set; }
+
+    [Parameter]
     public IReadOnlyList<TrainingLoadWeekSnapshot> TrainingLoadHistory { get; set; } = [];
 
     private static readonly IReadOnlyList<FtpCategorySnapshot> FtpCategories =
@@ -348,6 +420,33 @@
     private IEnumerable<MetricSnapshotItem> FtpMetricItems => Items.Where(item => FtpMetricLabels.Contains(item.Label, StringComparer.Ordinal));
 
     private FtpDeltaNoticeSnapshot? FtpDeltaNotice => CreateFtpDeltaNotice(GetMetricValue("FTP/eFTP Delta"));
+
+    private void ToggleReadinessDetails()
+    {
+        if (TrainingReadiness is not null)
+        {
+            TrainingReadiness.DetailsVisible = !TrainingReadiness.DetailsVisible;
+        }
+    }
+
+    private static string GetReadinessStatusClass(string status) => status.Trim().ToLowerInvariant() switch
+    {
+        "green" => "green",
+        "yellow" => "yellow",
+        "red" => "red",
+        _ => "unknown"
+    };
+
+    private static string GetReadinessLabel(string status) => status.Trim().ToLowerInvariant() switch
+    {
+        "green" => "Ready",
+        "yellow" => "Adjust",
+        "red" => "Caution",
+        _ => "Review"
+    };
+
+    private static bool IsReadinessStatusActive(string currentStatus, string status) =>
+        string.Equals(currentStatus.Trim(), status, StringComparison.OrdinalIgnoreCase);
 
     private Vo2MaxCategorySnapshot? Vo2MaxCategory => Vo2MaxCategories
         .Select(category => new Vo2MaxCategorySnapshot(category.Value, category.DisplayName, category.Level, category.Color))
@@ -613,6 +712,23 @@
     }
 
     public sealed record MetricSnapshotItem(string Label, string Value, string? Trend = null);
+
+    public sealed class TrainingReadinessSnapshot(
+        string status,
+        string recommendation,
+        int? score,
+        string? confidence,
+        IReadOnlyList<string> reasons,
+        IReadOnlyList<string> safetyVetoes)
+    {
+        public string Status { get; } = status;
+        public string Recommendation { get; } = recommendation;
+        public int? Score { get; } = score;
+        public string? Confidence { get; } = confidence;
+        public IReadOnlyList<string> Reasons { get; } = reasons;
+        public IReadOnlyList<string> SafetyVetoes { get; } = safetyVetoes;
+        public bool DetailsVisible { get; set; }
+    }
 
     private sealed record FtpDeltaNoticeSnapshot(string Severity, string Title, string Message);
 
