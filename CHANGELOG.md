@@ -6,6 +6,22 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-06
+
+### Added
+- Added FTP/eFTP delta reporting to the FTP Category section.
+- Added color-coded FTP/eFTP delta status: green below 10%, yellow from 10% through 20%, and red above 20%.
+- Added direction-aware notices when the FTP/eFTP delta reaches the warning thresholds.
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.5.0] - 2026-08-27
 
 ### Added

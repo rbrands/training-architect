@@ -94,7 +94,7 @@
                     <dl class="coach-ftp-category-metrics">
                         @foreach (var item in FtpMetricItems)
                         {
-                            <div><dt>@item.Label</dt><dd>@item.Value</dd></div>
+                            <div><dt>@item.Label</dt><dd class="@GetFtpMetricValueCssClass(item)">@item.Value</dd></div>
                         }
                     </dl>
                     <div class="coach-ftp-category-gauge-slot" role="img" aria-label="@FtpCategory.AriaLabel">
@@ -121,6 +121,16 @@
                         }
                     </ul>
                 </div>
+                @if (FtpDeltaNotice is not null)
+                {
+                    <div class="coach-ftp-delta-notice coach-ftp-delta-notice--@FtpDeltaNotice.Severity" role="status">
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <div>
+                            <strong>@FtpDeltaNotice.Title</strong>
+                            <span>@FtpDeltaNotice.Message</span>
+                        </div>
+                    </div>
+                }
             </section>
         }
 
@@ -286,7 +296,7 @@
     private FtpCategorySnapshot? FtpCategory => FtpCategories.FirstOrDefault(category =>
         string.Equals(category.Value, GetFtpCategoryValue(), StringComparison.OrdinalIgnoreCase));
 
-    private static readonly string[] FtpMetricLabels = ["FTP", "FTP w/kg", "eFTP"];
+    private static readonly string[] FtpMetricLabels = ["FTP", "FTP w/kg", "eFTP", "FTP/eFTP Delta"];
 
     private static readonly string[] Vo2MaxMetricLabels = ["VO2max ml/kg/min", "VO2max Age Group", "VO2Max Power"];
 
@@ -336,6 +346,8 @@
     ];
 
     private IEnumerable<MetricSnapshotItem> FtpMetricItems => Items.Where(item => FtpMetricLabels.Contains(item.Label, StringComparer.Ordinal));
+
+    private FtpDeltaNoticeSnapshot? FtpDeltaNotice => CreateFtpDeltaNotice(GetMetricValue("FTP/eFTP Delta"));
 
     private Vo2MaxCategorySnapshot? Vo2MaxCategory => Vo2MaxCategories
         .Select(category => new Vo2MaxCategorySnapshot(category.Value, category.DisplayName, category.Level, category.Color))
@@ -401,6 +413,50 @@
     private string? GetMetricValue(string label)
     {
         return Items.FirstOrDefault(item => string.Equals(item.Label, label, StringComparison.Ordinal))?.Value;
+    }
+
+    private static string GetFtpMetricValueCssClass(MetricSnapshotItem item)
+    {
+        if (!string.Equals(item.Label, "FTP/eFTP Delta", StringComparison.Ordinal)
+            || !TryParseFtpDelta(item.Value, out var deltaPercent))
+        {
+            return string.Empty;
+        }
+
+        return Math.Abs(deltaPercent) switch
+        {
+            < 10 => "coach-ftp-delta-value--ok",
+            <= 20 => "coach-ftp-delta-value--warning",
+            _ => "coach-ftp-delta-value--critical"
+        };
+    }
+
+    private static FtpDeltaNoticeSnapshot? CreateFtpDeltaNotice(string? value)
+    {
+        if (!TryParseFtpDelta(value, out var deltaPercent) || Math.Abs(deltaPercent) < 10)
+        {
+            return null;
+        }
+
+        var directionMessage = deltaPercent >= 0
+            ? "Your recent eFTP is above your configured FTP. Your FTP may be outdated or set too low."
+            : "Your recent eFTP is below your configured FTP. Your FTP may be outdated, or recent data may lack a representative sustained effort.";
+
+        return Math.Abs(deltaPercent) > 20
+            ? new("critical", "FTP values differ significantly", $"{directionMessage} Review your FTP in intervals.icu.")
+            : new("warning", "Review your FTP", $"{directionMessage} Check your FTP setting in intervals.icu.");
+    }
+
+    private static bool TryParseFtpDelta(string? value, out double deltaPercent)
+    {
+        deltaPercent = default;
+
+        return !string.IsNullOrWhiteSpace(value)
+            && double.TryParse(
+                value.Replace("%", string.Empty, StringComparison.Ordinal).Trim(),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out deltaPercent);
     }
 
     private static double GetFtpCategoryLabelAngle(double level) => 210 + (level - 1) * 60;
@@ -557,6 +613,8 @@
     }
 
     public sealed record MetricSnapshotItem(string Label, string Value, string? Trend = null);
+
+    private sealed record FtpDeltaNoticeSnapshot(string Severity, string Title, string Message);
 
     private sealed record FtpCategorySnapshot(string Value, string DisplayName, double Level, string Color)
     {

@@ -441,6 +441,62 @@
     font-weight: 800;
 }
 
+.coach-ftp-category-metrics dd.coach-ftp-delta-value--ok {
+    color: #238636;
+}
+
+.coach-ftp-category-metrics dd.coach-ftp-delta-value--warning {
+    color: #a66b00;
+}
+
+.coach-ftp-category-metrics dd.coach-ftp-delta-value--critical {
+    color: #c53030;
+}
+
+.coach-ftp-delta-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    margin-top: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    border-left: 4px solid;
+    background: #fff8e6;
+    color: #614c16;
+    font-size: 0.74rem;
+    line-height: 1.4;
+}
+
+.coach-ftp-delta-notice > i {
+    flex: 0 0 auto;
+    margin-top: 0.08rem;
+    font-size: 0.85rem;
+}
+
+.coach-ftp-delta-notice strong,
+.coach-ftp-delta-notice span {
+    display: block;
+}
+
+.coach-ftp-delta-notice strong {
+    margin-bottom: 0.12rem;
+    color: #4f3b08;
+    font-size: 0.76rem;
+}
+
+.coach-ftp-delta-notice--warning {
+    border-left-color: #d6a000;
+}
+
+.coach-ftp-delta-notice--critical {
+    border-left-color: #ce5951;
+    background: #fff1f0;
+    color: #713a36;
+}
+
+.coach-ftp-delta-notice--critical strong {
+    color: #642d29;
+}
+
 .coach-ftp-category-gauge-slot {
     height: 180px;
     min-height: 180px;
@@ -776,7 +832,7 @@
     }
 
     .coach-ftp-category-metrics {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .coach-ftp-category-metrics div {

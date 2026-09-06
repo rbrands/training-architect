@@ -1350,6 +1350,7 @@
         {
             new("FTP", FormatMetricValue(GetAnyProperty(metrics, "ftp"), "W")),
             new("eFTP", FormatMetricValue(GetAnyProperty(metrics, "eftp"), "W")),
+            new("FTP/eFTP Delta", FormatMetricValue(GetAnyProperty(metrics, "ftp_eftp_delta_pct"), "%")),
             new("FTP w/kg", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "w_per_kg"))),
             new("FTP Category", FormatMetricValue(GetNestedProperty(metrics, "ftp_classification", "category"))),
             new("Power Profile Type", FormatMetricValue(GetNestedProperty(metrics, "power_profile", "type"))),
