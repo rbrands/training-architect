@@ -248,6 +248,22 @@
     -webkit-line-clamp: 2;
 }
 
+.coach-metrics-kpi-article-link {
+    align-self: flex-start;
+    margin-top: 0.05rem;
+    color: #2a5d8e;
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-decoration: none;
+}
+
+.coach-metrics-kpi-article-link:hover,
+.coach-metrics-kpi-article-link:focus-visible {
+    color: #1f4d78;
+    text-decoration: underline;
+}
+
 .coach-readiness-details {
     display: grid;
     grid-template-columns: auto repeat(2, minmax(0, 1fr));
