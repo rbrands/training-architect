@@ -44,4 +44,20 @@ public interface IAthleteDataService
         double loadTarget,
         double? tolerancePct,
         CancellationToken ct);
+
+    /// <summary>
+    /// Validates a plan JSON against the upload schema by calling the MCP tool.
+    /// </summary>
+    /// <param name="athleteId">Intervals athlete identifier.</param>
+    /// <param name="apiKey">Intervals API key.</param>
+    /// <param name="planJson">Weekly plan payload as JSON object text.</param>
+    /// <param name="maxErrors">Maximum number of schema errors to include in the result.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The formal validation result reported by the MCP tool.</returns>
+    Task<PlanValidationCheckResult> ValidateWeekPlanAsync(
+        string athleteId,
+        string apiKey,
+        string planJson,
+        int maxErrors,
+        CancellationToken ct);
 }

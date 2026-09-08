@@ -391,7 +391,19 @@
                     <div class="coach-plan-label">
                         <i class="bi bi-clipboard-check"></i>
                         <span>Create Plan</span>
+                        <button type="button"
+                                class="coach-status-copy-json"
+                                title="Paste plan JSON from clipboard"
+                                aria-label="Paste plan JSON from clipboard"
+                                disabled="@(!CanUseCoachActions || IsAnyRequestInFlight)"
+                                @onclick="PastePlanJsonAsync">
+                            <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                        </button>
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(_planPasteFeedback))
+                    {
+                        <div class="coach-status-copy-feedback">@_planPasteFeedback</div>
+                    }
                     <p class="coach-plan-description mb-0">
                         Structured plan according to
                         <a href="https://github.com/rbrands/intervals-icu-sync/tree/main/coach-logic"
@@ -520,16 +532,19 @@
 
                     <div class="coach-custom-tabs">
                         <div class="coach-custom-tabs-header" role="tablist" aria-label="Plan result tabs">
-                            <button type="button"
-                                    id="coach-plan-tab-0"
-                                    class="coach-custom-tab @(IsPlanTabSelected(0) ? "is-active" : string.Empty)"
-                                    role="tab"
-                                    aria-selected="@IsPlanTabSelected(0)"
-                                    aria-controls="coach-plan-panel-0"
-                                    tabindex="@(IsPlanTabSelected(0) ? 0 : -1)"
-                                    @onclick="() => SelectPlanTab(0)">
-                                Text
-                            </button>
+                            @if (!string.IsNullOrWhiteSpace(_planReadableText))
+                            {
+                                <button type="button"
+                                        id="coach-plan-tab-0"
+                                        class="coach-custom-tab @(IsPlanTabSelected(0) ? "is-active" : string.Empty)"
+                                        role="tab"
+                                        aria-selected="@IsPlanTabSelected(0)"
+                                        aria-controls="coach-plan-panel-0"
+                                        tabindex="@(IsPlanTabSelected(0) ? 0 : -1)"
+                                        @onclick="() => SelectPlanTab(0)">
+                                    Text
+                                </button>
+                            }
 
                             <button type="button"
                                     id="coach-plan-tab-1"
@@ -562,10 +577,6 @@
                             @if (!string.IsNullOrWhiteSpace(_planReadableText))
                             {
                                 <div class="coach-assess-result-markdown">@RenderAssessMarkdown(_planReadableText)</div>
-                            }
-                            else
-                            {
-                                <p class="coach-overview-empty">No text available.</p>
                             }
                         </div>
 
@@ -1036,6 +1047,7 @@
     private bool _isAssessRequestInFlight;
     private bool _isPlanRequestInFlight;
     private bool _isPlanUploadInFlight;
+    private bool _isPlanValidationInFlight;
     private bool _isPlanExpanded;
     private long? _planTotalTokens;
     private string? _planReadableText;
@@ -1044,6 +1056,8 @@
     private string? _planResponseId;
     private string? _planCopyFeedback;
     private string? _planUploadFeedback;
+    private string? _planPasteFeedback;
+    private bool _planRequiresValidation;
     private string? _planProgressMessage;
     private readonly List<string> _planProgressSteps = [];
     private readonly List<string> _planWarnings = [];
@@ -1056,7 +1070,7 @@
     private PlanWeekMetadata? _planWeekMetadata;
 
     private bool IsBusy => Session.State == CoachConnectionState.Connecting;
-    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight;
+    private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight || _isPlanValidationInFlight;
     private bool IsActionBusy => IsBusy || Session.IsRefreshing || IsAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
     private bool CanUsePlanButton => CanUseCoachActions && !_isPlanRequestInFlight && !_isAssessRequestInFlight;
@@ -2641,6 +2655,8 @@
         _isPlanRequestInFlight = true;
         _planUploaded = false;
         _planUploadFeedback = null;
+        _planPasteFeedback = null;
+        _planRequiresValidation = false;
         _planErrorMessage = null;
         _planReadableText = null;
         _planUploadJson = null;
@@ -2808,12 +2824,120 @@
 
         _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
         _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
+        _planRequiresValidation = false;
         LoadPlanWorkoutEditor();
         _selectedPlanTabIndex = 0;
 
         if (_planReadableText is null && _planUploadJson is null)
         {
             _planErrorMessage = "Plan request returned no usable content.";
+        }
+    }
+
+    private async Task PastePlanJsonAsync()
+    {
+        if (!CanUseCoachActions || IsAnyRequestInFlight)
+        {
+            return;
+        }
+
+        string clipboardText;
+        try
+        {
+            clipboardText = await JS.InvokeAsync<string>("trainingArchitect.pasteText");
+        }
+        catch
+        {
+            _planPasteFeedback = "Could not read clipboard. Check browser permissions.";
+            StateHasChanged();
+            return;
+        }
+
+        clipboardText = clipboardText.Trim();
+
+        if (string.IsNullOrWhiteSpace(clipboardText))
+        {
+            _planPasteFeedback = "Clipboard is empty.";
+            StateHasChanged();
+            return;
+        }
+
+        _planUploaded = false;
+        _planUploadFeedback = null;
+        _planErrorMessage = null;
+        _planReadableText = null;
+        _planCopyFeedback = null;
+        _planProgressSteps.Clear();
+        _planWarnings.Clear();
+        _planTotalTokens = null;
+        _planResponseId = null;
+        // Pasted plans have no coaching text, so jump straight to the Weekly Plan tab.
+        _selectedPlanTabIndex = 1;
+
+        _planUploadJson = clipboardText;
+        _planRequiresValidation = true;
+        LoadPlanWorkoutEditor();
+        _isPlanExpanded = true;
+        _planPasteFeedback = "Plan pasted from clipboard. Validating...";
+        _isPlanValidationInFlight = true;
+        StateHasChanged();
+
+        try
+        {
+            await ValidatePastedPlanAsync(clipboardText);
+        }
+        finally
+        {
+            _isPlanValidationInFlight = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ValidatePastedPlanAsync(string weekPlanJson)
+    {
+        try
+        {
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan/validate")
+            {
+                Content = JsonContent.Create(new { weekPlanJson })
+            };
+
+            AppendCredentialHeaders(httpRequest);
+
+            using var response = await Http.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _planErrorMessage = FormatRequestError("Plan validation", errorBody);
+                _planPasteFeedback = null;
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<PlanValidateResponse>();
+            if (result is null)
+            {
+                _planErrorMessage = "Plan validation returned no result.";
+                _planPasteFeedback = null;
+                return;
+            }
+
+            if (result.Valid)
+            {
+                _planPasteFeedback = "Plan pasted from clipboard and passed validation.";
+            }
+            else
+            {
+                _planErrorMessage = string.IsNullOrWhiteSpace(result.Details)
+                    ? "The pasted plan did not pass validation."
+                    : $"The pasted plan did not pass validation:\n{result.Details}";
+                _planPasteFeedback = null;
+            }
+        }
+        catch
+        {
+            _planErrorMessage = "Plan validation failed. Please try again.";
+            _planPasteFeedback = null;
         }
     }
 
@@ -2838,7 +2962,7 @@
         {
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/coach/plan/upload")
             {
-                Content = JsonContent.Create(new { weekPlanJson = _planUploadJson })
+                Content = JsonContent.Create(new { weekPlanJson = _planUploadJson, validate = _planRequiresValidation })
             };
 
             AppendCredentialHeaders(httpRequest);
@@ -2848,9 +2972,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                _planUploadFeedback = string.IsNullOrWhiteSpace(errorBody)
-                    ? "Plan upload failed. Please try again."
-                    : $"Plan upload failed: {errorBody}";
+                _planUploadFeedback = FormatRequestError("Plan upload", errorBody);
                 return;
             }
 

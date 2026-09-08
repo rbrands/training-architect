@@ -60,6 +60,7 @@ public static class CoachEndpoints
 
         group.MapPost("/assess", AssessAsync);
         group.MapPost("/plan", PlanAsync);
+        group.MapPost("/plan/validate", ValidatePlanAsync);
         group.MapPost("/plan/upload", UploadPlanAsync);
     }
 
@@ -292,18 +293,106 @@ public static class CoachEndpoints
         return Results.Empty;
     }
 
+    private const int MaxPlanValidationErrors = 10;
+
+    private static bool TryGetIntervalsCredentials(HttpRequest request, out string athleteId, out string apiKey)
+    {
+        athleteId = request.Headers[IntervalsHeaders.AthleteId].ToString();
+        apiKey = request.Headers[IntervalsHeaders.ApiKey].ToString();
+        return !string.IsNullOrWhiteSpace(athleteId) && !string.IsNullOrWhiteSpace(apiKey);
+    }
+
+    private static async Task<IResult> ValidatePlanAsync(
+        HttpContext httpContext,
+        PlanValidateRequest request,
+        IAthleteDataService athleteDataService,
+        CancellationToken ct)
+    {
+        if (!TryGetIntervalsCredentials(httpContext.Request, out var athleteIdHeader, out var apiKeyHeader))
+        {
+            return Results.BadRequest(new
+            {
+                error = "Missing required headers: X-Intervals-Athlete-Id and X-Intervals-Api-Key."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.WeekPlanJson))
+        {
+            return Results.BadRequest(new
+            {
+                error = "Missing required payload field: weekPlanJson."
+            });
+        }
+
+        try
+        {
+            var validation = await athleteDataService.ValidateWeekPlanAsync(
+                athleteIdHeader,
+                apiKeyHeader,
+                request.WeekPlanJson,
+                MaxPlanValidationErrors,
+                ct);
+
+            if (!string.IsNullOrWhiteSpace(validation.Error))
+            {
+                return Results.Problem(
+                    title: "Plan validation failed.",
+                    detail: validation.Error,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Results.Ok(new PlanValidateResponse(validation.IsValid, validation.Details));
+        }
+        catch (McpToolExecutionException ex)
+        {
+            return Results.Problem(
+                title: "MCP tool execution failed.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (HttpRequestException ex)
+        {
+            return Results.Problem(
+                title: "MCP server unreachable.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (TimeoutException ex)
+        {
+            return Results.Problem(
+                title: "MCP server timeout.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+        catch (OperationCanceledException)
+        {
+            return Results.Problem(
+                title: "Request was canceled.",
+                statusCode: StatusCodes.Status408RequestTimeout);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(
+                title: "MCP configuration error.",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    private sealed record PlanValidateRequest(string WeekPlanJson);
+
     private static async Task<IResult> UploadPlanAsync(
         HttpContext httpContext,
         PlanUploadRequest request,
         IAthleteDataService athleteDataService,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger(nameof(CoachEndpoints));
+
         try
         {
-            var athleteIdHeader = httpContext.Request.Headers[IntervalsHeaders.AthleteId].ToString();
-            var apiKeyHeader = httpContext.Request.Headers[IntervalsHeaders.ApiKey].ToString();
-
-            if (string.IsNullOrWhiteSpace(athleteIdHeader) || string.IsNullOrWhiteSpace(apiKeyHeader))
+            if (!TryGetIntervalsCredentials(httpContext.Request, out var athleteIdHeader, out var apiKeyHeader))
             {
                 return Results.BadRequest(new
                 {
@@ -317,6 +406,36 @@ public static class CoachEndpoints
                 {
                     error = "Missing required payload field: weekPlanJson."
                 });
+            }
+
+            // Pasted plans get a formal schema check first; generated plans are already validated upstream and skip it to avoid extra latency.
+            if (request.Validate)
+            {
+                var validation = await athleteDataService.ValidateWeekPlanAsync(
+                    athleteIdHeader,
+                    apiKeyHeader,
+                    request.WeekPlanJson,
+                    MaxPlanValidationErrors,
+                    ct);
+
+                if (!string.IsNullOrWhiteSpace(validation.Error))
+                {
+                    return Results.Problem(
+                        title: "Plan validation failed.",
+                        detail: validation.Error,
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
+
+                if (!validation.IsValid)
+                {
+                    logger.LogInformation(
+                        "Pasted plan failed validate_week_plan for athlete {AthleteId}.",
+                        athleteIdHeader);
+
+                    return Results.Json(
+                        new { error = validation.Details ?? "The plan JSON did not pass validation." },
+                        statusCode: StatusCodes.Status422UnprocessableEntity);
+                }
             }
 
             await athleteDataService.UploadWeekPlanAsync(athleteIdHeader, apiKeyHeader, request.WeekPlanJson, ct);
@@ -358,7 +477,7 @@ public static class CoachEndpoints
         }
     }
 
-    private sealed record PlanUploadRequest(string WeekPlanJson);
+    private sealed record PlanUploadRequest(string WeekPlanJson, bool Validate = false);
 
     private static async Task<AthleteConfig> EnsureAthleteConfigAsync(
         IAthleteRepository athleteRepository,
