@@ -75,6 +75,10 @@
             await navigator.clipboard.writeText(text);
         };
 
+        window.trainingArchitect.pasteText = async function () {
+            return await navigator.clipboard.readText();
+        };
+
         window.trainingArchitect.downloadText = function (fileName, text) {
             const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
             const url = URL.createObjectURL(blob);

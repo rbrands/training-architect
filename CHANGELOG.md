@@ -6,6 +6,21 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-09
+
+### Added
+- Added the ability to paste a training plan JSON directly on the Coach page, validate it against the upload schema, and upload it after a successful check.
+- Added `POST /api/validate` and `POST /api/upload` endpoints accepting the raw plan JSON for Postman-style integrations, analogous to `/api/dataset`. `/api/upload` runs the same schema validation internally before uploading.
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.6.0] - 2026-09-06
 
 ### Added

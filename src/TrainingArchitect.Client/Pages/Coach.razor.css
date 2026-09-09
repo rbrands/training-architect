@@ -1115,9 +1115,14 @@
 .coach-prompt-workflow-link {
     display: inline-block;
     margin-top: 0.65rem;
-    color: #d95d39;
+    color: #2e67bf;
     font-size: 0.88rem;
     font-weight: 600;
+}
+
+.coach-prompt-workflow-link:hover,
+.coach-prompt-workflow-link:focus-visible {
+    color: #234f91;
 }
 
 .coach-token-hint {

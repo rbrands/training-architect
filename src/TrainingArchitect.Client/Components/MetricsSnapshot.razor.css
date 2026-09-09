@@ -385,9 +385,13 @@
 
 .coach-load-history-week {
     display: grid;
-    grid-template-rows: 1.15rem 6.4rem auto auto auto;
+    grid-template-rows: 1.15rem 6.4rem auto auto auto auto;
     min-width: 0;
     text-align: center;
+}
+
+.coach-load-history-week.is-recovery .coach-load-history-bar {
+    background: #35a981;
 }
 
 .coach-load-history-achievement {
@@ -463,6 +467,21 @@
 
 .coach-load-history-week.is-current .coach-load-history-week-label {
     color: #253858;
+}
+
+.coach-load-history-week-type {
+    justify-self: center;
+    margin-top: 0.12rem;
+    padding: 0.08rem 0.28rem;
+    border: 1px solid rgba(53, 169, 129, 0.35);
+    border-radius: 999px;
+    background: rgba(53, 169, 129, 0.12);
+    color: #197153;
+    font-size: 0.55rem;
+    font-weight: 800;
+    line-height: 1.25;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .coach-load-history-values {

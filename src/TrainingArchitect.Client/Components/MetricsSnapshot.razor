@@ -13,8 +13,8 @@
             <h4 class="coach-metrics-snapshot-title">Fitness & Training Load</h4>
             <a class="coach-metrics-snapshot-help"
                href="/blog/training-load-metrics"
-               aria-label="Mehr zu TSS, CTL, ATL und TSB"
-               title="Mehr zu TSS, CTL, ATL und TSB">
+               aria-label="More about TSS, CTL, ATL and TSB"
+               title="More about TSS, CTL, ATL and TSB">
                 ?
             </a>
         </div>
@@ -124,7 +124,7 @@
                 <div class="coach-load-history-chart" role="img" aria-label="@BuildChartAriaLabel()">
                     @foreach (var week in TrainingLoadHistory)
                     {
-                        <div class="coach-load-history-week @(week.IsCurrentWeek ? "is-current" : string.Empty)">
+                        <div class="@GetTrainingLoadWeekCssClass(week)">
                             <span class="coach-load-history-achievement @GetAchievementCssClass(week)">
                                 @FormatAchievement(week)
                             </span>
@@ -136,6 +136,10 @@
                                 <span class="coach-load-history-bar" aria-hidden="true"></span>
                             </div>
                             <span class="coach-load-history-week-label">@FormatWeekLabel(week)</span>
+                            @if (week.IsRecoveryWeek)
+                            {
+                                <span class="coach-load-history-week-type" aria-label="Recovery week">Recovery</span>
+                            }
                             <span class="coach-load-history-values">@FormatLoadValues(week)</span>
                             @if (HasFitnessTrend(week))
                             {
@@ -593,9 +597,27 @@
     {
         var weekDescriptions = TrainingLoadHistory.Select(week =>
             $"{FormatWeekLabel(week)}: load {week.ActualLoad:0.#} TSS"
-            + (week.TargetLoad is > 0 ? $", target {week.TargetLoad.Value:0.#} TSS" : ", no target"));
+            + (week.TargetLoad is > 0 ? $", target {week.TargetLoad.Value:0.#} TSS" : ", no target")
+            + (week.IsRecoveryWeek ? ", recovery week" : string.Empty));
 
         return $"Weekly training load. {string.Join("; ", weekDescriptions)}.";
+    }
+
+    private static string GetTrainingLoadWeekCssClass(TrainingLoadWeekSnapshot week)
+    {
+        var classes = new List<string> { "coach-load-history-week" };
+
+        if (week.IsCurrentWeek)
+        {
+            classes.Add("is-current");
+        }
+
+        if (week.IsRecoveryWeek)
+        {
+            classes.Add("is-recovery");
+        }
+
+        return string.Join(' ', classes);
     }
 
     private static string FormatWeekLabel(TrainingLoadWeekSnapshot week)
@@ -758,6 +780,7 @@
         double? TargetLoad,
         double? AchievementPercent,
         bool IsCurrentWeek,
+        bool IsRecoveryWeek,
         double? Ctl = null,
         double? Atl = null,
         double? FormPercentDisplay = null);
