@@ -214,7 +214,236 @@ public static class AthleteDataEndpoints
         .WithSummary("Returns the \"curated\" dataset from intervals.icu for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
         .WithDescription("Calls the intervals.icu athlete data service and returns the parsed JSON payload only. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
 
+        app.MapPost("/api/validate", async (
+            HttpContext httpContext,
+            IAthleteDataService athleteDataService,
+            IAthleteRepository athleteRepository,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var logger = loggerFactory.CreateLogger("PlanApiEndpoints");
+
+            if (!TryGetIntervalsCredentials(httpContext.Request, out var athleteIdHeader, out var apiKeyHeader))
+            {
+                logger.LogWarning("Rejected /api/validate request due to missing required credential headers.");
+                return AthleteDataEndpointResults.CreateBadRequestResult(
+                    "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+            }
+
+            var existingAthleteConfig = await athleteRepository.GetByAthleteIdAsync(athleteIdHeader);
+            if (AthleteDataEndpointResults.TryCreateLockedAthleteResult(existingAthleteConfig, out var lockedResult, out var lockMessage))
+            {
+                logger.LogWarning(
+                    "Rejected /api/validate request for athlete {AthleteId} because the athlete config is locked. Message: {Message}",
+                    athleteIdHeader,
+                    lockMessage);
+
+                return lockedResult;
+            }
+
+            var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
+            if (string.IsNullOrWhiteSpace(planJson))
+            {
+                return AthleteDataEndpointResults.CreateBadRequestResult(
+                    "Request body must contain the plan JSON to validate.");
+            }
+
+            try
+            {
+                var validation = await athleteDataService.ValidateWeekPlanAsync(
+                    athleteIdHeader, apiKeyHeader, planJson, PlanApiMaxValidationErrors, ct);
+
+                if (!string.IsNullOrWhiteSpace(validation.Error))
+                {
+                    return Results.Problem(
+                        title: "Plan validation failed.",
+                        detail: validation.Error,
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
+
+                return Results.Ok(validation);
+            }
+            catch (McpToolExecutionException ex)
+            {
+                logger.LogWarning(ex, "MCP tool execution failed in /api/validate.");
+                return Results.Problem(
+                    title: "MCP tool execution failed.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogWarning(ex, "MCP server connection failed in /api/validate.");
+                return Results.Problem(
+                    title: "MCP server unreachable.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (TimeoutException ex)
+            {
+                logger.LogWarning(ex, "MCP server timeout in /api/validate.");
+                return Results.Problem(
+                    title: "MCP server timeout.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status504GatewayTimeout);
+            }
+            catch (OperationCanceledException)
+            {
+                return Results.Problem(
+                    title: "Request was canceled.",
+                    statusCode: StatusCodes.Status408RequestTimeout);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogError(ex, "Invalid MCP configuration for /api/validate.");
+                return Results.Problem(
+                    title: "MCP configuration error.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled error in /api/validate.");
+                return Results.Problem(
+                    title: "Failed to validate plan.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+        })
+        .WithName("ValidatePlan")
+        .WithTags("Plan")
+        .WithSummary("Validates the posted plan JSON against the upload schema for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
+        .WithDescription("Accepts the raw plan JSON as the request body (no wrapper object). Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+
+        app.MapPost("/api/upload", async (
+            HttpContext httpContext,
+            IAthleteDataService athleteDataService,
+            IAthleteRepository athleteRepository,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var logger = loggerFactory.CreateLogger("PlanApiEndpoints");
+
+            if (!TryGetIntervalsCredentials(httpContext.Request, out var athleteIdHeader, out var apiKeyHeader))
+            {
+                logger.LogWarning("Rejected /api/upload request due to missing required credential headers.");
+                return AthleteDataEndpointResults.CreateBadRequestResult(
+                    "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+            }
+
+            var existingAthleteConfig = await athleteRepository.GetByAthleteIdAsync(athleteIdHeader);
+            if (AthleteDataEndpointResults.TryCreateLockedAthleteResult(existingAthleteConfig, out var lockedResult, out var lockMessage))
+            {
+                logger.LogWarning(
+                    "Rejected /api/upload request for athlete {AthleteId} because the athlete config is locked. Message: {Message}",
+                    athleteIdHeader,
+                    lockMessage);
+
+                return lockedResult;
+            }
+
+            var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
+            if (string.IsNullOrWhiteSpace(planJson))
+            {
+                return AthleteDataEndpointResults.CreateBadRequestResult(
+                    "Request body must contain the plan JSON to upload.");
+            }
+
+            try
+            {
+                var validation = await athleteDataService.ValidateWeekPlanAsync(
+                    athleteIdHeader, apiKeyHeader, planJson, PlanApiMaxValidationErrors, ct);
+
+                if (!string.IsNullOrWhiteSpace(validation.Error))
+                {
+                    return Results.Problem(
+                        title: "Plan validation failed.",
+                        detail: validation.Error,
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
+
+                if (!validation.IsValid)
+                {
+                    logger.LogInformation(
+                        "Rejected /api/upload request for athlete {AthleteId} because the plan failed validation.",
+                        athleteIdHeader);
+
+                    return Results.Json(
+                        new { error = validation.Details ?? "The plan JSON did not pass validation." },
+                        statusCode: StatusCodes.Status422UnprocessableEntity);
+                }
+
+                await athleteDataService.UploadWeekPlanAsync(athleteIdHeader, apiKeyHeader, planJson, ct);
+                return Results.Ok(new { uploaded = true });
+            }
+            catch (McpToolExecutionException ex)
+            {
+                logger.LogWarning(ex, "MCP tool execution failed in /api/upload.");
+                return Results.Problem(
+                    title: "MCP tool execution failed.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogWarning(ex, "MCP server connection failed in /api/upload.");
+                return Results.Problem(
+                    title: "MCP server unreachable.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (TimeoutException ex)
+            {
+                logger.LogWarning(ex, "MCP server timeout in /api/upload.");
+                return Results.Problem(
+                    title: "MCP server timeout.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status504GatewayTimeout);
+            }
+            catch (OperationCanceledException)
+            {
+                return Results.Problem(
+                    title: "Request was canceled.",
+                    statusCode: StatusCodes.Status408RequestTimeout);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogError(ex, "Invalid MCP configuration for /api/upload.");
+                return Results.Problem(
+                    title: "MCP configuration error.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled error in /api/upload.");
+                return Results.Problem(
+                    title: "Failed to upload plan.",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+        })
+        .WithName("UploadPlan")
+        .WithTags("Plan")
+        .WithSummary("Validates and uploads the posted plan JSON for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
+        .WithDescription("Accepts the raw plan JSON as the request body (no wrapper object). Runs the same schema validation as /api/validate before uploading. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+
         return app;
+    }
+
+    private const int PlanApiMaxValidationErrors = 10;
+
+    private static bool TryGetIntervalsCredentials(HttpRequest request, out string athleteId, out string apiKey)
+    {
+        athleteId = request.Headers[IntervalsHeaders.AthleteId].ToString();
+        apiKey = request.Headers[IntervalsHeaders.ApiKey].ToString();
+        return !string.IsNullOrWhiteSpace(athleteId) && !string.IsNullOrWhiteSpace(apiKey);
+    }
+
+    private static async Task<string> ReadPlanJsonAsync(HttpRequest request, CancellationToken ct)
+    {
+        using var reader = new StreamReader(request.Body);
+        return await reader.ReadToEndAsync(ct);
     }
 }
 
