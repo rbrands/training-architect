@@ -248,7 +248,16 @@
                                     </div>
                                     <h3 class="coach-prompt-title">@prompt.Title</h3>
                                 </div>
-                                <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                                @if (prompt.CardType == AssessCardType.MetricsWellness)
+                                {
+                                    <p class="coach-prompt-description mb-0">
+                                        Complete view of <a href="/blog/training-load-metrics">CTL/ATL/TSB</a> and wellness data.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(prompt.WorkflowUrl))
                                 {
                                     <a class="coach-prompt-workflow-link"
@@ -310,7 +319,16 @@
                                 </div>
                                 <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
                             </div>
-                            <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                            @if (expandedPrompt.CardType == AssessCardType.MetricsWellness)
+                            {
+                                <p class="coach-prompt-description mb-0">
+                                    Complete view of <a href="/blog/training-load-metrics">CTL/ATL/TSB</a> and wellness data.
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                            }
                             @if (!string.IsNullOrWhiteSpace(expandedPrompt.WorkflowUrl))
                             {
                                 <a class="coach-prompt-workflow-link"
@@ -1424,6 +1442,7 @@
                     GetDoubleProperty(entry, "weekly_load_target"),
                     GetDoubleProperty(entry, "achievement_pct"),
                     IsCurrentWeek: false,
+                    IsRecoveryWeek: IsRecoveryWeek(entry),
                     Ctl: GetDoubleProperty(entry, "ctl"),
                     Atl: GetDoubleProperty(entry, "atl"),
                     FormPercentDisplay: GetDoubleProperty(entry, "form_percent_display")));
@@ -1446,12 +1465,26 @@
                 targetLoad,
                 achievementPercent,
                 IsCurrentWeek: true,
+                IsRecoveryWeek: IsRecoveryWeek(weekSummary.Value)
+                    || IsRecoveryWeek(root.Value)
+                    || IsRecoveryWeek(FindWeekMetadata(root.Value, currentWeekStarting)),
                 Ctl: GetDoubleProperty(weekSummary.Value, "ctl"),
                 Atl: GetDoubleProperty(weekSummary.Value, "atl"),
                 FormPercentDisplay: GetDoubleProperty(weekSummary.Value, "form_percent_display")));
         }
 
         return result;
+    }
+
+    private static bool IsRecoveryWeek(JsonElement? element)
+    {
+        if (element is null)
+        {
+            return false;
+        }
+
+        var weekType = GetStringProperty(element.Value, "week_type");
+        return string.Equals(weekType, "RECOVERY", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetDateProperty(JsonElement parent, string propertyName, out DateOnly value)
