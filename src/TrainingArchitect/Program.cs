@@ -587,10 +587,17 @@ app.Run();
 
 internal sealed class DatasetOnlyDocumentFilter : IDocumentFilter
 {
+    private static readonly string[] IncludedPaths =
+    [
+        "/api/dataset",
+        "/api/validate",
+        "/api/upload"
+    ];
+
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
         var datasetOperations = swaggerDoc.Paths
-            .Where(path => path.Key.StartsWith("/api/dataset", StringComparison.OrdinalIgnoreCase))
+            .Where(path => IncludedPaths.Any(includedPath => path.Key.StartsWith(includedPath, StringComparison.OrdinalIgnoreCase)))
             .ToDictionary(path => path.Key, path => path.Value);
 
         swaggerDoc.Paths = new OpenApiPaths();

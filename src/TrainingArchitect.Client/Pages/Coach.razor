@@ -2231,11 +2231,19 @@
         !string.IsNullOrWhiteSpace(_planReadableText) ||
         !string.IsNullOrWhiteSpace(_planUploadJson);
 
-    private bool IsPlanTabSelected(int index) => _selectedPlanTabIndex == index;
+    private bool IsPlanTabSelected(int index) => NormalizePlanTabIndex(_selectedPlanTabIndex) == index;
 
     private void SelectPlanTab(int index)
     {
-        _selectedPlanTabIndex = index;
+        _selectedPlanTabIndex = NormalizePlanTabIndex(index);
+    }
+
+    private int NormalizePlanTabIndex(int index)
+    {
+        var normalizedIndex = Math.Clamp(index, 0, 2);
+        return normalizedIndex == 0 && string.IsNullOrWhiteSpace(_planReadableText)
+            ? 1
+            : normalizedIndex;
     }
 
     private bool IsDataViewTabSelected(int index) => _selectedDataViewTabIndex == index;
@@ -2826,7 +2834,7 @@
         _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
         _planRequiresValidation = false;
         LoadPlanWorkoutEditor();
-_selectedPlanTabIndex = _planReadableText is null && _planUploadJson is not null ? 1 : 0;
+        _selectedPlanTabIndex = NormalizePlanTabIndex(0);
 
         if (_planReadableText is null && _planUploadJson is null)
         {
@@ -3484,7 +3492,7 @@ _selectedPlanTabIndex = _planReadableText is null && _planUploadJson is not null
         _planReadableText = CoachPageState.PlanReadableText;
         _planUploadJson = CoachPageState.PlanUploadJson;
         _planErrorMessage = CoachPageState.PlanErrorMessage;
-        _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
+        _selectedPlanTabIndex = NormalizePlanTabIndex(CoachPageState.SelectedPlanTabIndex);
         _planTotalTokens = CoachPageState.PlanTotalTokens;
         _planResponseId = CoachPageState.PlanResponseId;
 
@@ -3519,7 +3527,7 @@ _selectedPlanTabIndex = _planReadableText is null && _planUploadJson is not null
         CoachPageState.PlanReadableText = _planReadableText;
         CoachPageState.PlanUploadJson = _planUploadJson;
         CoachPageState.PlanErrorMessage = _planErrorMessage;
-        CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
+        CoachPageState.SelectedPlanTabIndex = NormalizePlanTabIndex(_selectedPlanTabIndex);
         CoachPageState.PlanTotalTokens = _planTotalTokens;
         CoachPageState.PlanResponseId = _planResponseId;
     }
