@@ -241,13 +241,20 @@ public static class AthleteDataEndpoints
                 return lockedResult;
             }
 
+            if (httpContext.Request.ContentLength is > 128_000)
+            {
+                return Results.Problem(
+                    title: "Payload too large.",
+                    detail: "Plan JSON payload exceeds the 128 KB limit.",
+                    statusCode: StatusCodes.Status413PayloadTooLarge);
+            }
+
             var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
             if (string.IsNullOrWhiteSpace(planJson))
             {
                 return AthleteDataEndpointResults.CreateBadRequestResult(
                     "Request body must contain the plan JSON to validate.");
             }
-
             try
             {
                 var validation = await athleteDataService.ValidateWeekPlanAsync(
