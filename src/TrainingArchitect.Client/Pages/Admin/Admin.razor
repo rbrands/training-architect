@@ -72,13 +72,6 @@
                                            placeholder="e.g. 2026-07 or 2026-W31" />
                                 </div>
 
-                                <div>
-                                    <label class="form-label text-secondary small mb-1">Action</label>
-                                    <input class="form-control form-control-sm"
-                                           @bind="ActionFilter"
-                                           placeholder="contains..." />
-                                </div>
-
                                 <button class="btn btn-outline-primary btn-sm" @onclick="ReloadUsageAsync">Refresh</button>
                                 <button class="btn btn-outline-secondary btn-sm"
                                         @onclick="RefreshGlobalUsageAsync"
@@ -477,7 +470,6 @@
     private string _usageTypeFilter = "all";
     private string _athleteFilter = string.Empty;
     private string _periodFilter = string.Empty;
-    private string _actionFilter = string.Empty;
     private bool _usageRefreshInProgress;
     private string? _usageActionMessage;
     private string? _usageActionError;
@@ -507,18 +499,11 @@
         set => SetFilter(ref _periodFilter, value);
     }
 
-    private string ActionFilter
-    {
-        get => _actionFilter;
-        set => SetFilter(ref _actionFilter, value);
-    }
-
     private IReadOnlyList<UsageGridRow> FilteredUsageRows => _filteredUsageRows ??= _allUsageRows
         .Where(MatchesScope)
         .Where(MatchesUsageType)
         .Where(MatchesAthlete)
         .Where(MatchesPeriod)
-        .Where(MatchesAction)
         .ToList();
 
     private DateTime? LastGlobalRefreshAt => _allUsageRows
@@ -693,7 +678,6 @@
         UsageTypeFilter = "all";
         AthleteFilter = string.Empty;
         PeriodFilter = string.Empty;
-        ActionFilter = string.Empty;
     }
 
     private void SetFilter(ref string field, string value)
@@ -958,16 +942,6 @@
         }
 
         return row.PeriodKey.Contains(_periodFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesAction(UsageGridRow row)
-    {
-        if (string.IsNullOrWhiteSpace(_actionFilter))
-        {
-            return true;
-        }
-
-        return row.ActionSummary.Contains(_actionFilter, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildActionSummary(IReadOnlyDictionary<string, int> counts)
