@@ -6,6 +6,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-09-17
+
+### Added
+- Recovery Week metadata is now recognized when resolving the selected training week from the athlete dataset.
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
 ## [1.7.0] - 2026-09-09
 
 ### Added
