@@ -7,6 +7,7 @@ using System.Collections;
 using System.ClientModel;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace TrainingArchitect.Services;
 
@@ -242,12 +243,20 @@ public sealed class FoundryCoachingAgent(
         return null;
     }
 
+    // Models may emit raw citation markers (U+E200 … U+E201) that are not rendered as annotations.
+    private static readonly Regex CitationMarkerPattern = new(
+        @"[ \t]*\uE200[^\uE201]*\uE201|[\uE200-\uE202]",
+        RegexOptions.Compiled);
+
+    private static string RemoveCitationMarkers(string text) =>
+        CitationMarkerPattern.Replace(text, string.Empty);
+
     private static string ExtractAssistantOutputText(object responseValue)
     {
         var assistantText = TryExtractAssistantMessageText(responseValue);
         if (!string.IsNullOrWhiteSpace(assistantText))
         {
-            return assistantText;
+            return RemoveCitationMarkers(assistantText);
         }
 
         // Fallback for SDKs that expose only aggregate helper methods.
@@ -257,7 +266,7 @@ public sealed class FoundryCoachingAgent(
             var outputText = getOutputTextMethod.Invoke(responseValue, null)?.ToString();
             if (!string.IsNullOrWhiteSpace(outputText))
             {
-                return outputText;
+                return RemoveCitationMarkers(outputText);
             }
         }
 

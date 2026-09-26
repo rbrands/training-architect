@@ -116,6 +116,17 @@ public sealed class CoachingAgentErrorTests
         Assert.True(log.Contains($"RequestId={(header is null ? "body-request" : "header-request")}"), log);
     }
 
+    [Fact]
+    public void RemoveCitationMarkers_StripsLeakedFileCitations()
+    {
+        var method = typeof(FoundryCoachingAgent).GetMethod("RemoveCitationMarkers", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var text = "Verpflegung absichern. \uE200filecite\uE202turn0file0\uE202turn0file5\uE201\nNext line \uE202";
+
+        var result = Assert.IsType<string>(method.Invoke(null, [text]));
+
+        Assert.Equal("Verpflegung absichern.\nNext line ", result);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

@@ -4,9 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.7.1] - 2026-09-26
 
 ### Added
+- Added a CTL trend line over the weekly training-load bars while retaining the absolute weekly CTL values below each bar.
 - Added explicit production/staging Foundry agent selection for local development and the Azure staging slot, including status, dry-run, readback verification, and slot-swap protection. Existing local selections are preserved by subsequent setup runs.
 
 ### Fixed
