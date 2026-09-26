@@ -627,16 +627,12 @@
         var weekDescriptions = TrainingLoadHistory.Select(week =>
             $"{FormatWeekLabel(week)}: load {week.ActualLoad:0.#} TSS"
             + (week.TargetLoad is > 0 ? $", target {week.TargetLoad.Value:0.#} TSS" : ", no target")
-<<<<<<< HEAD
-            + (week.Ctl is not null ? $", CTL {FormatCtlValue(week)}" : ", no CTL"));
-=======
+            + (week.Ctl is not null ? $", CTL {FormatCtlValue(week)}" : ", no CTL")
             + (week.IsRecoveryWeek ? ", recovery week" : string.Empty));
->>>>>>> origin/main
 
         return $"Weekly training load. {string.Join("; ", weekDescriptions)}.";
     }
 
-<<<<<<< HEAD
     private IReadOnlyList<CtlChartPoint> CtlChartPoints
     {
         get
@@ -683,7 +679,6 @@
 
     private static string FormatChartCoordinate(double coordinate) => coordinate.ToString("0.##", CultureInfo.InvariantCulture);
 
-=======
     private static string GetTrainingLoadWeekCssClass(TrainingLoadWeekSnapshot week)
     {
         var classes = new List<string> { "coach-load-history-week" };
@@ -700,8 +695,6 @@
 
         return string.Join(' ', classes);
     }
-
->>>>>>> origin/main
     private static string FormatWeekLabel(TrainingLoadWeekSnapshot week)
     {
         return week.IsCurrentWeek

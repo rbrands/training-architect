@@ -241,8 +241,6 @@ public static class AthleteDataEndpoints
                 return lockedResult;
             }
 
-<<<<<<< HEAD
-=======
             if (httpContext.Request.ContentLength is > 128_000)
             {
                 return Results.Problem(
@@ -250,18 +248,12 @@ public static class AthleteDataEndpoints
                     detail: "Plan JSON payload exceeds the 128 KB limit.",
                     statusCode: StatusCodes.Status413PayloadTooLarge);
             }
-
->>>>>>> origin/main
             var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
             if (string.IsNullOrWhiteSpace(planJson))
             {
                 return AthleteDataEndpointResults.CreateBadRequestResult(
                     "Request body must contain the plan JSON to validate.");
             }
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
             try
             {
                 var validation = await athleteDataService.ValidateWeekPlanAsync(
@@ -356,8 +348,6 @@ public static class AthleteDataEndpoints
                 return lockedResult;
             }
 
-<<<<<<< HEAD
-=======
             if (httpContext.Request.ContentLength is > 128_000)
             {
                 return Results.Problem(
@@ -365,18 +355,12 @@ public static class AthleteDataEndpoints
                     detail: "Plan JSON payload exceeds the 128 KB limit.",
                     statusCode: StatusCodes.Status413PayloadTooLarge);
             }
-
->>>>>>> origin/main
             var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
             if (string.IsNullOrWhiteSpace(planJson))
             {
                 return AthleteDataEndpointResults.CreateBadRequestResult(
                     "Request body must contain the plan JSON to upload.");
             }
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
             try
             {
                 var validation = await athleteDataService.ValidateWeekPlanAsync(
