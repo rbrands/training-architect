@@ -66,6 +66,7 @@ $config = @{
     # Endpoint + agent name used for coaching agent invocation.
     FoundryProjectEndpoint = "__FOUNDRY_PROJECT_ENDPOINT__"
     FoundryProjectAgentName = "__FOUNDRY_PROJECT_AGENT_NAME__"
+    FoundryProjectStagingAgentName = "__FOUNDRY_PROJECT_STAGING_AGENT_NAME__"
 
     # GitHub Actions OIDC
     AzureClientId        = "__AZURE_CLIENT_ID__"

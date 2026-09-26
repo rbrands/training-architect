@@ -70,11 +70,13 @@ public sealed class FoundryCoachingAgent(
 
             if (LooksLikeHtmlDocument(content))
             {
-                _logger.LogWarning(
+                _logger.LogError(
                     "Foundry agent returned HTML-like content for {AgentName}@{AgentVersion}. ResponseId={ResponseId}",
                     _configuredAgent.Name,
                     _configuredAgent.Version ?? "latest",
                     responseId ?? "unknown");
+
+                throw new HttpRequestException("The Foundry agent returned an invalid HTML response.");
             }
 
             return new CoachingAgentResponse(

@@ -229,6 +229,7 @@ resource slotSettings 'Microsoft.Web/sites/config@2023-12-01' = {
       'ASPNETCORE_ENVIRONMENT'
       'SiteUrl'
       'Author'
+      'FoundryProjectAgentName'
     ]
   }
 }

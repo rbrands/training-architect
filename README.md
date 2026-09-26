@@ -388,6 +388,50 @@ Foundry-related config values in `config.ps1`:
 - `FoundryProjectEndpoint = "__FOUNDRY_PROJECT_ENDPOINT__"`
 - `FoundryProjectAgentName = "__FOUNDRY_PROJECT_AGENT_NAME__"`
 
+#### Switch the Foundry Agent
+
+Use [setup.ps1](setup.ps1) to choose the production or staging agent independently of the deployed application. Both agents must exist in the same project configured by `FoundryProjectEndpoint`.
+
+In the existing `$config` hashtable in [config.ps1](config.ps1), keep `FoundryProjectAgentName` as the production reference and add the optional staging reference:
+
+```powershell
+FoundryProjectStagingAgentName = "__FOUNDRY_PROJECT_STAGING_AGENT_NAME__"
+```
+
+Replace this placeholder with `training-architect-agent-staging`. Either reference can include `@version` to pin a published version, for example `training-architect-agent@30`. Without a version, the latest agent version is used. The staging key is required only when selecting `Staging` and is consumed by the setup script, not by the application.
+
+Run these commands in PowerShell 7 from the repository root:
+
+```powershell
+./setup.ps1 -AgentTarget Local -ShowAgent
+./setup.ps1 -AgentTarget Local -Agent Staging -WhatIf
+./setup.ps1 -AgentTarget Local -Agent Staging
+./setup.ps1 -AgentTarget Local -Agent Production
+```
+
+The switch changes only the host project's `FoundryProjectAgentName` user-secret, displays the previous reference, and verifies the new value by reading it back. `-ShowAgent` only displays the stored reference; `-WhatIf` previews the change without writing it. Local switching requires the .NET SDK but does not invoke Azure CLI or GitHub CLI, change the project endpoint, or update deployed settings. `Production` selects the configured production agent; it does not target a production deployment slot.
+
+Restart the local host after switching. Environment variables, launch-profile settings, or command-line arguments can override user-secrets, so the stored reference is not necessarily the effective runtime value. The script warns when its current process has a `FoundryProjectAgentName` environment override.
+
+Subsequent `-Secrets` or `-All` runs preserve an existing, non-placeholder local agent reference. They initialize the production reference only when the local value is missing, blank, or a placeholder. Use the explicit switch command to change it thereafter. Agent commands cannot be combined with the general setup flags. `-GitHub` and `-Bicep` continue using the production reference from the configuration.
+
+For the existing Azure `staging` slot, use:
+
+```powershell
+./setup.ps1 -AgentTarget StagingSlot -ShowAgent
+./setup.ps1 -AgentTarget StagingSlot -Agent Staging -WhatIf
+./setup.ps1 -AgentTarget StagingSlot -Agent Staging
+./setup.ps1 -AgentTarget StagingSlot -Agent Production
+```
+
+This requires an authenticated Azure CLI session and valid `SubscriptionId`, `AppResourceGroupName`, and `AppName` values in your configuration. The identity needs permission to read production and staging app settings, update staging app settings, and update the app's slot configuration names. The script verifies the configured slot, uses an explicit subscription on each call, and does not log in or change the global Azure account context. `-ShowAgent` displays the stored staging reference and its swap-protection status. `-WhatIf` performs validation reads but no writes.
+
+Only the `staging` slot's `FoundryProjectAgentName` value is changed. Before selecting `Staging`, the script requires the production slot's stored agent reference to match `FoundryProjectAgentName` in your configuration. A mismatch aborts the operation without changing either slot. It marks the agent setting as slot-sticky, preserves existing sticky entries, and reads back the result and production reference. Sticky metadata applies across the app's slots; production's agent value is not written. The Bicep configuration also declares the agent setting sticky.
+
+**Operational notes:** Updating app settings can restart the staging slot. Do not run the switcher concurrently with deployments or slot swaps. This is a temporary test selection: it stays with the slot during a swap, but an infrastructure deployment can reset it to the configured production agent. It does not promote an agent, change the project endpoint, or update GitHub Secrets. On a verification failure, inspect `-ShowAgent` and the slot settings before retrying or swapping; the script does not automatically roll back a completed write.
+
+Run the isolated switcher regression tests with `pwsh -NoProfile -File tests/scripts/AgentSwitch.Tests.ps1`. They use temporary configuration and simulated CLI commands, without accessing private configuration or Azure.
+
 ### 6. CI/CD flow (after first push)
 
 ```bash

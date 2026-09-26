@@ -6,6 +6,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Added explicit production/staging Foundry agent selection for local development and the Azure staging slot, including status, dry-run, readback verification, and slot-swap protection. Existing local selections are preserved by subsequent setup runs.
+
+### Fixed
+- Prevented HTML error responses from the Foundry agent from being rendered as successful coaching assessments.
+
 ## [1.7.0] - 2026-09-09
 
 ### Added
