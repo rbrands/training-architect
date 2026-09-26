@@ -44,6 +44,7 @@
 - Add XML doc comments to all public interfaces and methods
 - Document any new __PLACEHOLDER__ values in README.md 
   under the Setup section
+- Whenever a release version is added or updated in `CHANGELOG.md`, update `ApplicationVersionInfo.Current` in `src/TrainingArchitect.Core/Models/ApplicationVersionInfo.cs` to the same semantic version and release date.
 
 ## Dependencies
 - Syncfusion Community License is in use - 
