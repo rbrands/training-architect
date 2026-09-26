@@ -248,7 +248,16 @@
                                     </div>
                                     <h3 class="coach-prompt-title">@prompt.Title</h3>
                                 </div>
-                                <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                                @if (prompt.CardType == AssessCardType.MetricsWellness)
+                                {
+                                    <p class="coach-prompt-description mb-0">
+                                        Complete view of <a href="/blog/training-load-metrics">CTL/ATL/TSB</a> and wellness data.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="coach-prompt-description mb-0">@prompt.Description</p>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(prompt.WorkflowUrl))
                                 {
                                     <a class="coach-prompt-workflow-link"
@@ -310,7 +319,16 @@
                                 </div>
                                 <h3 class="coach-prompt-title">@expandedPrompt.Title</h3>
                             </div>
-                            <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                            @if (expandedPrompt.CardType == AssessCardType.MetricsWellness)
+                            {
+                                <p class="coach-prompt-description mb-0">
+                                    Complete view of <a href="/blog/training-load-metrics">CTL/ATL/TSB</a> and wellness data.
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="coach-prompt-description mb-0">@expandedPrompt.Description</p>
+                            }
                             @if (!string.IsNullOrWhiteSpace(expandedPrompt.WorkflowUrl))
                             {
                                 <a class="coach-prompt-workflow-link"
@@ -1424,6 +1442,7 @@
                     GetDoubleProperty(entry, "weekly_load_target"),
                     GetDoubleProperty(entry, "achievement_pct"),
                     IsCurrentWeek: false,
+                    IsRecoveryWeek: IsRecoveryWeek(entry),
                     Ctl: GetDoubleProperty(entry, "ctl"),
                     Atl: GetDoubleProperty(entry, "atl"),
                     FormPercentDisplay: GetDoubleProperty(entry, "form_percent_display")));
@@ -1446,12 +1465,26 @@
                 targetLoad,
                 achievementPercent,
                 IsCurrentWeek: true,
+                IsRecoveryWeek: IsRecoveryWeek(weekSummary.Value)
+                    || IsRecoveryWeek(root.Value)
+                    || IsRecoveryWeek(FindWeekMetadata(root.Value, currentWeekStarting)),
                 Ctl: GetDoubleProperty(weekSummary.Value, "ctl"),
                 Atl: GetDoubleProperty(weekSummary.Value, "atl"),
                 FormPercentDisplay: GetDoubleProperty(weekSummary.Value, "form_percent_display")));
         }
 
         return result;
+    }
+
+    private static bool IsRecoveryWeek(JsonElement? element)
+    {
+        if (element is null)
+        {
+            return false;
+        }
+
+        var weekType = GetStringProperty(element.Value, "week_type");
+        return string.Equals(weekType, "RECOVERY", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetDateProperty(JsonElement parent, string propertyName, out DateOnly value)
@@ -2250,11 +2283,19 @@
         !string.IsNullOrWhiteSpace(_planReadableText) ||
         !string.IsNullOrWhiteSpace(_planUploadJson);
 
-    private bool IsPlanTabSelected(int index) => _selectedPlanTabIndex == index;
+    private bool IsPlanTabSelected(int index) => NormalizePlanTabIndex(_selectedPlanTabIndex) == index;
 
     private void SelectPlanTab(int index)
     {
-        _selectedPlanTabIndex = index;
+        _selectedPlanTabIndex = NormalizePlanTabIndex(index);
+    }
+
+    private int NormalizePlanTabIndex(int index)
+    {
+        var normalizedIndex = Math.Clamp(index, 0, 2);
+        return normalizedIndex == 0 && string.IsNullOrWhiteSpace(_planReadableText)
+            ? 1
+            : normalizedIndex;
     }
 
     private bool IsDataViewTabSelected(int index) => _selectedDataViewTabIndex == index;
@@ -2434,7 +2475,8 @@
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
                     out var candidateWeek)
-                && candidateWeek == weekStarting)
+                && candidateWeek == weekStarting
+                && HasWeekMetadata(element))
             {
                 return element;
             }
@@ -2462,6 +2504,15 @@
 
         return null;
     }
+
+    private static bool HasWeekMetadata(JsonElement element) =>
+        GetStringProperty(element, "week_type") is not null
+        || GetStringProperty(element, "phase") is not null
+        || GetStringProperty(element, "week_note") is not null
+        || GetStringProperty(element, "weekly_note") is not null
+        || GetDoubleProperty(element, "weekly_load_target") is not null
+        || GetDoubleProperty(element, "target_load") is not null
+        || GetDoubleProperty(element, "load_target") is not null;
 
     private void OnPlanWorkoutDateChanged(Microsoft.AspNetCore.Components.ChangeEventArgs args, string workoutId)
     {
@@ -2845,7 +2896,7 @@
         _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
         _planRequiresValidation = false;
         LoadPlanWorkoutEditor();
-        _selectedPlanTabIndex = 0;
+        _selectedPlanTabIndex = NormalizePlanTabIndex(0);
 
         if (_planReadableText is null && _planUploadJson is null)
         {
@@ -3503,7 +3554,7 @@
         _planReadableText = CoachPageState.PlanReadableText;
         _planUploadJson = CoachPageState.PlanUploadJson;
         _planErrorMessage = CoachPageState.PlanErrorMessage;
-        _selectedPlanTabIndex = Math.Clamp(CoachPageState.SelectedPlanTabIndex, 0, 2);
+        _selectedPlanTabIndex = NormalizePlanTabIndex(CoachPageState.SelectedPlanTabIndex);
         _planTotalTokens = CoachPageState.PlanTotalTokens;
         _planResponseId = CoachPageState.PlanResponseId;
 
@@ -3538,7 +3589,7 @@
         CoachPageState.PlanReadableText = _planReadableText;
         CoachPageState.PlanUploadJson = _planUploadJson;
         CoachPageState.PlanErrorMessage = _planErrorMessage;
-        CoachPageState.SelectedPlanTabIndex = _selectedPlanTabIndex;
+        CoachPageState.SelectedPlanTabIndex = NormalizePlanTabIndex(_selectedPlanTabIndex);
         CoachPageState.PlanTotalTokens = _planTotalTokens;
         CoachPageState.PlanResponseId = _planResponseId;
     }
