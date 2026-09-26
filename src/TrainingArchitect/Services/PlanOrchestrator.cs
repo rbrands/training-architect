@@ -44,6 +44,7 @@ public sealed class PlanOrchestrator(
                 round);
 
             CoachingAgentResponse? response = null;
+            string? failureMessage = null;
             try
             {
                 response = await agent.PromptAsync(
@@ -61,14 +62,21 @@ public sealed class PlanOrchestrator(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Plan agent call failed in round {Round} for athlete {AthleteId}.", round, intervalsAthleteId);
+                var agentException = ex as CoachingAgentException;
+                var diagnosticId = agentException?.DiagnosticId
+                    ?? System.Diagnostics.Activity.Current?.TraceId.ToString()
+                    ?? Guid.NewGuid().ToString("N");
+                logger.LogError(
+                    "Plan agent call failed in round {Round}. DiagnosticId={DiagnosticId}; ExceptionType={ExceptionType}; StackTrace={StackTrace}",
+                    round, diagnosticId, ex.GetType().FullName, ex.StackTrace);
+                failureMessage = $"{agentException?.Message ?? "The coaching model request failed. Please try again."} Diagnostic ID: {diagnosticId}.";
             }
 
             if (response is null)
             {
                 yield return new PlanProgressEvent(
                     PlanProgressStage.Failed,
-                    "The coaching model request failed. Please try again.",
+                    failureMessage ?? "The coaching model returned no response. Please try again.",
                     round);
                 yield break;
             }

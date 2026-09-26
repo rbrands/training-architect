@@ -4,6 +4,8 @@ using Azure.AI.Extensions.OpenAI;
 using Microsoft.Extensions.Logging;
 using OpenAI.Responses;
 using System.Collections;
+using System.ClientModel;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace TrainingArchitect.Services;
@@ -31,6 +33,7 @@ public sealed class FoundryCoachingAgent(
         string? intervalsApiKey = null,
         string? previousResponseId = null)
     {
+        ct.ThrowIfCancellationRequested();
         var structuredInputs = new Dictionary<string, string>
         {
             ["discipline"] = discipline,
@@ -87,39 +90,51 @@ public sealed class FoundryCoachingAgent(
                 tokenUsage.CachedInputTokens,
                 tokenUsage.OutputTokens);
         }
-        catch (RequestFailedException ex)
+        catch (Exception) when (ct.IsCancellationRequested)
         {
-            var normalized = NormalizeErrorMessage(ex.Message);
-            var requestId = ExtractRequestId(ex, normalized);
-
-            _logger.LogError(
-                ex,
-                "Foundry agent call failed for agent {AgentName}@{AgentVersion}. RequestId={RequestId}; Code={Code}; Param={Param}; Type={Type}; Message={Message}",
-                _configuredAgent.Name,
-                _configuredAgent.Version ?? "latest",
-                requestId ?? "unknown",
-                normalized.Code ?? "unknown",
-                normalized.Param ?? "unknown",
-                normalized.Type ?? "unknown",
-                normalized.Message ?? ex.Message);
-
-            if (TryBuildModelCompatibilityError(normalized.Message ?? ex.Message, out var compatibilityMessage))
-            {
-                throw new InvalidOperationException(compatibilityMessage, ex);
-            }
-
-            throw;
+            throw new OperationCanceledException(ct);
         }
-        catch (Exception ex) when (TryBuildModelCompatibilityError(ex.Message, out var compatibilityMessage))
+        catch (Exception ex)
         {
+            var status = ex switch
+            {
+                ClientResultException clientError => clientError.Status,
+                RequestFailedException azureError => azureError.Status,
+                _ => 0
+            };
+            var responseBody = ex switch
+            {
+                ClientResultException clientError => clientError.GetRawResponse()?.Content?.ToString(),
+                RequestFailedException azureError => azureError.GetRawResponse()?.Content?.ToString(),
+                _ => null
+            };
+            var normalized = NormalizeErrorMessage(responseBody ?? ex.Message);
+            var requestId = ExtractRequestId(ex, normalized);
+            var diagnosticId = Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N");
+            string?[] sensitiveValues = [prompt, intervalsAthleteId, intervalsApiKey];
+
             _logger.LogError(
-                ex,
-                "Foundry agent model compatibility issue for {AgentName}@{AgentVersion}: {Message}",
+                "Foundry agent call failed for agent {AgentName}@{AgentVersion}. DiagnosticId={DiagnosticId}; Status={Status}; RequestId={RequestId}; Code={Code}; Param={Param}; Type={Type}; ExceptionType={ExceptionType}; ExceptionDetails={ExceptionDetails}; ResponseBody={ResponseBody}",
                 _configuredAgent.Name,
                 _configuredAgent.Version ?? "latest",
-                compatibilityMessage);
+                diagnosticId,
+                status,
+                SafeDiagnosticValue(requestId, sensitiveValues),
+                SafeDiagnosticValue(normalized.Code ?? (ex as RequestFailedException)?.ErrorCode, sensitiveValues),
+                SafeDiagnosticValue(normalized.Param, sensitiveValues),
+                SafeDiagnosticValue(normalized.Type, sensitiveValues),
+                ex.GetType().FullName,
+                RedactDiagnosticText(ex.ToString(), sensitiveValues),
+                RedactDiagnosticText(responseBody, sensitiveValues));
 
-            throw new InvalidOperationException(compatibilityMessage, ex);
+            var message = TryBuildModelCompatibilityError(normalized.Message ?? ex.Message, out var compatibilityMessage)
+                ? compatibilityMessage
+                : status >= 500
+                    ? $"The coaching service returned an upstream error (HTTP {status}). Please try again later."
+                    : status == 429
+                        ? "The coaching service is currently rate limited. Please try again later."
+                        : "The coaching service could not complete the request. Please contact support with the diagnostic ID.";
+            throw new CoachingAgentException(message, diagnosticId);
         }
     }
 
@@ -404,17 +419,25 @@ public sealed class FoundryCoachingAgent(
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return (null, null, null, null, null);
+            }
+            if (root.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object)
+            {
+                root = error;
+            }
 
             var code = TryGetString(root, "code");
             var message = TryGetString(root, "message") ?? rawMessage;
             var param = TryGetString(root, "param");
             var type = TryGetString(root, "type");
 
-            string? requestId = null;
+            string? requestId = TryGetString(root, "request_id");
             if (root.TryGetProperty("additionalInfo", out var additionalInfo)
                 && additionalInfo.ValueKind == JsonValueKind.Object)
             {
-                requestId = TryGetString(additionalInfo, "request_id");
+                requestId ??= TryGetString(additionalInfo, "request_id");
             }
 
             return (code, param, type, message, requestId);
@@ -433,22 +456,57 @@ public sealed class FoundryCoachingAgent(
             : null;
     }
 
-    private static string? ExtractRequestId(RequestFailedException exception, (string? Code, string? Param, string? Type, string? Message, string? RequestId) normalized)
+    private static string RedactDiagnosticText(string? value, string?[] sensitiveValues)
     {
-        if (!string.IsNullOrWhiteSpace(normalized.RequestId))
+        if (string.IsNullOrEmpty(value))
         {
-            return normalized.RequestId;
+            return "unavailable";
         }
 
-        var rawResponse = exception.GetRawResponse();
-        if (rawResponse is not null
-            && rawResponse.Headers.TryGetValue("x-ms-request-id", out var headerRequestId)
-            && !string.IsNullOrWhiteSpace(headerRequestId))
+        var redactions = sensitiveValues
+            .Where(sensitive => !string.IsNullOrEmpty(sensitive))
+            .SelectMany(sensitive => new[] { sensitive!, JsonSerializer.Serialize(sensitive)[1..^1] })
+            .Distinct(StringComparer.Ordinal)
+            .OrderByDescending(sensitive => sensitive.Length);
+
+        foreach (var sensitive in redactions)
         {
-            return headerRequestId;
+            value = value.Replace(sensitive, "[REDACTED]", StringComparison.Ordinal);
         }
 
-        return null;
+        return value;
+    }
+
+    private static string SafeDiagnosticValue(string? value, string?[] sensitiveValues)
+    {
+        return !string.IsNullOrWhiteSpace(value) && value.Length <= 128
+            && value.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-' or '.')
+            && !sensitiveValues.Any(sensitive => !string.IsNullOrWhiteSpace(sensitive) && value.Contains(sensitive, StringComparison.Ordinal))
+                ? value
+                : "unknown";
+    }
+
+    private static string? ExtractRequestId(Exception exception, (string? Code, string? Param, string? Type, string? Message, string? RequestId) normalized)
+    {
+        foreach (var headerName in new[] { "x-request-id", "x-ms-request-id", "apim-request-id" })
+        {
+            if (exception is ClientResultException clientException
+                && clientException.GetRawResponse() is { } clientResponse
+                && clientResponse.Headers.TryGetValue(headerName, out var clientRequestId)
+                && !string.IsNullOrWhiteSpace(clientRequestId))
+            {
+                return clientRequestId;
+            }
+            if (exception is RequestFailedException azureException
+                && azureException.GetRawResponse() is { } azureResponse
+                && azureResponse.Headers.TryGetValue(headerName, out var azureRequestId)
+                && !string.IsNullOrWhiteSpace(azureRequestId))
+            {
+                return azureRequestId;
+            }
+        }
+
+        return normalized.RequestId;
     }
 
     private readonly record struct TokenUsageSnapshot(

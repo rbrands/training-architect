@@ -11,6 +11,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Prevented HTML error responses from the Foundry agent from being rendered as successful coaching assessments.
+- Added safe Foundry failure diagnostics for both SDK exception types, correlated diagnostic IDs in Assess and Plan errors, and readable Problem Details messages in the Coach UI without exposing raw SDK responses.
 
 ## [1.7.0] - 2026-09-09
 

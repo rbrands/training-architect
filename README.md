@@ -110,6 +110,14 @@ re-register it in `TrainingArchitect/Program.cs` (server) and
 | `IChatService` | `StubChatService` | Invoke the Microsoft Foundry Agent and forward messages through the MCP server |
 | `IAuthContext` | `StubAuthContext` | Read OIDC subject claim from `IHttpContextAccessor`; resolve `AthleteTier` from entitlement store — **never from client input** |
 
+### Coaching Failure Diagnostics
+
+Failed Foundry calls in `/api/coach/assess` return HTTP 502 Problem Details with a safe `detail` and a `diagnosticId`. The Coach page displays the message and diagnostic ID, not the raw SDK response or an HTML error page. Plan generation carries the same safe message and ID in its failed SSE progress event.
+
+Search server logs or Application Insights traces for the displayed `DiagnosticId` (also the activity trace ID when available). The Foundry log records the configured agent/version, upstream HTTP `Status`, `RequestId`, error `Code`, `Param`, `Type`, exception type, and stack trace. An upstream HTTP 500 is distinct from the application's HTTP 502 response. Status `0` means no upstream HTTP status was available; unavailable or unsafe metadata is recorded as `unknown`.
+
+Both `ClientResultException` and `RequestFailedException` are handled. Request IDs are taken from `x-request-id`, `x-ms-request-id`, or `apim-request-id` headers, then from supported error-body fields when retained by the SDK. Failure logs include `ExceptionDetails` (message, inner exceptions, and stack trace) and `ResponseBody` when available. Known prompt, athlete ID, and API key values are replaced with `[REDACTED]`, including their JSON-escaped forms. Other provider-supplied context may remain, so restrict access to these logs. Upstream timeouts are logged; caller-requested cancellations are not. This improves diagnosis but does not resolve upstream model failures.
+
 ### MCP Athlete Data Endpoint
 
 The endpoint at `/api/athlete-data` now supports credential forwarding via headers and executes the MCP tool `prepare_week_data` server-side.
