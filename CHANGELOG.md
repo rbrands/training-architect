@@ -4,21 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-## [1.7.1] - 2026-09-17
+## [1.7.1] - 2026-09-26
 
 ### Added
-- Recovery Week metadata is now recognized when resolving the selected training week from the athlete dataset.
-
-### Changed
--
+- Added a CTL trend line over the weekly training-load bars while retaining the absolute weekly CTL values below each bar.
+- Added explicit production/staging Foundry agent selection for local development and the Azure staging slot, including status, dry-run, readback verification, and slot-swap protection. Existing local selections are preserved by subsequent setup runs.
 
 ### Fixed
--
-
-### Removed
--
+- Prevented HTML error responses from the Foundry agent from being rendered as successful coaching assessments.
+- Added safe Foundry failure diagnostics for both SDK exception types, correlated diagnostic IDs in Assess and Plan errors, and readable Problem Details messages in the Coach UI without exposing raw SDK responses.
 
 ## [1.7.0] - 2026-09-09
 

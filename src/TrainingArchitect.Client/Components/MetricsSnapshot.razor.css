@@ -376,10 +376,17 @@
     border-top: 2px solid #253858;
 }
 
+.coach-load-history-legend-ctl {
+    width: 0.7rem;
+    height: 0;
+    border-top: 2px solid #3aa8f2;
+}
+
 .coach-load-history-chart {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(5, minmax(2.7rem, 1fr));
-    gap: clamp(0.25rem, 1.5vw, 0.7rem);
+    gap: 0;
     min-width: 0;
 }
 
@@ -387,6 +394,7 @@
     display: grid;
     grid-template-rows: 1.15rem 6.4rem auto auto auto auto;
     min-width: 0;
+    padding-inline: clamp(0.125rem, 0.75vw, 0.35rem);
     text-align: center;
 }
 

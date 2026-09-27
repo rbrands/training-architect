@@ -1931,9 +1931,10 @@
         return message.Trim();
     }
 
-    private static string FormatRequestError(string requestType, string? message)
+    private static string FormatRequestError(string requestType, string? message, int? statusCode = null)
     {
-        var fallback = $"{requestType} request failed. Please try again.";
+        var status = statusCode.HasValue ? $" (HTTP {statusCode.Value})" : string.Empty;
+        var fallback = $"{requestType} request failed{status}. Please try again.";
         if (string.IsNullOrWhiteSpace(message))
         {
             return fallback;
@@ -1944,7 +1945,7 @@
             return endpointMessage;
         }
 
-        return message.Trim();
+        return fallback;
     }
 
     private static bool TryExtractRequestErrorText(string message, out string endpointMessage)
@@ -1954,6 +1955,24 @@
         try
         {
             using var document = JsonDocument.Parse(message);
+            var root = document.RootElement;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                var detail = GetStringProperty(root, "detail");
+                var title = GetStringProperty(root, "title");
+                var problemMessage = !string.IsNullOrWhiteSpace(detail) ? detail : title;
+                if (!string.IsNullOrWhiteSpace(problemMessage))
+                {
+                    endpointMessage = problemMessage.Trim();
+                    var diagnosticId = GetStringProperty(root, "diagnosticId");
+                    if (!string.IsNullOrWhiteSpace(diagnosticId) && diagnosticId.Length <= 128
+                        && diagnosticId.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_'))
+                    {
+                        endpointMessage += $" Diagnostic ID: {diagnosticId}.";
+                    }
+                    return true;
+                }
+            }
             if (!TryFindErrorPayload(document.RootElement, out var payload))
             {
                 return false;
@@ -2668,7 +2687,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                state.ErrorMessage = FormatRequestError("Assess", errorBody);
+                state.ErrorMessage = FormatRequestError("Assess", errorBody, (int)response.StatusCode);
                 return;
             }
 

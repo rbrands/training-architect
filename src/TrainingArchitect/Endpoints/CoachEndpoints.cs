@@ -178,21 +178,9 @@ public static class CoachEndpoints
                 intervalsAthleteId: athleteIdHeader,
                 intervalsApiKey: apiKeyHeader);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogError(ex, "Agent configuration error in /api/coach/assess for athlete {AthleteId}.", athleteIdHeader);
-            return Results.Problem(
-                title: "Coaching agent configuration error.",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status502BadGateway);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Agent request failed in /api/coach/assess for athlete {AthleteId}.", athleteIdHeader);
-            return Results.Problem(
-                title: "Coaching agent request failed.",
-                detail: "The coaching model request failed. Check server logs for details.",
-                statusCode: StatusCodes.Status502BadGateway);
+            return CreateAgentFailureResult(httpContext, ex, logger);
         }
 
         var inputTokens = ToInt32NonNegative(result.InputTokens);
@@ -208,6 +196,25 @@ public static class CoachEndpoints
             outputTokens);
 
         return Results.Ok(new AssessResponse(result.Content, result.TotalTokens, result.ResponseId));
+    }
+
+    private static IResult CreateAgentFailureResult(HttpContext httpContext, Exception exception, ILogger logger)
+    {
+        var agentException = exception as CoachingAgentException;
+        var diagnosticId = agentException?.DiagnosticId
+            ?? System.Diagnostics.Activity.Current?.TraceId.ToString()
+            ?? Guid.NewGuid().ToString("N");
+        logger.LogError(
+            "Agent request failed at {Path}. DiagnosticId={DiagnosticId}; ExceptionType={ExceptionType}; StackTrace={StackTrace}",
+            httpContext.Request.Path,
+            diagnosticId,
+            exception.GetType().FullName,
+            exception.StackTrace);
+        return Results.Problem(
+            title: "Coaching agent request failed.",
+            detail: agentException?.Message ?? "The coaching request could not be completed. Please contact support with the diagnostic ID.",
+            statusCode: StatusCodes.Status502BadGateway,
+            extensions: new Dictionary<string, object?> { ["diagnosticId"] = diagnosticId });
     }
 
     private static async Task<IResult> PlanAsync(

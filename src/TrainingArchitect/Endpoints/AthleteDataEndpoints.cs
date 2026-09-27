@@ -248,7 +248,6 @@ public static class AthleteDataEndpoints
                     detail: "Plan JSON payload exceeds the 128 KB limit.",
                     statusCode: StatusCodes.Status413PayloadTooLarge);
             }
-
             var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
             if (string.IsNullOrWhiteSpace(planJson))
             {
@@ -356,7 +355,6 @@ public static class AthleteDataEndpoints
                     detail: "Plan JSON payload exceeds the 128 KB limit.",
                     statusCode: StatusCodes.Status413PayloadTooLarge);
             }
-
             var planJson = await ReadPlanJsonAsync(httpContext.Request, ct);
             if (string.IsNullOrWhiteSpace(planJson))
             {

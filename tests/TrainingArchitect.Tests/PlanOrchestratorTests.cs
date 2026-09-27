@@ -98,6 +98,40 @@ public class PlanOrchestratorTests
     private static PlanOrchestrator CreateOrchestrator(ICoachingAgent agent, IPlanValidator validator) =>
         new(agent, validator, new FakeUsageCounterRepository(), NullLogger<PlanOrchestrator>.Instance);
 
+    [Fact]
+    public async Task RunAsync_AgentFailure_PreservesSafeMessageAndDiagnosticId()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            ExceptionToThrow = new CoachingAgentException("Upstream HTTP 500. Please try again later.", "test-diagnostic")
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new FakeValidator()));
+
+        Assert.Equal(PlanProgressStage.Failed, events[^1].Stage);
+        Assert.Equal("Upstream HTTP 500. Please try again later. Diagnostic ID: test-diagnostic.", events[^1].Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_UnexpectedFailure_DoesNotExposeExceptionMessage()
+    {
+        var agent = new FakeCoachingAgent { ExceptionToThrow = new InvalidOperationException("private-prompt-and-api-key") };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new FakeValidator()));
+
+        Assert.Equal(PlanProgressStage.Failed, events[^1].Stage);
+        Assert.Contains("Diagnostic ID:", events[^1].Message);
+        Assert.DoesNotContain("private-prompt-and-api-key", events[^1].Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_Cancellation_IsNotConvertedToFailure()
+    {
+        var agent = new FakeCoachingAgent { ExceptionToThrow = new OperationCanceledException() };
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => CollectAsync(CreateOrchestrator(agent, new FakeValidator())));
+    }
+
     private static async Task<List<PlanProgressEvent>> CollectAsync(IPlanOrchestrator orchestrator)
     {
         var events = new List<PlanProgressEvent>();
@@ -118,6 +152,8 @@ public class PlanOrchestratorTests
 
         public bool ThrowOnCall { get; init; }
 
+        public Exception? ExceptionToThrow { get; init; }
+
         public Task<CoachingAgentResponse> PromptAsync(
             string prompt,
             string discipline,
@@ -127,6 +163,10 @@ public class PlanOrchestratorTests
             string? intervalsApiKey = null,
             string? previousResponseId = null)
         {
+            if (ExceptionToThrow is not null)
+            {
+                throw ExceptionToThrow;
+            }
             if (ThrowOnCall)
             {
                 throw new InvalidOperationException("agent unavailable");

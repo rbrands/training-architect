@@ -118,10 +118,11 @@
                     <div class="coach-load-history-legend" aria-hidden="true">
                         <span><i class="coach-load-history-legend-bar"></i>Load</span>
                         <span><i class="coach-load-history-legend-target"></i>Target</span>
+                        <span><i class="coach-load-history-legend-ctl"></i>CTL</span>
                     </div>
                 </div>
 
-                <div class="coach-load-history-chart" role="img" aria-label="@BuildChartAriaLabel()">
+                <div class="coach-load-history-chart" role="img" aria-label="@BuildChartAriaLabel()" style="position: relative;">
                     @foreach (var week in TrainingLoadHistory)
                     {
                         <div class="@GetTrainingLoadWeekCssClass(week)">
@@ -150,6 +151,32 @@
                                 </span>
                             }
                         </div>
+                    }
+                    @if (CtlChartPoints.Count > 0)
+                    {
+                        <svg class="coach-load-history-ctl-line"
+                             viewBox="0 0 100 100"
+                             preserveAspectRatio="none"
+                             aria-hidden="true"
+                             style="position: absolute; z-index: 2; top: 1.15rem; left: 0; width: 100%; height: 6.4rem; overflow: visible; pointer-events: none;">
+                            <path d="@BuildCtlPath()"
+                                  fill="none"
+                                  stroke="#3aa8f2"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  vector-effect="non-scaling-stroke"></path>
+                            @foreach (var point in CtlChartPoints)
+                            {
+                                <circle cx="@FormatChartCoordinate(point.X)"
+                                        cy="@FormatChartCoordinate(point.Y)"
+                                        r="1.5"
+                                        fill="#ffffff"
+                                        stroke="#3aa8f2"
+                                        stroke-width="2"
+                                        vector-effect="non-scaling-stroke"></circle>
+                            }
+                        </svg>
                     }
                 </div>
             </section>
@@ -351,6 +378,8 @@
 }
 
 @code {
+    private const int TrainingLoadChartColumnCount = 5;
+
     [Parameter]
     public IReadOnlyList<MetricSnapshotItem> Items { get; set; } = [];
 
@@ -598,10 +627,57 @@
         var weekDescriptions = TrainingLoadHistory.Select(week =>
             $"{FormatWeekLabel(week)}: load {week.ActualLoad:0.#} TSS"
             + (week.TargetLoad is > 0 ? $", target {week.TargetLoad.Value:0.#} TSS" : ", no target")
+            + (week.Ctl is not null ? $", CTL {FormatCtlValue(week)}" : ", no CTL")
             + (week.IsRecoveryWeek ? ", recovery week" : string.Empty));
 
         return $"Weekly training load. {string.Join("; ", weekDescriptions)}.";
     }
+
+    private IReadOnlyList<CtlChartPoint> CtlChartPoints
+    {
+        get
+        {
+            var values = TrainingLoadHistory.Where(week => week.Ctl is not null).Select(week => week.Ctl!.Value).ToArray();
+            if (values.Length == 0)
+            {
+                return [];
+            }
+
+            var minimum = values.Min();
+            var maximum = values.Max();
+            var padding = Math.Max((maximum - minimum) * 0.15, Math.Max(Math.Abs(maximum) * 0.05, 1));
+            var lowerBound = minimum - padding;
+            var range = maximum - minimum + padding * 2;
+
+            return TrainingLoadHistory
+                .Select((week, index) => week.Ctl is null
+                    ? null
+                    : new CtlChartPoint(
+                        (index + 0.5) * 100 / TrainingLoadChartColumnCount,
+                        100 - (week.Ctl.Value - lowerBound) / range * 100,
+                        index))
+                .Where(point => point is not null)
+                .Select(point => point!)
+                .ToArray();
+        }
+    }
+
+    private string BuildCtlPath()
+    {
+        var commands = new List<string>();
+        var previousWeekIndex = -2;
+
+        foreach (var point in CtlChartPoints)
+        {
+            var command = point.WeekIndex == previousWeekIndex + 1 ? "L" : "M";
+            commands.Add(FormattableString.Invariant($"{command} {point.X:0.##},{point.Y:0.##}"));
+            previousWeekIndex = point.WeekIndex;
+        }
+
+        return string.Join(" ", commands);
+    }
+
+    private static string FormatChartCoordinate(double coordinate) => coordinate.ToString("0.##", CultureInfo.InvariantCulture);
 
     private static string GetTrainingLoadWeekCssClass(TrainingLoadWeekSnapshot week)
     {
@@ -619,7 +695,6 @@
 
         return string.Join(' ', classes);
     }
-
     private static string FormatWeekLabel(TrainingLoadWeekSnapshot week)
     {
         return week.IsCurrentWeek
@@ -771,6 +846,8 @@
     private sealed record FuelingCategorySnapshot(string Value, string DisplayName, string Threshold, string Description);
 
     private sealed record PowerProfileSnapshot(string Value, string DisplayName, string Description);
+
+    private sealed record CtlChartPoint(double X, double Y, int WeekIndex);
 
     public sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
 
