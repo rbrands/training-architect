@@ -8,8 +8,8 @@ namespace TrainingArchitect.Core.Services;
 public static partial class PlanUploadNormalizer
 {
     /// <summary>
-    /// Converts explicit steps to the description syntax required by the MCP upload tool, then removes
-    /// the separate steps representation to prevent duplicate duration and load.
+    /// Keeps workout steps as structured JSON and removes any duplicated interval structure
+    /// from the coaching description.
     /// </summary>
     /// <param name="planJson">The generated weekly plan JSON.</param>
     /// <returns>The normalized weekly plan JSON.</returns>
@@ -37,11 +37,7 @@ public static partial class PlanUploadNormalizer
             }
 
             var coachingDescription = GetCoachingDescription(workout["description"]);
-            var intervalsStructure = BuildIntervalsStructure(steps);
-            workout["description"] = string.IsNullOrWhiteSpace(coachingDescription)
-                ? intervalsStructure
-                : $"{coachingDescription}\n{intervalsStructure}";
-            workout.Remove("steps");
+            workout["description"] = coachingDescription;
         }
 
         return root.ToJsonString();
@@ -60,36 +56,6 @@ public static partial class PlanUploadNormalizer
             WorkoutStepLineRegex().IsMatch(line) || RepeatLineRegex().IsMatch(line));
 
         return string.Join('\n', structureStart < 0 ? lines : lines[..structureStart]).Trim();
-    }
-
-    private static string BuildIntervalsStructure(JsonArray steps)
-    {
-        var lines = steps
-            .OfType<JsonObject>()
-            .Select(BuildIntervalsStep)
-            .Where(line => line is not null);
-
-        return string.Join('\n', lines!);
-    }
-
-    private static string? BuildIntervalsStep(JsonObject step)
-    {
-        if (step["duration_seconds"] is not JsonValue durationValue ||
-            !durationValue.TryGetValue<int>(out var durationSeconds) ||
-            durationSeconds <= 0 ||
-            step["power_pct_ftp"] is not JsonValue powerValue ||
-            !powerValue.TryGetValue<double>(out var powerPercent))
-        {
-            return null;
-        }
-
-        var duration = durationSeconds % 3600 == 0
-            ? $"{durationSeconds / 3600}h"
-            : durationSeconds % 60 == 0
-                ? $"{durationSeconds / 60}m"
-                : $"{durationSeconds}s";
-
-        return $"- {duration} {powerPercent:0.##}%";
     }
 
     [GeneratedRegex(@"^\s*-\s*.*\b\d+(?:[.,]\d+)?\s*(?:s|m|h)\b.*%", RegexOptions.IgnoreCase)]

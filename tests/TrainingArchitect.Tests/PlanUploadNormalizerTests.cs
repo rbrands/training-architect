@@ -6,7 +6,7 @@ namespace TrainingArchitect.Tests;
 public class PlanUploadNormalizerTests
 {
     [Fact]
-    public void Normalize_WhenWorkoutContainsExplicitSteps_ConvertsStepsForIntervalsUpload()
+    public void Normalize_WhenWorkoutContainsExplicitSteps_PreservesStepsAsStructuredJson()
     {
         const string planJson = """
             {
@@ -28,15 +28,15 @@ public class PlanUploadNormalizerTests
         using var document = JsonDocument.Parse(normalized);
         var workout = document.RootElement.GetProperty("workouts")[0];
 
-        Assert.False(workout.TryGetProperty("steps", out _));
-  Assert.Equal(90, workout.GetProperty("duration_minutes").GetInt32());
+        Assert.Equal(3, workout.GetProperty("steps").GetArrayLength());
+        Assert.Equal(90, workout.GetProperty("duration_minutes").GetInt32());
         Assert.Equal(
-          "Aerobic ride. TSS: 58. Fueling: 30-50 g carbs per hour.\n- 10m 50%\n- 70m 65%\n- 10m 50%",
+          "Aerobic ride. TSS: 58. Fueling: 30-50 g carbs per hour.",
           workout.GetProperty("description").GetString());
     }
 
     [Fact]
-    public void Normalize_WhenDescriptionAlreadyContainsStructure_ReplacesItFromExplicitSteps()
+    public void Normalize_WhenDescriptionAlreadyContainsStructure_RemovesDuplicateStructureButPreservesSteps()
     {
         const string planJson = """
             {
@@ -50,9 +50,11 @@ public class PlanUploadNormalizerTests
         var normalized = PlanUploadNormalizer.Normalize(planJson);
         using var document = JsonDocument.Parse(normalized);
 
+        var workout = document.RootElement.GetProperty("workouts")[0];
+        Assert.Equal("Recovery ride.", workout.GetProperty("description").GetString());
         Assert.Equal(
-            "Recovery ride.\n- 45m 50%",
-            document.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
+            """[{"duration_seconds":2700,"power_pct_ftp":50}]""",
+            workout.GetProperty("steps").GetRawText());
     }
 
     [Fact]

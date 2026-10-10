@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.7.2] - 2026-10-10
+
+### Fixed
+- Preserved structured workout `steps` as JSON when uploading training plans instead of converting them into description text, so long interval sessions (for example criterium microburst workouts) are no longer truncated in intervals.icu. Duplicated interval lines are stripped from the coaching description to avoid double-counted duration and load.
+
 ## [1.7.1] - 2026-09-26
 
 ### Added
