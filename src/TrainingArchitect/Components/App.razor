@@ -58,18 +58,71 @@
             navigator.serviceWorker.register('/service-worker.js');
         });
 
-        // Patches the img src inside the Syncfusion RTE editor DOM.
-        // Called after an image upload to correct the GUID blob URL that
-        // Syncfusion would otherwise set to Path + originalFilename.
-        window.sfFixImageSrc = function (wrongSrc, correctSrc) {
-            document.querySelectorAll('.e-content img').forEach(function (img) {
-                if (img.getAttribute('src') === wrongSrc) {
-                    img.setAttribute('src', correctSrc);
-                }
-            });
-        };
-
         window.trainingArchitect = window.trainingArchitect || {};
+
+        window.trainingArchitect.images = {
+            resizeAndUpload: async function (fileName, maxDimension, maxFileBytes) {
+                const input = Array.from(document.querySelectorAll(
+                    '.e-rte-upload, .e-rte-dialog input[type="file"], .e-rte-img-dialog input[type="file"]'
+                )).find(element => element.files?.length > 0
+                    && (!fileName || element.files[0].name === fileName));
+
+                if (!input) {
+                    throw new Error('Could not read the selected image from the editor.');
+                }
+
+                const file = input.files[0];
+                const bitmap = await createImageBitmap(file);
+                const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    bitmap.close();
+                    throw new Error('Image resizing is not supported by this browser.');
+                }
+
+                context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                bitmap.close();
+
+                const contentType = file.type.toLowerCase() === 'image/png'
+                    ? 'image/png'
+                    : 'image/jpeg';
+                const blob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(
+                        result => result ? resolve(result) : reject(new Error('Could not encode the resized image.')),
+                        contentType,
+                        0.85
+                    );
+                });
+
+                if (blob.size > maxFileBytes) {
+                    throw new Error('The resized image exceeds the 10 MB upload limit.');
+                }
+
+                const formData = new FormData();
+                formData.append('file', blob, contentType === 'image/png' ? 'image.png' : 'image.jpg');
+
+                const response = await fetch('/api/images/upload', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: formData
+                });
+                const responseText = await response.text();
+                if (!response.ok) {
+                    throw new Error(responseText || `Image upload failed with status ${response.status}.`);
+                }
+
+                const result = JSON.parse(responseText);
+                if (!result.url) {
+                    throw new Error('The image upload response did not include a URL.');
+                }
+
+                return result.url;
+            }
+        };
 
         window.trainingArchitect.copyText = async function (text) {
             await navigator.clipboard.writeText(text);

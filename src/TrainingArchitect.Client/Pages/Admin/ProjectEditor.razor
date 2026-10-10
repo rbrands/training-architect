@@ -70,13 +70,21 @@ else
         <div>
             <label class="form-label text-secondary small">Description</label>
             <SfRichTextEditor Value="@_form.Description"
+                              @ref="_descriptionEditor"
                               ValueChanged="@OnDescriptionChanged"
                               Height="300px">
                 <RichTextEditorToolbarSettings Items="@_toolbarItems" />
                 <RichTextEditorImageSettings SaveUrl="/api/images/upload"
-                                             Path="@Config.ImageContainerUrl" />
-                <RichTextEditorEvents OnImageUploadSuccess="@OnImageUploadSuccess" />
+                                             Path="@Config.ImageContainerUrl"
+                                             MaxFileSize="10485760" />
+                <RichTextEditorEvents OnToolbarClick="@OnDescriptionToolbarClick"
+                                      OnImageSelected="@OnImageSelected"
+                                      OnImageUploadSuccess="@OnImageUploadSuccess" />
             </SfRichTextEditor>
+            @if (!string.IsNullOrEmpty(_imageUploadError))
+            {
+                <p class="text-danger small mt-2 mb-0">@_imageUploadError</p>
+            }
         </div>
 
         <div>
@@ -98,6 +106,8 @@ else
     private string _siteTitle { get; set; } = "Brands Advisory";
 
     private ProjectForm _form = new();
+    private SfRichTextEditor? _descriptionEditor;
+    private string? _imageUploadError;
     private string _projectId = string.Empty;
     private bool _isNew;
     private bool _ready;
@@ -193,6 +203,50 @@ else
     // Store the pending fix here; OnDescriptionChanged applies it when ValueChanged fires.
     private string? _pendingBlobUrl;
     private IReadOnlyList<string>? _pendingWrongSrcCandidates;
+
+    private async Task OnDescriptionToolbarClick(ToolbarClickEventArgs args)
+    {
+        if (_descriptionEditor is not null)
+            await _descriptionEditor.SaveSelectionAsync();
+    }
+
+    private async Task OnImageSelected(Syncfusion.Blazor.Inputs.SelectedEventArgs args)
+    {
+        args.Cancel = true;
+        _imageUploadError = null;
+
+        var editor = _descriptionEditor;
+        if (editor is null)
+        {
+            _imageUploadError = "The editor is not ready to upload an image.";
+            return;
+        }
+
+        var fileName = args.FilesData?.FirstOrDefault()?.Name;
+        try
+        {
+            var imageUrl = await JSRuntime.InvokeAsync<string>(
+                "trainingArchitect.images.resizeAndUpload",
+                fileName,
+                1920,
+                10 * 1024 * 1024);
+
+            await editor.RestoreSelectionAsync();
+            await editor.ExecuteCommandAsync(
+                CommandName.InsertImage,
+                new ImageCommandsArgs
+                {
+                    Url = imageUrl,
+                    AltText = string.IsNullOrWhiteSpace(fileName)
+                        ? "Project image"
+                        : Path.GetFileNameWithoutExtension(fileName)
+                });
+        }
+        catch (JSException ex)
+        {
+            _imageUploadError = $"Image upload failed: {ex.Message}";
+        }
+    }
 
     private void OnImageUploadSuccess(ImageSuccessEventArgs args)
     {

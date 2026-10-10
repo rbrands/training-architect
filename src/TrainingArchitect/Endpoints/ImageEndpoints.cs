@@ -2,22 +2,18 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Processing;
 
 namespace TrainingArchitect.Endpoints;
 
 /// <summary>
-/// Minimal API endpoint for uploading article images to Azure Blob Storage.
-/// Images are resized to a maximum of 1920px on the longest side and capped at 2 MB.
-/// Each blob is stored under a sanitized GUID-based name.
+/// Minimal API endpoint for uploading editor images to Azure Blob Storage.
+/// Images selected through the editor's file dialog are resized in the browser
+/// before upload. Each blob is stored under a sanitized GUID-based name.
 /// </summary>
 public static class ImageEndpoints
 {
-    private const int MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
-    private const int MaxDimension = 1920;
+    private const int MaxFileSizeBytes = 10 * 1024 * 1024;
+    private const int WarningFileSizeBytes = 2 * 1024 * 1024;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -30,13 +26,16 @@ public static class ImageEndpoints
             async (HttpContext context, IConfiguration config, ILoggerFactory loggerFactory) =>
             {
                 var logger = loggerFactory.CreateLogger("ImageEndpoints");
+                if (context.Request.ContentLength > MaxFileSizeBytes + 64 * 1024)
+                    return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
                 var file = context.Request.Form.Files.FirstOrDefault();
 
                 if (file is null || file.Length == 0)
                     return Results.BadRequest("No file received.");
 
-                if (!AllowedContentTypes.Contains(file.ContentType))
-                    return Results.BadRequest("File type not allowed.");
+                if (file.Length > MaxFileSizeBytes)
+                    return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
 
                 var endpoint = config["Storage:BlobEndpoint"];
                 if (string.IsNullOrEmpty(endpoint))
@@ -44,36 +43,54 @@ public static class ImageEndpoints
 
                 try
                 {
-                    var (processedStream, contentType, extension) = await ProcessImageAsync(file, logger);
-                    await using (processedStream)
+                    if (!AllowedContentTypes.Contains(file.ContentType))
+                        return Results.BadRequest("File type not allowed.");
+
+                    var contentType = await GetValidatedContentTypeAsync(file);
+                    if (contentType is null)
+                        return Results.BadRequest("The uploaded file is not a supported image.");
+
+                    var extension = contentType switch
                     {
-                        var blobName = $"{Guid.NewGuid():N}{extension}";
+                        "image/png" => ".png",
+                        "image/webp" => ".webp",
+                        "image/gif" => ".gif",
+                        _ => ".jpg"
+                    };
+                    var blobName = $"{Guid.NewGuid():N}{extension}";
 
-                        var credential = new DefaultAzureCredential();
-                        var blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential);
-                        var containerClient = blobServiceClient.GetBlobContainerClient("images");
-                        var blobClient = containerClient.GetBlobClient(blobName);
+                    var credential = new DefaultAzureCredential();
+                    var blobServiceClient = new BlobServiceClient(new Uri(endpoint), credential);
+                    var containerClient = blobServiceClient.GetBlobContainerClient("images");
+                    var blobClient = containerClient.GetBlobClient(blobName);
 
-                        await blobClient.UploadAsync(processedStream, new BlobUploadOptions
-                        {
-                            HttpHeaders = new BlobHttpHeaders { ContentType = contentType }
-                        });
+                    await using var uploadStream = file.OpenReadStream();
+                    await blobClient.UploadAsync(uploadStream, new BlobUploadOptions
+                    {
+                        HttpHeaders = new BlobHttpHeaders { ContentType = contentType }
+                    });
 
-                        var blobUrl = blobClient.Uri.ToString();
-
-                        // X-Blob-Url header: fallback for Syncfusion versions where
-                        // the JSON response body is not exposed via ImageSuccessEventArgs.
-                        context.Response.Headers["X-Blob-Url"] = blobUrl;
-
-                        return Results.Ok(new ImageUploadResponse(
-                            Success: true,
-                            Name: blobName,
-                            Url: blobUrl,
-                            File: new ImageFileInfo(
-                                Name: blobName,
-                                Size: processedStream.Length,
-                                Type: contentType)));
+                    if (file.Length > WarningFileSizeBytes)
+                    {
+                        logger.LogWarning(
+                            "Uploaded image exceeds {LimitMB} MB: {ActualKB} KB.",
+                            WarningFileSizeBytes / 1024 / 1024,
+                            file.Length / 1024);
                     }
+
+                    var blobUrl = blobClient.Uri.ToString();
+
+                    // X-Blob-Url is used by the Syncfusion upload success handler.
+                    context.Response.Headers["X-Blob-Url"] = blobUrl;
+
+                    return Results.Ok(new ImageUploadResponse(
+                        Success: true,
+                        Name: blobName,
+                        Url: blobUrl,
+                        File: new ImageFileInfo(
+                            Name: blobName,
+                            Size: file.Length,
+                            Type: contentType)));
                 }
                 catch (Exception ex)
                 {
@@ -135,53 +152,44 @@ public static class ImageEndpoints
         return app;
     }
 
-    /// <summary>
-    /// Resizes the image to at most <see cref="MaxDimension"/> px on the longest side
-    /// and re-encodes it. PNG stays PNG; everything else is converted to JPEG at quality 85.
-    /// Logs a warning when the result still exceeds <see cref="MaxFileSizeBytes"/>.
-    /// </summary>
-    private static async Task<(MemoryStream Stream, string ContentType, string Extension)> ProcessImageAsync(
-        IFormFile file, ILogger logger)
+    private static async Task<string?> GetValidatedContentTypeAsync(IFormFile file)
     {
-        await using var inputStream = file.OpenReadStream();
-        using var image = await Image.LoadAsync(inputStream);
+        if (file.Length < 12)
+            return null;
 
-        if (image.Width > MaxDimension || image.Height > MaxDimension)
-        {
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Mode = ResizeMode.Max,
-                Size = new Size(MaxDimension, MaxDimension)
-            }));
-        }
+        var header = new byte[12];
+        await using var stream = file.OpenReadStream();
+        await stream.ReadExactlyAsync(header);
 
-        var outputStream = new MemoryStream();
-        string contentType;
-        string extension;
+        if (file.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase)
+            && header[0] == 137
+            && header[1] == 80
+            && header[2] == 78
+            && header[3] == 71
+            && header[4] == 13
+            && header[5] == 10
+            && header[6] == 26
+            && header[7] == 10)
+            return "image/png";
 
-        if (file.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
-        {
-            await image.SaveAsPngAsync(outputStream, new PngEncoder());
-            contentType = "image/png";
-            extension = ".png";
-        }
-        else
-        {
-            await image.SaveAsJpegAsync(outputStream, new JpegEncoder { Quality = 85 });
-            contentType = "image/jpeg";
-            extension = ".jpg";
-        }
+        if ((file.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
+             || file.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+            && header[0] == 0xFF
+            && header[1] == 0xD8
+            && header[2] == 0xFF)
+            return "image/jpeg";
 
-        if (outputStream.Length > MaxFileSizeBytes)
-        {
-            logger.LogWarning(
-                "Processed image still exceeds {LimitMB} MB: {ActualKB} KB.",
-                MaxFileSizeBytes / 1024 / 1024,
-                outputStream.Length / 1024);
-        }
+        if (file.ContentType.Equals("image/gif", StringComparison.OrdinalIgnoreCase)
+            && (System.Text.Encoding.ASCII.GetString(header, 0, 6) == "GIF87a"
+                || System.Text.Encoding.ASCII.GetString(header, 0, 6) == "GIF89a"))
+            return "image/gif";
 
-        outputStream.Position = 0;
-        return (outputStream, contentType, extension);
+        if (file.ContentType.Equals("image/webp", StringComparison.OrdinalIgnoreCase)
+            && System.Text.Encoding.ASCII.GetString(header, 0, 4) == "RIFF"
+            && System.Text.Encoding.ASCII.GetString(header, 8, 4) == "WEBP")
+            return "image/webp";
+
+        return null;
     }
 }
 
