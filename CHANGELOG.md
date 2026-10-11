@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Added a deterministic data quality check based on the MCP `check_athlete_data` tool. The Coach connection panel shows the overall result as a traffic light (Good / Partial / Limited) and expands on click to show the suggested fix and the status, explanation, context, and evidence of each checked area.
 - Added `includeDataCheck=true` to `GET /api/athlete-data` so athlete data and the data quality report are returned in a single request. A failing check is reported via `dataCheckError` and does not block the connection.
 - Added `POST /api/coach/data-check` to run the data quality check on a posted athlete dataset.
+- Added `GET /api/dataset/check` (fetch and check the current dataset) and `POST /api/dataset/check` (check a posted raw dataset JSON) as public API endpoints, documented in Swagger alongside `/api/dataset`.
 
 ### Removed
 - Removed the AI-based Data Consistency assessment card, the `assess_consistency` prompt, and the `Consistency` assessment type, which are superseded by the deterministic data quality check.

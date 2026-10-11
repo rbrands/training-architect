@@ -150,6 +150,17 @@ Timeouts are reported as HTTP 504, transport failures as HTTP 502.
 
 For local development, set real values with user-secrets instead of committing non-placeholder values.
 
+### Dataset Quality Check Endpoint
+
+Runs the deterministic data quality check (MCP tool `check_athlete_data`) on the curated dataset.
+No training recommendations are made; the report lists the status per area (`OK` / `Warning` / `Missing`),
+the overall rating (`Good` / `Partial` / `Limited`), a single suggested fix, and a plain-text report.
+
+- `GET /api/dataset/check` — fetches the current dataset and checks it in one call
+- `POST /api/dataset/check` — checks the raw dataset JSON posted as request body (max. 512 KB)
+- Both routes require the same credential headers as `/api/dataset`
+- `GET /api/athlete-data?includeDataCheck=true` returns the athlete data together with the report (`dataCheck`, or `dataCheckError` if the check failed)
+
 ### New Core Models
 
 | Model | Purpose |

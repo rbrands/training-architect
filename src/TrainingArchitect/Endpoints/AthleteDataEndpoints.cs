@@ -223,6 +223,18 @@ public static class AthleteDataEndpoints
         .WithSummary("Returns the \"curated\" dataset from intervals.icu for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
         .WithDescription("Calls the intervals.icu athlete data service and returns the parsed JSON payload only. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
 
+        myDatasetGroup.MapGet("/check", CheckCurrentDatasetAsync)
+            .WithName("CheckCurrentDataset")
+            .WithTags("Dataset")
+            .WithSummary("Fetches the current curated dataset and runs the deterministic data quality check for the athlete with Athlete ID provided in the X-Intervals-Athlete-Id header.")
+            .WithDescription("Returns the data quality report (checks per area, overall rating, suggested fix, and report text). No training recommendations are made. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+
+        myDatasetGroup.MapPost("/check", CheckPostedDatasetAsync)
+            .WithName("CheckPostedDataset")
+            .WithTags("Dataset")
+            .WithSummary("Runs the deterministic data quality check on the posted curated dataset.")
+            .WithDescription("Accepts the raw dataset JSON as returned by GET /api/dataset as the request body (no wrapper object). Returns the data quality report. Requires X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+
         app.MapPost("/api/validate", async (
             HttpContext httpContext,
             IAthleteDataService athleteDataService,
@@ -453,6 +465,162 @@ public static class AthleteDataEndpoints
     }
 
     private const int PlanApiMaxValidationErrors = 10;
+    private const int DatasetCheckMaxPayloadBytes = 512_000;
+
+    private static async Task<IResult> CheckCurrentDatasetAsync(
+        HttpContext httpContext,
+        IAthleteDataService athleteDataService,
+        IAthleteRepository athleteRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("MyDatasetEndpoints");
+
+        var rejection = await ValidateDatasetCheckRequestAsync(httpContext.Request, athleteRepository, logger);
+        if (rejection is not null)
+        {
+            return rejection;
+        }
+
+        TryGetIntervalsCredentials(httpContext.Request, out var athleteId, out var apiKey);
+
+        try
+        {
+            var dataset = await athleteDataService.GetAsync(athleteId, apiKey, ct);
+            var result = await athleteDataService.CheckAthleteDataAsync(
+                athleteId, apiKey, dataset.DataParsed.GetRawText(), ct);
+
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return CreateDatasetCheckFailureResult(ex, ct, logger);
+        }
+    }
+
+    private static async Task<IResult> CheckPostedDatasetAsync(
+        HttpContext httpContext,
+        IAthleteDataService athleteDataService,
+        IAthleteRepository athleteRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("MyDatasetEndpoints");
+
+        var rejection = await ValidateDatasetCheckRequestAsync(httpContext.Request, athleteRepository, logger);
+        if (rejection is not null)
+        {
+            return rejection;
+        }
+
+        if (httpContext.Request.ContentLength is > DatasetCheckMaxPayloadBytes)
+        {
+            return Results.Problem(
+                title: "Payload too large.",
+                detail: "Dataset JSON payload exceeds the 512 KB limit.",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+        }
+
+        var datasetJson = await ReadPlanJsonAsync(httpContext.Request, ct);
+        if (!IsJsonObject(datasetJson))
+        {
+            return AthleteDataEndpointResults.CreateBadRequestResult(
+                "Request body must contain the dataset JSON object to check.");
+        }
+
+        TryGetIntervalsCredentials(httpContext.Request, out var athleteId, out var apiKey);
+
+        try
+        {
+            var result = await athleteDataService.CheckAthleteDataAsync(athleteId, apiKey, datasetJson, ct);
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return CreateDatasetCheckFailureResult(ex, ct, logger);
+        }
+    }
+
+    private static async Task<IResult?> ValidateDatasetCheckRequestAsync(
+        HttpRequest request,
+        IAthleteRepository athleteRepository,
+        ILogger logger)
+    {
+        if (!TryGetIntervalsCredentials(request, out var athleteId, out _))
+        {
+            logger.LogWarning("Rejected /api/dataset/check request due to missing required credential headers.");
+            return AthleteDataEndpointResults.CreateBadRequestResult(
+                "Missing intervals.icu credentials. Provide X-Intervals-Athlete-Id and X-Intervals-Api-Key headers.");
+        }
+
+        var athleteConfig = await athleteRepository.GetByAthleteIdAsync(athleteId);
+        if (AthleteDataEndpointResults.TryCreateLockedAthleteResult(athleteConfig, out var lockedResult, out var lockMessage))
+        {
+            logger.LogWarning(
+                "Rejected /api/dataset/check request for athlete {AthleteId} because the athlete config is locked. Message: {Message}",
+                athleteId,
+                lockMessage);
+
+            return lockedResult;
+        }
+
+        return null;
+    }
+
+    private static bool IsJsonObject(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static IResult CreateDatasetCheckFailureResult(Exception exception, CancellationToken ct, ILogger logger)
+    {
+        switch (exception)
+        {
+            case McpToolExecutionException:
+                logger.LogWarning(exception, "MCP tool execution failed in /api/dataset/check.");
+                return Results.Problem(
+                    title: "Data quality check failed.",
+                    detail: "The MCP server could not check the dataset. Make sure the body is a curated dataset as returned by GET /api/dataset.",
+                    statusCode: StatusCodes.Status502BadGateway);
+            case HttpRequestException:
+                logger.LogWarning(exception, "MCP server connection failed in /api/dataset/check.");
+                return Results.Problem(
+                    title: "MCP server unreachable.",
+                    statusCode: StatusCodes.Status502BadGateway);
+            case TimeoutException:
+                logger.LogWarning(exception, "MCP server timeout in /api/dataset/check.");
+                return Results.Problem(
+                    title: "MCP server timeout.",
+                    statusCode: StatusCodes.Status504GatewayTimeout);
+            case OperationCanceledException when ct.IsCancellationRequested:
+                return Results.Problem(
+                    title: "Request was canceled.",
+                    statusCode: StatusCodes.Status408RequestTimeout);
+            case InvalidOperationException:
+                logger.LogError(exception, "Invalid MCP configuration for /api/dataset/check.");
+                return Results.Problem(
+                    title: "MCP configuration error.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+            default:
+                logger.LogError(exception, "Unhandled error in /api/dataset/check.");
+                return Results.Problem(
+                    title: "Failed to check dataset.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
 
     private static bool TryGetIntervalsCredentials(HttpRequest request, out string athleteId, out string apiKey)
     {
