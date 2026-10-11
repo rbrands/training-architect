@@ -6,14 +6,13 @@ namespace TrainingArchitect.Tests;
 public sealed class PromptBuilderTests
 {
     [Fact]
-    public void BuildAssessPrompt_Consistency_UsesConsistencyPrompt()
+    public void BuildAssessPrompt_Metrics_UsesMetricsPrompt()
     {
-        var request = new AssessRequest("{\"ftp\":250}", "road race", "en", AssessmentType.Consistency);
+        var request = new AssessRequest("{\"ftp\":250}", "road race", "en", AssessmentType.Metrics);
 
         var prompt = PromptBuilder.BuildAssessPrompt(request);
 
-        Assert.Contains("Check the attached athlete data for completeness and internal consistency.", prompt);
+        Assert.Contains("Summarize the current metrics and wellness data.", prompt);
         Assert.Contains("{\"ftp\":250}", prompt);
-        Assert.DoesNotContain("Summarize the current metrics and wellness data.", prompt);
     }
 }

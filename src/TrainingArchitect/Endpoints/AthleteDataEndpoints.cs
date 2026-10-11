@@ -18,6 +18,7 @@ public static class AthleteDataEndpoints
 
         group.MapGet("/", async (
             HttpContext httpContext,
+            bool? includeDataCheck,
             IAthleteDataService athleteDataService,
             IAthleteRepository athleteRepository,
             ILevelRepository levelRepository,
@@ -62,11 +63,19 @@ public static class AthleteDataEndpoints
                 }
 
                 var response = await athleteDataService.GetAsync(athleteIdHeader, apiKeyHeader, ct);
-                return Results.Ok(response with
+                response = response with
                 {
                     Level = athleteLevel,
                     LevelLabel = athleteLevelLabel
-                });
+                };
+
+                if (includeDataCheck == true)
+                {
+                    response = await AddDataCheckAsync(
+                        response, athleteDataService, athleteIdHeader, apiKeyHeader, logger, ct);
+                }
+
+                return Results.Ok(response);
             }
             catch (McpToolExecutionException ex)
             {
@@ -457,6 +466,34 @@ public static class AthleteDataEndpoints
         using var reader = new StreamReader(request.Body);
         return await reader.ReadToEndAsync(ct);
     }
+
+    // The data check is best-effort: a failure must not prevent the athlete data from being returned.
+    private static async Task<AthleteDataResponse> AddDataCheckAsync(
+        AthleteDataResponse response,
+        IAthleteDataService athleteDataService,
+        string athleteId,
+        string apiKey,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        if (response.DataParsed.ValueKind != JsonValueKind.Object)
+        {
+            return response with { DataCheckError = "Data quality check is not available for this dataset." };
+        }
+
+        try
+        {
+            var dataCheck = await athleteDataService.CheckAthleteDataAsync(
+                athleteId, apiKey, response.DataParsed.GetRawText(), ct);
+
+            return response with { DataCheck = dataCheck };
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Data quality check failed in /api/athlete-data.");
+            return response with { DataCheckError = "Data quality check is currently unavailable." };
+        }
+    }
 }
 
 /// <summary>Response payload returned for athlete data retrieval.</summary>
@@ -468,6 +505,12 @@ public record AthleteDataResponse
     public JsonElement DataParsed { get; init; }
     public string Level { get; init; } = string.Empty;
     public string LevelLabel { get; init; } = string.Empty;
+
+    /// <summary>Gets the data quality report when requested via <c>includeDataCheck=true</c>.</summary>
+    public AthleteDataCheckResult? DataCheck { get; init; }
+
+    /// <summary>Gets the reason why the requested data quality check is missing.</summary>
+    public string? DataCheckError { get; init; }
 }
 
 internal static class AthleteDataEndpointResults

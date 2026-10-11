@@ -1,0 +1,230 @@
+@using System.Globalization
+@using System.Text.Json
+
+<div class="data-check">
+    @if (IsLoading)
+    {
+        <div class="data-check-summary is-loading" role="status">
+            <span class="data-check-spinner" aria-hidden="true"></span>
+            <span>Checking data quality...</span>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="data-check-summary is-error" role="status">
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <span>@ErrorMessage</span>
+        </div>
+    }
+    else if (Result is not null)
+    {
+        <button type="button"
+                class="data-check-summary is-clickable"
+                aria-expanded="@(_expanded ? "true" : "false")"
+                aria-controls="data-check-details"
+                title="Show data quality details"
+                @onclick="ToggleDetails">
+            <span class="data-check-light @GetLightCss(Result.Overall)" aria-hidden="true"></span>
+            <span class="data-check-summary-label">Data quality: <strong>@Result.Overall</strong></span>
+            <span class="data-check-summary-meta">@SummaryMeta</span>
+            <i class="bi bi-chevron-down data-check-chevron @(_expanded ? "is-open" : string.Empty)" aria-hidden="true"></i>
+        </button>
+
+        @if (_expanded)
+        {
+            <div id="data-check-details" class="data-check-details">
+                @if (!string.IsNullOrWhiteSpace(Result.SuggestedFix))
+                {
+                    <div class="data-check-fix">
+                        <i class="bi bi-lightbulb" aria-hidden="true"></i>
+                        <span>@Result.SuggestedFix</span>
+                    </div>
+                }
+
+                <ul class="data-check-list">
+                    @foreach (var check in Result.Checks)
+                    {
+                        var evidence = FlattenEvidence(check.Evidence);
+                        var context = GetContextNotes(check.Context);
+
+                        <li class="data-check-item">
+                            <span class="data-check-light data-check-light--small @GetLightCss(check.Status)" aria-hidden="true"></span>
+                            <div class="data-check-item-body">
+                                <div class="data-check-item-title">
+                                    <span>@GetAreaLabel(check.Area)</span>
+                                    <span class="data-check-status @GetLightCss(check.Status)">@check.Status</span>
+                                </div>
+                                <p class="data-check-item-text">@check.Explanation</p>
+
+                                @foreach (var note in context)
+                                {
+                                    <p class="data-check-item-context">@note</p>
+                                }
+
+                                @if (evidence.Count > 0)
+                                {
+                                    <dl class="data-check-evidence">
+                                        @foreach (var (key, value) in evidence)
+                                        {
+                                            <div>
+                                                <dt>@key</dt>
+                                                <dd>@value</dd>
+                                            </div>
+                                        }
+                                    </dl>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+
+                @if (!string.IsNullOrWhiteSpace(Result.WeekStarting) || !string.IsNullOrWhiteSpace(Result.CurrentDate))
+                {
+                    <p class="data-check-meta">
+                        Week starting @Result.WeekStarting · checked on @Result.CurrentDate
+                        @if (Result.LookbackDays is not null)
+                        {
+                            <span> · lookback @Result.LookbackDays days</span>
+                        }
+                    </p>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Gets or sets the data quality report to display.</summary>
+    [Parameter] public AthleteDataCheckResult? Result { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the check is running.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Gets or sets an error message shown instead of the report.</summary>
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    private bool _expanded;
+    private AthleteDataCheckResult? _lastResult;
+
+    private static readonly Dictionary<string, string> AreaLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["season_plan"] = "Season plan / macrocycle",
+        ["ftp_consistency"] = "FTP consistency",
+        ["w_prime_consistency"] = "W' consistency",
+        ["wellness_tracking"] = "Wellness tracking",
+        ["recent_activity_density"] = "Recent activity density",
+        ["activity_feedback"] = "Activity feedback tracking",
+        ["load_target_history"] = "Load target history"
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(Result, _lastResult))
+        {
+            _expanded = false;
+            _lastResult = Result;
+        }
+    }
+
+    private void ToggleDetails() => _expanded = !_expanded;
+
+    private string SummaryMeta
+    {
+        get
+        {
+            if (Result is null)
+            {
+                return string.Empty;
+            }
+
+            var total = Result.Checks.Count;
+            return Result.NonOkCount == 0
+                ? $"All {total} checks passed"
+                : $"{Result.NonOkCount} of {total} checks need attention";
+        }
+    }
+
+    private static string GetLightCss(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "ok" or "good" => "is-green",
+        "warning" or "partial" => "is-yellow",
+        "missing" or "limited" => "is-red",
+        _ => "is-grey"
+    };
+
+    private static string GetAreaLabel(string area)
+    {
+        if (AreaLabels.TryGetValue(area, out var label))
+        {
+            return label;
+        }
+
+        var text = area.Replace('_', ' ').Trim();
+        return text.Length == 0 ? area : char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    private static List<string> GetContextNotes(JsonElement? context)
+    {
+        var notes = new List<string>();
+        if (context is not { ValueKind: JsonValueKind.Array } array)
+        {
+            return notes;
+        }
+
+        foreach (var item in array.EnumerateArray())
+        {
+            var text = item.ValueKind == JsonValueKind.String ? item.GetString() : item.GetRawText();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                notes.Add(text);
+            }
+        }
+
+        return notes;
+    }
+
+    private static List<(string Key, string Value)> FlattenEvidence(JsonElement? evidence)
+    {
+        var entries = new List<(string, string)>();
+        if (evidence is { ValueKind: JsonValueKind.Object } root)
+        {
+            Flatten(root, prefix: null, entries);
+        }
+
+        return entries;
+    }
+
+    private static void Flatten(JsonElement element, string? prefix, List<(string, string)> entries)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            var key = prefix is null ? property.Name : $"{prefix}.{property.Name}";
+            var value = property.Value;
+
+            if (value.ValueKind == JsonValueKind.Object)
+            {
+                Flatten(value, key, entries);
+                continue;
+            }
+
+            var text = FormatValue(value);
+            if (!string.IsNullOrEmpty(text))
+            {
+                entries.Add((key, text));
+            }
+        }
+    }
+
+    private static string FormatValue(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Number => value.TryGetDouble(out var number)
+            ? number.ToString("0.##", CultureInfo.InvariantCulture)
+            : value.GetRawText(),
+        JsonValueKind.String => value.GetString() ?? string.Empty,
+        JsonValueKind.True => "yes",
+        JsonValueKind.False => "no",
+        JsonValueKind.Array => string.Join(", ", value.EnumerateArray().Select(FormatValue).Where(text => text.Length > 0)),
+        JsonValueKind.Null => "n/a",
+        _ => string.Empty
+    };
+}

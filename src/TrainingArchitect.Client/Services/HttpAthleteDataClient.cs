@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TrainingArchitect.Core.Constants;
+using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Client.Services;
 
@@ -9,7 +10,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
 
     public async Task<AthleteDataResult> FetchAsync(string athleteId, string apiKey, CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/athlete-data");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/athlete-data?includeDataCheck=true");
 
         request.Headers.TryAddWithoutValidation(IntervalsHeaders.AthleteId, athleteId);
         request.Headers.TryAddWithoutValidation(IntervalsHeaders.ApiKey, apiKey);
@@ -59,7 +60,9 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
             DataRaw = raw,
             DataParsed = parsed,
             Level = envelope.Level ?? string.Empty,
-            LevelLabel = envelope.LevelLabel ?? string.Empty
+            LevelLabel = envelope.LevelLabel ?? string.Empty,
+            DataCheck = envelope.DataCheck,
+            DataCheckError = envelope.DataCheckError
         };
     }
 
@@ -237,5 +240,7 @@ internal sealed class HttpAthleteDataClient(HttpClient httpClient) : IAthleteDat
         public JsonElement DataParsed { get; init; }
         public string? Level { get; init; }
         public string? LevelLabel { get; init; }
+        public AthleteDataCheckResult? DataCheck { get; init; }
+        public string? DataCheckError { get; init; }
     }
 }

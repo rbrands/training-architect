@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TrainingArchitect.Client.Services;
+using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Services;
 
@@ -56,6 +57,10 @@ public sealed class ServerAthleteSession : IAthleteSession
     public JsonElement? AthleteDataParsed => null;
 
     public string? AthleteDataMethodName => null;
+
+    public AthleteDataCheckResult? DataCheck => null;
+
+    public string? DataCheckError => null;
 
     public event Action? Changed;
 

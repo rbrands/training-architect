@@ -140,6 +140,37 @@ public sealed class McpAthleteDataService(
                 $"MCP tool '{McpToolNames.ValidateWeekPlan}' returned an unexpected payload.");
     }
 
+    public async Task<AthleteDataCheckResult> CheckAthleteDataAsync(
+        string athleteId,
+        string apiKey,
+        string athleteDataJson,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(athleteDataJson))
+        {
+            throw new ArgumentException("Athlete data JSON must not be empty.", nameof(athleteDataJson));
+        }
+
+        var toolArguments = new Dictionary<string, object?>
+        {
+            ["athlete_data"] = athleteDataJson
+        };
+
+        var toolResult = await CallToolAsync(
+            McpToolNames.CheckAthleteData,
+            athleteId,
+            apiKey,
+            toolArguments,
+            allowRetry: true,
+            ct);
+
+        var payload = NormalizeResultPayload(ExtractDataJson(toolResult));
+
+        return payload.Deserialize<AthleteDataCheckResult>()
+            ?? throw new McpToolExecutionException(
+                $"MCP tool '{McpToolNames.CheckAthleteData}' returned an unexpected payload.");
+    }
+
     private static Dictionary<string, object?> BuildUploadArguments(string weekPlanJson)
     {
         try

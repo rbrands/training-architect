@@ -101,6 +101,13 @@
                 </div>
             </div>
 
+            @if (Session.State == CoachConnectionState.Connected)
+            {
+                <AthleteDataCheck Result="Session.DataCheck"
+                                  IsLoading="Session.IsRefreshing"
+                                  ErrorMessage="@Session.DataCheckError" />
+            }
+
             @if (CanConnect)
             {
                 <div class="credential-form">
@@ -970,8 +977,7 @@
     {
         MetricsWellness,
         LastTraining,
-        Week,
-        Consistency
+        Week
     }
 
     private sealed class AssessCardState
@@ -1058,8 +1064,7 @@
     {
         [AssessCardType.MetricsWellness] = new AssessCardState(),
         [AssessCardType.LastTraining] = new AssessCardState(),
-        [AssessCardType.Week] = new AssessCardState(),
-        [AssessCardType.Consistency] = new AssessCardState()
+        [AssessCardType.Week] = new AssessCardState()
     };
     private AssessCardType? _expandedCard;
     private bool _isAssessRequestInFlight;
@@ -1104,8 +1109,7 @@
     [
         new(AssessCardType.MetricsWellness, "bi bi-speedometer2", "Metrics & Wellness", "Complete view of CTL/ATL/TSB and wellness data."),
         new(AssessCardType.LastTraining, "bi bi-bicycle", "Last Training", "Assessment of the latest workout in context."),
-        new(AssessCardType.Week, "bi bi-calendar3", "Week", "Training week summarized and put into context."),
-        new(AssessCardType.Consistency, "bi bi-check2-circle", "Data Consistency", "Check the data for internal consistency.", "/blog/workflow")
+        new(AssessCardType.Week, "bi bi-calendar3", "Week", "Training week summarized and put into context.")
     ];
 
     private sealed record PromptCardModel(
@@ -3274,7 +3278,6 @@
         AssessCardType.MetricsWellness => AssessmentType.Metrics,
         AssessCardType.LastTraining => AssessmentType.Activity,
         AssessCardType.Week => AssessmentType.Week,
-        AssessCardType.Consistency => AssessmentType.Consistency,
         _ => AssessmentType.Metrics
     };
 
@@ -3283,7 +3286,6 @@
         AssessCardType.MetricsWellness => "assess.metrics",
         AssessCardType.LastTraining => "assess.lastTraining",
         AssessCardType.Week => "assess.week",
-        AssessCardType.Consistency => "assess.consistency",
         _ => "assess.metrics"
     };
 

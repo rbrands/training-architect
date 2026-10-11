@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-10-11
+
+### Added
+- Added a deterministic data quality check based on the MCP `check_athlete_data` tool. The Coach connection panel shows the overall result as a traffic light (Good / Partial / Limited) and expands on click to show the suggested fix and the status, explanation, context, and evidence of each checked area.
+- Added `includeDataCheck=true` to `GET /api/athlete-data` so athlete data and the data quality report are returned in a single request. A failing check is reported via `dataCheckError` and does not block the connection.
+- Added `POST /api/coach/data-check` to run the data quality check on a posted athlete dataset.
+
+### Removed
+- Removed the AI-based Data Consistency assessment card, the `assess_consistency` prompt, and the `Consistency` assessment type, which are superseded by the deterministic data quality check.
+
 ## [1.7.2] - 2026-10-10
 
 ### Fixed

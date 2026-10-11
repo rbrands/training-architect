@@ -49,6 +49,12 @@ public interface IAthleteSession
     JsonElement? AthleteDataParsed { get; }
     string? AthleteDataMethodName { get; }
 
+    /// <summary>Gets the data quality report fetched together with the athlete data.</summary>
+    AthleteDataCheckResult? DataCheck { get; }
+
+    /// <summary>Gets the reason why no data quality report is available.</summary>
+    string? DataCheckError { get; }
+
     event Action? Changed;
 
     Task ConnectAsync(
@@ -88,6 +94,8 @@ public sealed class AthleteDataResult
     public JsonElement DataParsed { get; init; }
     public string Level { get; init; } = string.Empty;
     public string LevelLabel { get; init; } = string.Empty;
+    public AthleteDataCheckResult? DataCheck { get; init; }
+    public string? DataCheckError { get; init; }
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +121,8 @@ public sealed class AthleteSession(
     public string? AthleteDataRaw { get; private set; }
     public JsonElement? AthleteDataParsed { get; private set; }
     public string? AthleteDataMethodName { get; private set; }
+    public AthleteDataCheckResult? DataCheck { get; private set; }
+    public string? DataCheckError { get; private set; }
 
     public event Action? Changed;
 
@@ -145,6 +155,8 @@ public sealed class AthleteSession(
             AthleteDataRaw = result.DataRaw;
             AthleteDataParsed = result.DataParsed;
             AthleteDataJson = result.DataParsed.GetRawText();
+            DataCheck = result.DataCheck;
+            DataCheckError = result.DataCheckError;
             LastSynced = DateTimeOffset.Now;
             State = CoachConnectionState.Connected;
 
@@ -213,6 +225,8 @@ public sealed class AthleteSession(
             Level = string.IsNullOrWhiteSpace(result.Level) ? Level : result.Level;
             LevelLabel = string.IsNullOrWhiteSpace(result.LevelLabel) ? null : result.LevelLabel;
             AthleteDataJson = result.DataParsed.GetRawText();
+            DataCheck = result.DataCheck;
+            DataCheckError = result.DataCheckError;
             LastSynced = DateTimeOffset.Now;
             ErrorMessage = null;
         }
@@ -281,6 +295,8 @@ public sealed class AthleteSession(
         AthleteDataRaw = null;
         AthleteDataParsed = null;
         AthleteDataMethodName = null;
+        DataCheck = null;
+        DataCheckError = null;
         Level = null;
         LevelLabel = null;
         LastSynced = null;

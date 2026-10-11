@@ -9,4 +9,5 @@ public static class McpToolNames
     public const string UploadWeekPlan = "upload_week_plan";
     public const string CheckPlanTss = "check_plan_tss";
     public const string ValidateWeekPlan = "validate_week_plan";
+    public const string CheckAthleteData = "check_athlete_data";
 }

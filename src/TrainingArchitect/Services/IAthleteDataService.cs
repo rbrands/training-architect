@@ -60,4 +60,18 @@ public interface IAthleteDataService
         string planJson,
         int maxErrors,
         CancellationToken ct);
+
+    /// <summary>
+    /// Runs the deterministic data quality check on a consolidated athlete dataset.
+    /// </summary>
+    /// <param name="athleteId">Intervals athlete identifier.</param>
+    /// <param name="apiKey">Intervals API key.</param>
+    /// <param name="athleteDataJson">Consolidated athlete dataset as JSON text.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The data quality report returned by the MCP tool.</returns>
+    Task<AthleteDataCheckResult> CheckAthleteDataAsync(
+        string athleteId,
+        string apiKey,
+        string athleteDataJson,
+        CancellationToken ct);
 }

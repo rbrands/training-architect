@@ -62,6 +62,7 @@ public static class CoachEndpoints
         group.MapPost("/plan", PlanAsync);
         group.MapPost("/plan/validate", ValidatePlanAsync);
         group.MapPost("/plan/upload", UploadPlanAsync);
+        group.MapPost("/data-check", CheckAthleteDataAsync);
     }
 
     private static bool IsTrustedBrowserRequest(HttpRequest request)
@@ -388,6 +389,78 @@ public static class CoachEndpoints
 
     private sealed record PlanValidateRequest(string WeekPlanJson);
 
+    private static async Task<IResult> CheckAthleteDataAsync(
+        HttpContext httpContext,
+        AthleteDataCheckRequest request,
+        IAthleteDataService athleteDataService,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger(nameof(CoachEndpoints));
+
+        if (!TryGetIntervalsCredentials(httpContext.Request, out var athleteIdHeader, out var apiKeyHeader))
+        {
+            return Results.BadRequest(new
+            {
+                error = "Missing required headers: X-Intervals-Athlete-Id and X-Intervals-Api-Key."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.AthleteDataJson))
+        {
+            return Results.BadRequest(new
+            {
+                error = "Missing required payload field: athleteDataJson."
+            });
+        }
+
+        try
+        {
+            var result = await athleteDataService.CheckAthleteDataAsync(
+                athleteIdHeader,
+                apiKeyHeader,
+                request.AthleteDataJson,
+                ct);
+
+            return Results.Ok(result);
+        }
+        catch (McpToolExecutionException ex)
+        {
+            logger.LogWarning(ex, "MCP tool execution failed in /api/coach/data-check.");
+            return Results.Problem(
+                title: "Data quality check failed.",
+                detail: "The MCP server could not check the athlete data.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "MCP server connection failed in /api/coach/data-check.");
+            return Results.Problem(
+                title: "MCP server unreachable.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (TimeoutException ex)
+        {
+            logger.LogWarning(ex, "MCP server timeout in /api/coach/data-check.");
+            return Results.Problem(
+                title: "MCP server timeout.",
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+        catch (OperationCanceledException)
+        {
+            return Results.Problem(
+                title: "Request was canceled.",
+                statusCode: StatusCodes.Status408RequestTimeout);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogError(ex, "Invalid MCP configuration for /api/coach/data-check.");
+            return Results.Problem(
+                title: "MCP configuration error.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
     private static async Task<IResult> UploadPlanAsync(
         HttpContext httpContext,
         PlanUploadRequest request,
@@ -599,7 +672,6 @@ public static class CoachEndpoints
             AssessmentType.Metrics => "assess_metrics",
             AssessmentType.Activity => "assess_last_training",
             AssessmentType.Week => "assess_week",
-            AssessmentType.Consistency => "assess_consistency",
             _ => "assess_week"
         };
     }
