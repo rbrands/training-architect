@@ -178,6 +178,20 @@
     color: #314b73;
 }
 
+.data-check-workflow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin: 0.9rem 0 0 0;
+    color: #4a5568;
+    font-size: 0.85rem;
+}
+
+.data-check-workflow a {
+    color: #2c65bf;
+    font-weight: 600;
+}
+
 .data-check-meta {
     margin: 0.8rem 0 0 0;
     color: #8a94a6;
