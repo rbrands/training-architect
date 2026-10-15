@@ -26,7 +26,8 @@ public enum AthleteProfileGoal
     Climber,
     Criterium,
     Marathon,
-    RoadRace
+    RoadRace,
+    Fitness
 }
 
 public interface IAthleteSession

@@ -9,6 +9,7 @@ It is the user interface for the data and coaching layer published in [intervals
 **Key capabilities:**
 
 - **Virtual coach** — structured prompt interface powered by a Microsoft Foundry Agent (coaching orchestration)
+- **Athlete goals** — choose Climber, Criterium, Fitness, Marathon, or Road Race in the coaching panel. Fitness is sent to the agent as `fitness` for assessments and training plans; the selection is remembered with your connection settings.
 - **intervals.icu integration** — reads athlete fitness data and workout library via the intervals.icu REST API
 - **Structured plan proposals** — weekly training plans with day-by-day workouts including zone, TSS, IF, and coaching notes
 - **Athlete confirmation flow** — Accept / Adjust / Reject without a full page reload; decision forwarded to the coaching agent

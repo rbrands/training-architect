@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-10-15
+
+### Added
+- Added Fitness to the Athlete Goal selector. The selected profile is sent to the coaching agent as `fitness` for assessments and training plans and is remembered with the connection settings, while existing saved profile selections remain compatible.
+
 ## [1.8.0] - 2026-10-11
 
 ### Added
