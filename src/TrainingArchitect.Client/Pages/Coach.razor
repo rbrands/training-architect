@@ -3592,6 +3592,9 @@
         _selectedPlanTabIndex = NormalizePlanTabIndex(CoachPageState.SelectedPlanTabIndex);
         _planTotalTokens = CoachPageState.PlanTotalTokens;
         _planResponseId = CoachPageState.PlanResponseId;
+        _planMode = CoachPageState.PlanMode;
+        _planRequiresValidation = CoachPageState.PlanRequiresValidation;
+        _planWarnings.AddRange(CoachPageState.PlanWarnings);
 
         if (!string.IsNullOrWhiteSpace(_planUploadJson))
         {
@@ -3627,6 +3630,9 @@
         CoachPageState.SelectedPlanTabIndex = NormalizePlanTabIndex(_selectedPlanTabIndex);
         CoachPageState.PlanTotalTokens = _planTotalTokens;
         CoachPageState.PlanResponseId = _planResponseId;
+        CoachPageState.PlanMode = _planMode;
+        CoachPageState.PlanRequiresValidation = _planRequiresValidation;
+        CoachPageState.PlanWarnings = _planWarnings.ToArray();
     }
 
     private static AssessCardType? ParseAssessCardType(string? value)

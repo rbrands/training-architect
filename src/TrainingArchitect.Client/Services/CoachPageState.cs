@@ -1,3 +1,5 @@
+using TrainingArchitect.Core.Models;
+
 namespace TrainingArchitect.Client.Services;
 
 /// <summary>
@@ -30,6 +32,9 @@ public sealed class CoachPageState
     public string? PlanErrorMessage { get; set; }
     public long? PlanTotalTokens { get; set; }
     public string? PlanResponseId { get; set; }
+    public PlanningMode PlanMode { get; set; }
+    public bool PlanRequiresValidation { get; set; }
+    public string[] PlanWarnings { get; set; } = [];
     public int SelectedPlanTabIndex { get; set; }
     public string? OpenOverviewSectionTitle { get; set; }
 }
