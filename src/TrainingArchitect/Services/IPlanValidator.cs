@@ -3,7 +3,7 @@ using TrainingArchitect.Core.Models;
 namespace TrainingArchitect.Services;
 
 /// <summary>
-/// Validates a generated weekly plan before it is handed back to the athlete.
+/// Validates generated weekly plans or single-session workout JSON before review.
 /// </summary>
 public interface IPlanValidator
 {

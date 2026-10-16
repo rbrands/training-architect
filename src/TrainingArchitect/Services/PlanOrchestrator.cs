@@ -6,7 +6,7 @@ using TrainingArchitect.Core.Services;
 namespace TrainingArchitect.Services;
 
 /// <summary>
-/// Generates a weekly plan, validates it, and asks the coaching agent to correct remaining findings.
+/// Generates a weekly plan or next-session recommendation, validates workouts, and corrects remaining findings.
 /// </summary>
 public sealed class PlanOrchestrator(
     ICoachingAgent agent,
@@ -81,17 +81,38 @@ public sealed class PlanOrchestrator(
                 yield break;
             }
 
-            await RecordUsageBestEffortAsync(response, round == 0 ? "plan_create" : "plan_correct", intervalsAthleteId);
+            var action = request.Mode == PlanningMode.NextTraining
+                ? (round == 0 ? "next_training_create" : "next_training_correct")
+                : (round == 0 ? "plan_create" : "plan_correct");
+            await RecordUsageBestEffortAsync(response, action, intervalsAthleteId);
 
             lastResponse = response;
             previousResponseId = response.ResponseId;
             totalTokens += response.TotalTokens ?? 0;
-            var uploadJson = PlanResponseParser.Split(response.Content).UploadJson;
+            var (readableText, uploadJson) = PlanResponseParser.Split(response.Content);
 
             yield return new PlanProgressEvent(PlanProgressStage.Generated, "Plan received.", round);
+            var isProseOnlyRecommendation = request.Mode == PlanningMode.NextTraining
+                && !string.IsNullOrWhiteSpace(readableText)
+                && string.IsNullOrWhiteSpace(uploadJson)
+                && !response.Content.Contains("BEGIN_UPLOAD_JSON", StringComparison.Ordinal);
+
             yield return new PlanProgressEvent(PlanProgressStage.Validating, "Validating the plan.", round);
 
-            var validation = await validator.ValidateAsync(uploadJson, request, intervalsAthleteId, intervalsApiKey, ct);
+            PlanValidationResult validation;
+            if (request.Mode == PlanningMode.NextTraining
+                && readableText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length > 100)
+            {
+                validation = PlanValidationResult.FromFinding(
+                    "plan.recommendation_too_long",
+                    "Limit the recommendation to at most 100 words of prose, keeping the reason, easier alternative, and downgrade/stop criterion.");
+            }
+            else
+            {
+                validation = isProseOnlyRecommendation
+                    ? PlanValidationResult.Valid
+                    : await validator.ValidateAsync(uploadJson, request, intervalsAthleteId, intervalsApiKey, ct);
+            }
             findings = validation.Findings;
 
             if (!string.IsNullOrWhiteSpace(validation.Summary))
@@ -113,6 +134,12 @@ public sealed class PlanOrchestrator(
 
             // The follow-up turn continues the conversation, so only the findings need to be sent.
             prompt = PromptBuilder.BuildPlanCorrectionPrompt(findings);
+            if (request.Mode == PlanningMode.NextTraining)
+            {
+                prompt += "\nKeep the next-training contract: at most 100 words of prose, exactly one workout, "
+                    + "or prose only if rest is recommended or essential workout data is missing. "
+                    + "Keep the original recommendation date; do not fill the weekly TSS target or upload.";
+            }
         }
 
         if (lastResponse is null)

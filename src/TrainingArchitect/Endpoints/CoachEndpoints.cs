@@ -3,6 +3,7 @@ using TrainingArchitect.Services;
 using TrainingArchitect.Core.Constants;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Models;
+using TrainingArchitect.Core.Services;
 
 namespace TrainingArchitect.Endpoints;
 
@@ -488,13 +489,15 @@ public static class CoachEndpoints
                 });
             }
 
-            // Pasted plans get a formal schema check first; generated plans are already validated upstream and skip it to avoid extra latency.
+            // Pasted plans and single-session recommendations require a formal schema check before upload.
+            var planJson = request.WeekPlanJson;
             if (request.Validate)
             {
+                planJson = PlanUploadNormalizer.Normalize(planJson);
                 var validation = await athleteDataService.ValidateWeekPlanAsync(
                     athleteIdHeader,
                     apiKeyHeader,
-                    request.WeekPlanJson,
+                    planJson,
                     MaxPlanValidationErrors,
                     ct);
 
@@ -509,7 +512,7 @@ public static class CoachEndpoints
                 if (!validation.IsValid)
                 {
                     logger.LogInformation(
-                        "Pasted plan failed validate_week_plan for athlete {AthleteId}.",
+                        "Plan failed validate_week_plan for athlete {AthleteId}.",
                         athleteIdHeader);
 
                     return Results.Json(
@@ -518,8 +521,13 @@ public static class CoachEndpoints
                 }
             }
 
-            await athleteDataService.UploadWeekPlanAsync(athleteIdHeader, apiKeyHeader, request.WeekPlanJson, ct);
+            await athleteDataService.UploadWeekPlanAsync(athleteIdHeader, apiKeyHeader, planJson, ct);
             return Results.Ok(new { uploaded = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            logger.LogInformation("Rejected invalid plan JSON before upload.");
+            return Results.BadRequest(new { error = "Plan JSON must be a valid JSON object." });
         }
         catch (McpToolExecutionException ex)
         {

@@ -132,11 +132,103 @@ public class PlanOrchestratorTests
         await Assert.ThrowsAsync<OperationCanceledException>(() => CollectAsync(CreateOrchestrator(agent, new FakeValidator())));
     }
 
-    private static async Task<List<PlanProgressEvent>> CollectAsync(IPlanOrchestrator orchestrator)
+    [Theory]
+    [InlineData("Rest today: readiness is red. Re-check in the morning.")]
+    [InlineData("Essential workout data is missing; no workout can safely be prescribed.")]
+    public async Task RunAsync_NextTraining_ProseOnlyCompletesWithoutCorrections(string content)
+    {
+        var agent = new FakeCoachingAgent { Content = content };
+        var validator = new FakeValidator(invalidRounds: int.MaxValue);
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator),
+            Request with { Mode = PlanningMode.NextTraining });
+
+        Assert.Equal(1, agent.CallCount);
+        Assert.Equal(0, validator.CallCount);
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(content, completed.Result!.Content);
+    }
+
+    [Fact]
+    public async Task RunAsync_WeeklyProseOnly_StillRequiresUploadJson()
+    {
+        var agent = new FakeCoachingAgent { Content = "Rest." };
+        var validator = new FakeValidator(invalidRounds: int.MaxValue);
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator));
+
+        Assert.Equal(3, agent.CallCount);
+        Assert.Equal(3, validator.CallCount);
+        Assert.NotNull(events[^1].Warnings);
+    }
+
+    [Theory]
+    [InlineData("Rest.\nBEGIN_UPLOAD_JSON\nEND_UPLOAD_JSON")]
+    [InlineData("Rest.\nBEGIN_UPLOAD_JSON\n{}")]
+    public async Task RunAsync_NextTraining_MalformedUploadBlockIsNotTreatedAsRest(string content)
+    {
+        var agent = new FakeCoachingAgent { Content = content };
+        var validator = new FakeValidator(invalidRounds: int.MaxValue);
+
+        await CollectAsync(CreateOrchestrator(agent, validator),
+            Request with { Mode = PlanningMode.NextTraining });
+
+        Assert.Equal(3, validator.CallCount);
+    }
+
+    [Fact]
+    public async Task RunAsync_NextTraining_CorrectionKeepsSingleSessionContract()
+    {
+        var agent = new FakeCoachingAgent();
+        var validator = new FakeValidator(invalidRounds: 1);
+
+        await CollectAsync(CreateOrchestrator(agent, validator),
+            Request with { Mode = PlanningMode.NextTraining });
+
+        Assert.Equal(2, agent.CallCount);
+        Assert.Contains("exactly one workout", agent.Prompts[1]);
+        Assert.Contains("do not fill the weekly TSS target or upload", agent.Prompts[1]);
+        Assert.Equal("response-1", agent.PreviousResponseIds[1]);
+    }
+
+    [Theory]
+    [InlineData(100, false, 1)]
+    [InlineData(101, false, 3)]
+    [InlineData(100, true, 1)]
+    [InlineData(101, true, 3)]
+    public async Task RunAsync_NextTraining_EnforcesProseWordLimit(int wordCount, bool includeWorkout, int expectedCalls)
+    {
+        var prose = string.Join(" ", Enumerable.Repeat("word", wordCount));
+        var content = includeWorkout
+            ? prose + "\nBEGIN_UPLOAD_JSON\n{\"workouts\":[{}]}\nEND_UPLOAD_JSON"
+            : prose;
+        var agent = new FakeCoachingAgent { Content = content };
+        var validator = new FakeValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator),
+            Request with { Mode = PlanningMode.NextTraining });
+
+        Assert.Equal(expectedCalls, agent.CallCount);
+        var completed = events[^1];
+        Assert.Equal(PlanProgressStage.Completed, completed.Stage);
+        if (wordCount > 100)
+        {
+            Assert.Contains("at most 100 words", Assert.Single(completed.Warnings!));
+            Assert.Equal(0, validator.CallCount);
+        }
+        else
+        {
+            Assert.Null(completed.Warnings);
+            Assert.Equal(includeWorkout ? 1 : 0, validator.CallCount);
+        }
+    }
+
+    private static async Task<List<PlanProgressEvent>> CollectAsync(IPlanOrchestrator orchestrator, PlanRequest? request = null)
     {
         var events = new List<PlanProgressEvent>();
 
-        await foreach (var progressEvent in orchestrator.RunAsync(Request, "12345", "api-key"))
+        await foreach (var progressEvent in orchestrator.RunAsync(request ?? Request, "12345", "api-key"))
         {
             events.Add(progressEvent);
         }
@@ -149,6 +241,8 @@ public class PlanOrchestratorTests
         public int CallCount { get; private set; }
 
         public List<string?> PreviousResponseIds { get; } = [];
+        public List<string> Prompts { get; } = [];
+        public string? Content { get; init; }
 
         public bool ThrowOnCall { get; init; }
 
@@ -174,8 +268,9 @@ public class PlanOrchestratorTests
 
             CallCount++;
             PreviousResponseIds.Add(previousResponseId);
+            Prompts.Add(prompt);
 
-            var content = $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
+            var content = Content ?? $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
                 + """{"workouts":[{"date":"2026-08-17"}]}"""
                 + "\nEND_UPLOAD_JSON";
 
@@ -189,6 +284,7 @@ public class PlanOrchestratorTests
     private sealed class FakeValidator(int invalidRounds = 0) : IPlanValidator
     {
         private int _round;
+        public int CallCount => _round;
 
         public Task<PlanValidationResult> ValidateAsync(
             string uploadJson,

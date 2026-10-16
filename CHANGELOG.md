@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-10-16
+
+### Added
+- Added a Next Best Training card alongside weekly planning to recommend one session from the prepared athlete data, considering readiness, recent load, weekly targets, and calendar constraints. If training is already completed today, the recommendation targets tomorrow and is marked preliminary.
+- Added single-workout validation, a 100-word recommendation limit, and prose-only recommendations for rest or missing essential data. Recommended workouts remain available for review and upload only after an explicit user action and successful validation.
+
+### Changed
+- Renamed Create Plan to Plan Week and arranged both planning cards side by side on desktop and stacked on mobile, with a distinct lightning-bolt icon for Next Best Training.
+- Next-session recommendations use only the attached athlete data and never call `prepare_week_data`.
+
+### Fixed
+- Normalize workout upload JSON before validation so validation and upload use the same payload.
+
 ## [1.9.0] - 2026-10-15
 
 ### Added

@@ -410,13 +410,20 @@
         }
     </section>
 
+    <div class="coach-planning-grid">
+    @foreach (var mode in new[] { PlanningMode.Week, PlanningMode.NextTraining })
+    {
+        var isActiveMode = _planMode == mode;
+        var isNextTraining = mode == PlanningMode.NextTraining;
     <SfCard CssClass="coach-plan-card">
         <CardContent>
             <div class="coach-plan-layout">
                 <div class="coach-plan-copy">
                     <div class="coach-plan-label">
-                        <i class="bi bi-clipboard-check"></i>
-                        <span>Create Plan</span>
+                        <i class="bi @(isNextTraining ? "bi-lightning-charge" : "bi-clipboard-check")" aria-hidden="true"></i>
+                        <span>@(isNextTraining ? "Next Best Training" : "Plan Week")</span>
+                        @if (!isNextTraining)
+                        {
                         <button type="button"
                                 class="coach-status-copy-json"
                                 title="Paste plan JSON from clipboard"
@@ -425,25 +432,35 @@
                                 @onclick="PastePlanJsonAsync">
                             <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                         </button>
+                        }
                     </div>
-                    @if (!string.IsNullOrWhiteSpace(_planPasteFeedback))
+                    @if (isActiveMode && !string.IsNullOrWhiteSpace(_planPasteFeedback))
                     {
                         <div class="coach-status-copy-feedback">@_planPasteFeedback</div>
                     }
                     <p class="coach-plan-description mb-0">
-                        Structured plan according to
+                        @if (isNextTraining)
+                        {
+                            <text>One session based on your readiness, recent load, and weekly plan.
+                            Already trained today? Get a preliminary recommendation for tomorrow.
+                            Review the latest result below before choosing to upload.</text>
+                        }
+                        else
+                        {
+                        <text>Structured plan according to
                         <a href="https://github.com/rbrands/intervals-icu-sync/tree/main/coach-logic"
                            target="_blank"
                            rel="noopener noreferrer">coach logic</a>.
-                        Automatic scope: Monday to Wednesday creates the plan for the current week, Thursday to Sunday creates the plan for the next week.
+                        Automatic scope: Monday to Wednesday creates the plan for the current week, Thursday to Sunday creates the plan for the next week.</text>
+                        }
                     </p>
 
-                    @if (_planTotalTokens is not null)
+                    @if (isActiveMode && _planTotalTokens is not null)
                     {
                         <p class="coach-token-hint coach-token-hint--plan mb-0">Token usage: @_planTotalTokens.Value.ToString("N0")</p>
                     }
 
-                    @if (_isPlanRequestInFlight || _planProgressSteps.Count > 0)
+                    @if (isActiveMode && (_isPlanRequestInFlight || _planProgressSteps.Count > 0))
                     {
                         <div class="coach-plan-progress" aria-live="polite">
                             @foreach (var step in _planProgressSteps)
@@ -464,7 +481,7 @@
                         </div>
                     }
 
-                    @if (_planWarnings.Count > 0)
+                    @if (isActiveMode && _planWarnings.Count > 0)
                     {
                         <div class="coach-plan-warnings" role="note">
                             <div class="coach-plan-warnings-title">
@@ -481,22 +498,25 @@
                     }
                 </div>
 
+                @if (!isNextTraining)
+                {
                 <label class="field coach-plan-preference">
                     <span>Scheduling preference (optional)</span>
                     <input type="text"
                            autocomplete="off"
                            maxlength="150"
                            placeholder='e.g. "VO2max session on Tuesday"'
-                           disabled="@(IsActionBusy || HasCreatedPlanResult)"
+                           disabled="@(IsActionBusy || (isActiveMode && HasCreatedPlanResult))"
                            @bind="_planSchedulingPreference"
                            @bind:event="oninput" />
                     <div class="d-flex justify-content-end mt-1">
                         <small class="text-muted">@($"{_planSchedulingPreference.Length}/150")</small>
                     </div>
                 </label>
+                }
 
                 <div class="coach-plan-actions">
-                    @if (HasPlanResult && !string.IsNullOrWhiteSpace(_planUploadJson))
+                    @if (isActiveMode && HasPlanResult && !string.IsNullOrWhiteSpace(_planUploadJson))
                     {
                         <SfButton CssClass="e-btn coach-outline-button coach-button-orange"
                                   Disabled="@(!CanUploadPlan)"
@@ -512,22 +532,22 @@
                             }
                             else
                             {
-                                <span>Upload Plan</span>
+                                <span>@(isNextTraining ? "Upload Workout" : "Upload Plan")</span>
                             }
                         </SfButton>
                     }
 
                     <SfButton CssClass="e-btn coach-primary-button"
                               Disabled="@(!CanUsePlanButton)"
-                              @onclick="HandlePlanButtonAsync">
-                        @if (_isPlanRequestInFlight)
+                              @onclick="() => HandlePlanButtonAsync(mode)">
+                        @if (isActiveMode && _isPlanRequestInFlight)
                         {
                             <span class="coach-assess-spinner" aria-hidden="true"></span>
                             <span>Creating...</span>
                         }
                         else
                         {
-                            <span>@GetPlanButtonText()</span>
+                            <span>@GetPlanButtonText(mode)</span>
                             <span aria-hidden="true">→</span>
                         }
                     </SfButton>
@@ -535,6 +555,8 @@
             </div>
         </CardContent>
     </SfCard>
+    }
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(_planUploadFeedback))
     {
@@ -547,7 +569,7 @@
           !string.IsNullOrWhiteSpace(_planUploadJson)))
     {
         <section class="coach-section">
-            <h2 class="coach-section-title">Plan Result</h2>
+            <h2 class="coach-section-title">@(_planMode == PlanningMode.NextTraining ? "Next Best Training Result" : "Plan Result")</h2>
 
             <SfCard CssClass="coach-prompt-card">
                 <CardContent>
@@ -572,6 +594,8 @@
                                 </button>
                             }
 
+                            @if (!string.IsNullOrWhiteSpace(_planUploadJson))
+                            {
                             <button type="button"
                                     id="coach-plan-tab-1"
                                     class="coach-custom-tab @(IsPlanTabSelected(1) ? "is-active" : string.Empty)"
@@ -580,7 +604,7 @@
                                     aria-controls="coach-plan-panel-1"
                                     tabindex="@(IsPlanTabSelected(1) ? 0 : -1)"
                                     @onclick="() => SelectPlanTab(1)">
-                                Weekly Plan
+                                @(_planMode == PlanningMode.NextTraining ? "Workout" : "Weekly Plan")
                             </button>
 
                             <button type="button"
@@ -593,6 +617,7 @@
                                     @onclick="() => SelectPlanTab(2)">
                                 JSON
                             </button>
+                            }
                         </div>
 
                         <div id="coach-plan-panel-0"
@@ -1073,6 +1098,7 @@
     private bool _isPlanUploadInFlight;
     private bool _isPlanValidationInFlight;
     private bool _isPlanExpanded;
+    private PlanningMode _planMode;
     private long? _planTotalTokens;
     private string? _planReadableText;
     private string? _planUploadJson;
@@ -1097,8 +1123,10 @@
     private bool IsAnyRequestInFlight => _isAssessRequestInFlight || _isPlanRequestInFlight || _isPlanUploadInFlight || _isPlanValidationInFlight;
     private bool IsActionBusy => IsBusy || Session.IsRefreshing || IsAnyRequestInFlight;
     private bool CanRefresh => Session.State == CoachConnectionState.Connected && !IsActionBusy;
-    private bool CanUsePlanButton => CanUseCoachActions && !_isPlanRequestInFlight && !_isAssessRequestInFlight;
-    private bool CanUploadPlan => CanUseCoachActions && !_isPlanRequestInFlight && !_isPlanUploadInFlight && !string.IsNullOrWhiteSpace(_planUploadJson);
+    private bool CanUsePlanButton => CanUseCoachActions && !IsAnyRequestInFlight;
+    private bool CanUploadPlan => CanUseCoachActions && !IsAnyRequestInFlight
+        && !string.IsNullOrWhiteSpace(_planUploadJson)
+        && (_planMode != PlanningMode.NextTraining || _planWarnings.Count == 0);
 
     private bool CanSubmit => !IsActionBusy
         && !string.IsNullOrWhiteSpace(_athleteId)
@@ -2264,16 +2292,16 @@
         _expandedCard = cardType;
     }
 
-    private string GetPlanButtonText()
+    private string GetPlanButtonText(PlanningMode mode)
     {
-        if (_isPlanRequestInFlight)
+        if (_planMode == mode && _isPlanRequestInFlight)
         {
             return "Creating...";
         }
 
-        if (!HasPlanResult)
+        if (_planMode != mode || !HasPlanResult)
         {
-            return "Create Plan";
+            return mode == PlanningMode.NextTraining ? "Recommend Training" : "Plan Week";
         }
 
         return _isPlanExpanded ? "Close" : "Reopen";
@@ -2647,15 +2675,16 @@
         writer.WriteEndObject();
     }
 
-    private async Task HandlePlanButtonAsync()
+    private async Task HandlePlanButtonAsync(PlanningMode mode)
     {
         if (!CanUsePlanButton)
         {
             return;
         }
 
-        if (!HasPlanResult)
+        if (_planMode != mode || !HasPlanResult)
         {
+            _planMode = mode;
             await CreatePlanAsync();
             return;
         }
@@ -2736,6 +2765,7 @@
         _planReadableText = null;
         _planUploadJson = null;
         _planResponseId = null;
+        _planTotalTokens = null;
         _planCopyFeedback = null;
         _planProgressMessage = null;
         _planProgressSteps.Clear();
@@ -2899,7 +2929,7 @@
 
         _planReadableText = string.IsNullOrWhiteSpace(planText) ? null : planText;
         _planUploadJson = string.IsNullOrWhiteSpace(uploadJson) ? null : uploadJson;
-        _planRequiresValidation = false;
+        _planRequiresValidation = _planMode == PlanningMode.NextTraining;
         LoadPlanWorkoutEditor();
         _selectedPlanTabIndex = NormalizePlanTabIndex(0);
 
@@ -2937,6 +2967,7 @@
             return;
         }
 
+        _planMode = PlanningMode.Week;
         _planUploaded = false;
         _planUploadFeedback = null;
         _planErrorMessage = null;
@@ -3082,9 +3113,10 @@
             weekDataJson ?? "{}",
             GetDisciplineType(),
             GetResponseLanguage(),
-            planningScope,
+            _planMode == PlanningMode.NextTraining ? PlanningScope.CurrentWeek : planningScope,
             new PlanConstraints(null, Array.Empty<DayConstraint>()),
-            schedulingPreference);
+            _planMode == PlanningMode.NextTraining ? null : schedulingPreference,
+            _planMode);
     }
 
     private static PlanningScope ResolvePlanningScope()

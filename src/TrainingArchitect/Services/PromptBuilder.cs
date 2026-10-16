@@ -20,8 +20,17 @@ public static class PromptBuilder
             """);
     }
 
+    /// <summary>Builds the prompt for weekly planning or a next-session recommendation.</summary>
     public static string BuildPlanPrompt(PlanRequest request)
     {
+        if (request.Mode == PlanningMode.NextTraining)
+        {
+            return PromptLoader.Load("plan_next_training")
+                .Replace("{{athlete_data}}", string.IsNullOrWhiteSpace(request.WeekDataJson)
+                    ? "{}"
+                    : request.WeekDataJson);
+        }
+
         var template = PromptLoader.Load("plan_week");
 
         var planningScopeInstruction = request.Scope switch
