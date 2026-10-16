@@ -17,13 +17,25 @@ Take the following into account:
 **Plan context**
 - Current phase (Base/Build/Peak) and weekly target (`weekly_load_target` or time target)
 - Weekly TSS completed so far vs. remaining budget for the remaining days
-- Today's planned workout from the calendar (if any) - does it still fit?
+- Today's planned workout from the calendar (`planned_workouts` for the
+  recommendation date, if any) - does it still fit? See the rule below.
 - Upcoming races (RACE_A/B/C) and day constraints (Sick/Travel)
 - Use the entry in `week_summary.training_plan` matching the recommendation date's
   week, including when tomorrow is in a new week. Never use another week's target.
 - Respect `training_allowed: false` absolutely; LIMITED days must respect
   `max_training_time_hours` and allow only short, easy training.
 - An absent season plan is valid: do not invent a phase or weekly target.
+
+**Already planned workout on the recommendation date**
+- If it still fits readiness, form, budget, and constraints: confirm it in prose
+  (name, duration, TSS, one reason) and do not emit upload JSON. It is already
+  in the calendar; uploading again would create a duplicate.
+- If it no longer fits (for example readiness red, hard session too soon after
+  the last one, exceeds the remaining budget, violates a day constraint):
+  recommend a replacement with upload JSON as described below. In the prose,
+  name the planned workout that should be replaced and state that the athlete
+  must delete it from the calendar before uploading. Never silently keep both.
+- A race event on that date is never replaced; recommend around it in prose only.
 
 **Gaps in the week**
 - Which stimulus is still missing (VO2max, threshold, base, recovery)? Use the activity tags.
