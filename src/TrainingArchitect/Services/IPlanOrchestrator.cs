@@ -8,7 +8,7 @@ namespace TrainingArchitect.Services;
 public interface IPlanOrchestrator
 {
     /// <summary>
-    /// Generates a weekly plan, validates it, and applies correction rounds when needed.
+    /// Generates a weekly plan or next-session recommendation, validates it, and applies corrections when needed.
     /// </summary>
     /// <param name="request">The plan request.</param>
     /// <param name="intervalsAthleteId">The intervals.icu athlete ID.</param>

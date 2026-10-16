@@ -7,7 +7,8 @@ namespace TrainingArchitect.Services;
 /// <summary>
 /// Validates the structure of the upload JSON and verifies the weekly TSS via the
 /// <c>check_plan_tss</c> MCP tool. The TSS check is a backstop: technical failures never
-/// block plan generation.
+/// block plan generation. Single-session recommendations must contain exactly one workout
+/// and are not compared with a full week's TSS target.
 /// </summary>
 public sealed class TssPlanValidator(
     IAthleteDataService athleteDataService,
@@ -25,6 +26,16 @@ public sealed class TssPlanValidator(
         if (!structuralResult.IsValid)
         {
             return structuralResult;
+        }
+
+        if (request.Mode == PlanningMode.NextTraining)
+        {
+            using var document = JsonDocument.Parse(uploadJson);
+            return document.RootElement.GetProperty("workouts").GetArrayLength() == 1
+                ? WithSummary(PlanValidationResult.Valid, "Single-workout structure checked; weekly TSS target check does not apply.")
+                : PlanValidationResult.FromFinding(
+                    "plan.single_workout_required",
+                    "Return exactly one workout for the main recommendation. Keep the easier alternative in prose only.");
         }
 
         var loadTarget = request.Constraints?.WeeklyTssTarget is > 0
