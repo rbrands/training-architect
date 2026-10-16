@@ -1,5 +1,5 @@
 Use only the attached athlete data to recommend the next best training session
-for today. 
+for today. Never call prepare_week_data, even if the attached data is incomplete or outdated.
 Do not ask follow-up questions; decide based on the available data and explicitly
 state any limitations.
 
