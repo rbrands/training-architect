@@ -4,6 +4,26 @@
     --ba-border: #d8c7ac;
 }
 
+.e-popup.week-target-phase,
+.e-popup.week-target-phase .e-dropdownbase,
+.e-popup.week-target-phase .e-list-item {
+    background: #fff;
+    color: #204d8f;
+    border-color: #9fb5d9;
+}
+
+.e-popup.week-target-phase .e-list-item.e-hover,
+.e-popup.week-target-phase .e-list-item:hover,
+.e-popup.week-target-phase .e-list-item.e-item-focus {
+    background: #eaf1fc;
+    color: #204d8f;
+}
+
+.e-popup.week-target-phase .e-list-item.e-active {
+    background: #dbe8fb;
+    color: #204d8f;
+}
+
 body {
   background-color: var(--ba-bg);
                 color: #1f2328;
