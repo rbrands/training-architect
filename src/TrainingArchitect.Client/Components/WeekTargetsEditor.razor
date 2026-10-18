@@ -45,11 +45,6 @@
                             <NumericTextBoxEvents TValue="int?"
                                                   ValueChange="@(args => { if (args.IsInteracted) Change(target, target with { WeeklyTss = args.Value }); })" />
                         </SfNumericTextBox>
-                        @if (target.WeeklyHours is > 0 && target.WeeklyTss is >= 0)
-                        {
-                            var rate = target.WeeklyTss.Value / target.WeeklyHours.Value;
-                            <small class="week-target-rate">@rate.ToString("F1", CultureInfo.InvariantCulture) TSS/h; IF @Math.Sqrt(rate / 100).ToString("F2", CultureInfo.InvariantCulture)</small>
-                        }
                     </div>
                     }
                 </div>
@@ -60,6 +55,11 @@
                     @if (isRace)
                     {
                         <span class="week-target-race">Race week</span>
+                    }
+                    @if (!PhaseOnly && target.WeeklyHours is > 0 && target.WeeklyTss is >= 0)
+                    {
+                        var rate = target.WeeklyTss.Value / target.WeeklyHours.Value;
+                        <small class="week-target-rate">@rate.ToString("F1", CultureInfo.InvariantCulture) TSS/h; IF @Math.Sqrt(rate / 100).ToString("F2", CultureInfo.InvariantCulture)</small>
                     }
                 </div>
             </fieldset>
