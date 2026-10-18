@@ -165,6 +165,12 @@ public class WeeklyTargetOverrideTests
         Assert.Equal(expected, WeeklyLoadTargetResolver.Resolve(result, scope));
     }
 
+    [Theory]
+    [InlineData(PlanningScope.CurrentWeek, 8.5)]
+    [InlineData(PlanningScope.NextWeek, null)]
+    public void TimeTargetResolver_UsesTargetWeek(PlanningScope scope, double? expected) =>
+        Assert.Equal(expected, WeeklyTimeTargetResolver.Resolve(Dataset, scope));
+
     [Fact]
     public async Task Editor_OverridesBelongToPageStateAndAreNotStoredInSession()
     {
