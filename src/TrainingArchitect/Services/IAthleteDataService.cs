@@ -34,6 +34,7 @@ public interface IAthleteDataService
     /// <param name="apiKey">Intervals API key.</param>
     /// <param name="planJson">Weekly plan payload as JSON object text.</param>
     /// <param name="loadTarget">Weekly TSS target the plan is checked against.</param>
+    /// <param name="completedTss">TSS already completed in the target week, if known.</param>
     /// <param name="tolerancePct">Optional tolerance in percent; the server default is used when omitted.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The TSS check result reported by the MCP tool.</returns>
@@ -42,6 +43,7 @@ public interface IAthleteDataService
         string apiKey,
         string planJson,
         double loadTarget,
+        double? completedTss,
         double? tolerancePct,
         CancellationToken ct);
 

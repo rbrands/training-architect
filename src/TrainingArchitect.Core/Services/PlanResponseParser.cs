@@ -35,10 +35,19 @@ public static partial class PlanResponseParser
             return (responseText.Trim(), string.Empty);
         }
 
-        var planText = responseText[..beginIndex].Trim();
+        var planText = RemoveTrailingUploadJsonHeading(responseText[..beginIndex]);
         var markedSection = responseText[(beginIndex + BeginMarker.Length)..endIndex].Trim();
 
         return (planText, ExtractJson(markedSection));
+    }
+
+    private static string RemoveTrailingUploadJsonHeading(string planText)
+    {
+        return Regex.Replace(
+            planText,
+            @"(?:\r?\n)[ \t]{0,3}(?:#{1,6}[ \t]+|[0-9]+[.)][ \t]+)Upload(?:[ \t]*-[ \t]*|[ \t]+)JSON[ \t]*(?:\r?\n[ \t]*)*$",
+            string.Empty,
+            RegexOptions.IgnoreCase).Trim();
     }
 
     /// <summary>

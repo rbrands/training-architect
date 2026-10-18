@@ -40,6 +40,20 @@ public class PlanResponseParserTests
         Assert.Equal("""{"workouts":[]}""", uploadJson);
     }
 
+    [Theory]
+    [InlineData("## Upload JSON")]
+    [InlineData("## Upload-JSON")]
+    [InlineData("2. Upload JSON")]
+    public void Split_WhenUploadHeadingPrecedesJsonMarker_RemovesTrailingHeadingFromPlanText(string heading)
+    {
+        var response = $"Plan text.\n\n{heading}\n\nBEGIN_UPLOAD_JSON\n{{\"workouts\":[]}}\nEND_UPLOAD_JSON";
+
+        var (planText, uploadJson) = PlanResponseParser.Split(response);
+
+        Assert.Equal("Plan text.", planText);
+        Assert.Equal("""{"workouts":[]}""", uploadJson);
+    }
+
     [Fact]
     public void Split_WhenJsonIsSurroundedByProse_FallsBackToBraceExtraction()
     {

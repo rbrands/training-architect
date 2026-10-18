@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-10-18
+
+### Fixed
+- Prevented upload JSON headings from appearing in weekly plan prose by clarifying prompt output instructions and stripping residual headings.
+
 ## [1.10.0] - 2026-10-16
 
 ### Added

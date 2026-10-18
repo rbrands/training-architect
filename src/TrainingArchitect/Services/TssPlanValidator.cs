@@ -63,6 +63,9 @@ public sealed class TssPlanValidator(
                 intervalsApiKey,
                 uploadJson,
                 loadTarget.Value,
+                completedTss: request.Scope == PlanningScope.CurrentWeek
+                    ? ResolveCompletedTss(request.WeekDataJson)
+                    : null,
                 tolerancePct:  null,
                 ct);
         }
@@ -97,6 +100,33 @@ public sealed class TssPlanValidator(
 
     private static PlanValidationResult WithSummary(PlanValidationResult result, string summary) =>
         result with { Summary = summary };
+
+    private static double? ResolveCompletedTss(string? weekDataJson)
+    {
+        if (string.IsNullOrWhiteSpace(weekDataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(weekDataJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("week_summary", out var weekSummary)
+                && weekSummary.ValueKind == JsonValueKind.Object
+                && weekSummary.TryGetProperty("total_training_load", out var totalTrainingLoad)
+                && totalTrainingLoad.ValueKind == JsonValueKind.Number
+                && totalTrainingLoad.TryGetDouble(out var completedTss)
+                && double.IsFinite(completedTss)
+                && completedTss >= 0
+                    ? completedTss
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private static string BuildSummary(PlanTssCheckResult checkResult)
     {

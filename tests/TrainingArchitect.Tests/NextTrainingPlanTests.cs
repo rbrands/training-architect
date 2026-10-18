@@ -64,6 +64,28 @@ public sealed class NextTrainingPlanTests
     }
 
     [Theory]
+    [InlineData(PlanningScope.CurrentWeek, 135d)]
+    [InlineData(PlanningScope.NextWeek, null)]
+    public async Task ValidateAsync_WeeklyMode_PassesCompletedTssOnlyForCurrentWeek(
+        PlanningScope scope,
+        double? expectedCompletedTss)
+    {
+        const string athleteData = """
+            {"week_summary":{"total_training_load":135}}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        await validator.ValidateAsync(
+            PlanJson,
+            Request with { WeekDataJson = athleteData, Scope = scope, Mode = PlanningMode.Week },
+            "test-athlete",
+            "test-key");
+
+        Assert.Equal(expectedCompletedTss, service.CompletedTss);
+    }
+
+    [Theory]
     [InlineData("valid", null, 200)]
     [InlineData("invalid", null, 422)]
     [InlineData("valid", "Validation service failed.", 502)]
@@ -124,6 +146,7 @@ public sealed class NextTrainingPlanTests
     {
         public List<string> Calls { get; } = [];
         public double? LoadTarget { get; private set; }
+        public double? CompletedTss { get; private set; }
         public string? ValidatedJson { get; private set; }
         public string? UploadedJson { get; private set; }
         public PlanValidationCheckResult Validation { get; init; } = new() { Status = "valid" };
@@ -139,10 +162,11 @@ public sealed class NextTrainingPlanTests
         }
 
         public Task<PlanTssCheckResult> CheckPlanTssAsync(
-            string athleteId, string apiKey, string planJson, double loadTarget, double? tolerancePct, CancellationToken ct)
+            string athleteId, string apiKey, string planJson, double loadTarget, double? completedTss, double? tolerancePct, CancellationToken ct)
         {
             Calls.Add("tss");
             LoadTarget = loadTarget;
+            CompletedTss = completedTss;
             return Task.FromResult(new PlanTssCheckResult { Valid = true });
         }
 

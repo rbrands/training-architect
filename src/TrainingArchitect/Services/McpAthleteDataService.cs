@@ -73,6 +73,7 @@ public sealed class McpAthleteDataService(
         string apiKey,
         string planJson,
         double loadTarget,
+        double? completedTss,
         double? tolerancePct,
         CancellationToken ct)
     {
@@ -86,6 +87,11 @@ public sealed class McpAthleteDataService(
             ["plan_json"] = planJson,
             ["load_target"] = loadTarget
         };
+
+        if (completedTss.HasValue)
+        {
+            toolArguments["completed_tss"] = completedTss.Value;
+        }
 
         if (tolerancePct.HasValue)
         {
