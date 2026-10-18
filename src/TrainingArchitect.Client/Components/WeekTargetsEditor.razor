@@ -23,28 +23,22 @@
                             </a>
                         </div>
                         <SfDropDownList TValue="TrainingPhase" TItem="TrainingPhase" ID="@(id + "-phase")"
-                                        CssClass="week-target-phase" DataSource="@Phases" Value="@target.Phase" Enabled="@(!Disabled)">
-                            <DropDownListEvents TValue="TrainingPhase" TItem="TrainingPhase"
-                                                ValueChange="@(args => { if (args.IsInteracted) Change(target, target with { Phase = args.Value }, true); })" />
-                        </SfDropDownList>
+                                        CssClass="week-target-phase" DataSource="@Phases" Value="@target.Phase" Enabled="@(!Disabled)"
+                                        ValueChanged="@(value => Change(target, target with { Phase = value }, true))" />
                     </div>
                     @if (!PhaseOnly)
                     {
                     <div class="week-target-field">
                         <label for="@(id + "-hours")">Weekly hours</label>
                         <SfNumericTextBox TValue="double?" ID="@(id + "-hours")" Value="@target.WeeklyHours"
-                                          Min="0" Max="40" Step="0.5" Decimals="1" Format="n1" ValidateDecimalOnType="true" Enabled="@(!Disabled)">
-                            <NumericTextBoxEvents TValue="double?"
-                                                  ValueChange="@(args => { if (args.IsInteracted) Change(target, target with { WeeklyHours = args.Value }, true); })" />
-                        </SfNumericTextBox>
+                                          Min="0" Max="40" Step="0.5" Decimals="1" Format="n1" ValidateDecimalOnType="true" Enabled="@(!Disabled)"
+                                          ValueChanged="@(value => Change(target, target with { WeeklyHours = value }, true))" />
                     </div>
                     <div class="week-target-field">
                         <label for="@(id + "-tss")">Target TSS</label>
                         <SfNumericTextBox TValue="int?" ID="@(id + "-tss")" Value="@target.WeeklyTss"
-                                          Min="0" Step="1" Decimals="0" Format="n0" ValidateDecimalOnType="true" Enabled="@(!Disabled)">
-                            <NumericTextBoxEvents TValue="int?"
-                                                  ValueChange="@(args => { if (args.IsInteracted) Change(target, target with { WeeklyTss = args.Value }); })" />
-                        </SfNumericTextBox>
+                                          Min="0" Step="1" Decimals="0" Format="n0" ValidateDecimalOnType="true" Enabled="@(!Disabled)"
+                                          ValueChanged="@(value => Change(target, target with { WeeklyTss = value }))" />
                     </div>
                     }
                 </div>

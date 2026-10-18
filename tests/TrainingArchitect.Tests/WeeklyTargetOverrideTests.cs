@@ -1,7 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.Extensions.Logging.Abstractions;
+using Syncfusion.Blazor.Inputs;
 using TrainingArchitect.Client.Components;
 using TrainingArchitect.Client.Pages;
 using TrainingArchitect.Client.Services;
@@ -389,6 +393,60 @@ public class WeeklyTargetOverrideTests
         Assert.Equal(TrainingPhase.Build, values.Phase);
         Assert.Equal(updateTargets ? 525 : 320, values.WeeklyTss);
         Assert.Equal("RECOVERY", values.WeekType);
+    }
+
+    [Fact]
+    public async Task Editor_RenderedHoursBindingInvalidatesPlanAndUpdatesRequest()
+    {
+        var (session, _) = await CreateSessionAsync();
+        var coach = CreateCoach(session);
+        const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        typeof(Coach).GetField("_planReadableText", privateInstance)!.SetValue(coach, "Previous plan");
+        typeof(Coach).GetField("_planUploadJson", privateInstance)!.SetValue(coach, "{}");
+
+        var editor = new EventTestWeekTargetsEditor();
+        typeof(WeekTargetsEditor).GetProperty("Session", privateInstance)!.SetValue(editor, session);
+        typeof(WeekTargetsEditor).GetProperty(nameof(WeekTargetsEditor.Scope))!.SetValue(editor, PlanningScope.CurrentWeek);
+        typeof(WeekTargetsEditor).GetProperty(nameof(WeekTargetsEditor.Overrides))!.SetValue(editor, GetPageOverrides(coach));
+        typeof(WeekTargetsEditor).GetProperty(nameof(WeekTargetsEditor.Changed))!.SetValue(editor,
+            EventCallback.Factory.Create<WeekTargetOverride>(new object(), (WeekTargetOverride updated) =>
+                typeof(Coach).GetMethod("OnWeekTargetChanged", privateInstance)!.Invoke(coach, [updated])));
+        typeof(WeekTargetsEditor).GetMethod("OnParametersSet", privateInstance)!.Invoke(editor, null);
+
+        var hoursChanged = GetRenderedValueChanged<double?>(editor, typeof(SfNumericTextBox<double?>));
+        await hoursChanged.InvokeAsync(8.5);
+        Assert.True((bool)typeof(Coach).GetProperty("HasPlanResult", privateInstance)!.GetValue(coach)!);
+        Assert.Empty(GetPageOverrides(coach));
+
+        await hoursChanged.InvokeAsync(10);
+        Assert.False((bool)typeof(Coach).GetProperty("HasPlanResult", privateInstance)!.GetValue(coach)!);
+        Assert.Null(typeof(Coach).GetField("_planUploadJson", privateInstance)!.GetValue(coach));
+        Assert.Equal(10, GetPageOverrides(coach)[CurrentWeek].WeeklyHours);
+        Assert.Equal(484, GetPageOverrides(coach)[CurrentWeek].WeeklyTss);
+        var request = (PlanRequest)typeof(Coach).GetMethod("BuildPlanRequest", privateInstance)!.Invoke(coach, null)!;
+        Assert.Equal(484, WeeklyLoadTargetResolver.Resolve(request.WeekDataJson, PlanningScope.CurrentWeek));
+    }
+
+#pragma warning disable BL0006
+    private static EventCallback<TValue> GetRenderedValueChanged<TValue>(WeekTargetsEditor editor, Type componentType)
+    {
+        using var builder = new RenderTreeBuilder();
+        typeof(WeekTargetsEditor).GetMethod("BuildRenderTree", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(editor, [builder]);
+        var frames = builder.GetFrames();
+        var inputIndex = Array.FindIndex(frames.Array, 0, frames.Count,
+            frame => frame.FrameType == RenderTreeFrameType.Component && frame.ComponentType == componentType);
+        Assert.InRange(inputIndex, 0, frames.Count - 1);
+        var binding = frames.Array.Skip(inputIndex + 1)
+            .TakeWhile(frame => frame.FrameType == RenderTreeFrameType.Attribute)
+            .Single(frame => frame.AttributeName == "ValueChanged");
+        return (EventCallback<TValue>)binding.AttributeValue;
+    }
+#pragma warning restore BL0006
+
+    private sealed class EventTestWeekTargetsEditor : WeekTargetsEditor, IHandleEvent
+    {
+        Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? argument) => callback.InvokeAsync(argument);
     }
 
     private static WeekTargetsEditor CreateEditor(IAthleteSession session, PlanningScope scope = PlanningScope.CurrentWeek)
