@@ -341,6 +341,56 @@ public class WeeklyTargetOverrideTests
         Assert.True(JsonNode.DeepEquals(JsonNode.Parse(Dataset), JsonNode.Parse(rawJson)));
     }
 
+    [Theory]
+    [InlineData(PlanningMode.Week, true)]
+    [InlineData(PlanningMode.Week, false)]
+    [InlineData(PlanningMode.NextTraining, true)]
+    [InlineData(PlanningMode.NextTraining, false)]
+    public async Task Page_TargetChangesInvalidateAssessmentsAndUploadablePlans(PlanningMode mode, bool updateTargets)
+    {
+        var (session, _) = await CreateSessionAsync();
+        var coach = CreateCoach(session);
+        var coachType = typeof(Coach);
+        const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        coachType.GetField("_planMode", privateInstance)!.SetValue(coach, mode);
+        coachType.GetField("_planReadableText", privateInstance)!.SetValue(coach, "Previous plan");
+        coachType.GetField("_planUploadJson", privateInstance)!.SetValue(coach, "{}");
+        coachType.GetField("_planResponseId", privateInstance)!.SetValue(coach, "previous-plan");
+        coachType.GetField("_planUploaded", privateInstance)!.SetValue(coach, true);
+        coachType.GetField("_isPlanExpanded", privateInstance)!.SetValue(coach, true);
+
+        var assessments = (System.Collections.IDictionary)coachType.GetField("_assessCardStates", privateInstance)!.GetValue(coach)!;
+        foreach (var assessment in assessments.Values.Cast<object>())
+        {
+            assessment.GetType().GetProperty("ResultText")!.SetValue(assessment, "Previous assessment");
+            assessment.GetType().GetProperty("ResponseId")!.SetValue(assessment, "previous-assessment");
+        }
+
+        Assert.True((bool)coachType.GetProperty("HasPlanResult", privateInstance)!.GetValue(coach)!);
+        var target = new WeekTargetOverride(CurrentWeek, TrainingPhase.Build, true, 10, 525, updateTargets);
+        GetPageOverrides(coach)[CurrentWeek] = target;
+        coachType.GetMethod("OnWeekTargetChanged", privateInstance)!.Invoke(coach, [target]);
+
+        Assert.False((bool)coachType.GetProperty("HasPlanResult", privateInstance)!.GetValue(coach)!);
+        Assert.False((bool)coachType.GetProperty("CanUploadPlan", privateInstance)!.GetValue(coach)!);
+        Assert.Null(coachType.GetField("_planUploadJson", privateInstance)!.GetValue(coach));
+        Assert.Null(coachType.GetField("_planResponseId", privateInstance)!.GetValue(coach));
+        Assert.False((bool)coachType.GetField("_planUploaded", privateInstance)!.GetValue(coach)!);
+        Assert.False((bool)coachType.GetField("_isPlanExpanded", privateInstance)!.GetValue(coach)!);
+        foreach (var assessment in assessments.Values.Cast<object>())
+        {
+            Assert.Null(assessment.GetType().GetProperty("ResultText")!.GetValue(assessment));
+            Assert.Null(assessment.GetType().GetProperty("ResponseId")!.GetValue(assessment));
+        }
+
+        Assert.Equal(target, GetPageOverrides(coach)[CurrentWeek]);
+        var request = (PlanRequest)coachType.GetMethod("BuildPlanRequest", privateInstance)!.Invoke(coach, null)!;
+        var values = TrainingPlanOverrideApplier.Read(request.WeekDataJson, CurrentWeek);
+        Assert.Equal(TrainingPhase.Build, values.Phase);
+        Assert.Equal(updateTargets ? 525 : 320, values.WeeklyTss);
+        Assert.Equal("RECOVERY", values.WeekType);
+    }
+
     private static WeekTargetsEditor CreateEditor(IAthleteSession session, PlanningScope scope = PlanningScope.CurrentWeek)
     {
         var editor = new WeekTargetsEditor();
