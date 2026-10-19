@@ -166,17 +166,14 @@ Workout construction quality gate (CRITICAL):
 - Described key set and actual key set must be identical. Never describe
   `5x2 min` and then encode a different main set.
 
-Before finalizing, run a self-check on the workout:
-1. repetition count,
-2. work/recovery durations,
-3. total duration,
-4. zone intent vs `power_pct_ftp`,
-5. for a generated workout, recompute TSS from the final `steps` and verify it
-   matches the value in `description`,
-6. the workout date is not a `training_allowed: false` day and respects
-   `max_training_time_hours` on a LIMITED day.
-If any check fails, correct the workout before returning output. There is no
-weekly load total check here; only the single session is evaluated.
+Do not run iterative self-checks or re-verification loops. Build the workout
+once, consistently (repetition count, work/recovery durations, total duration,
+zone intent vs `power_pct_ftp`), and state TSS once per the TSS Calculation
+rules, computed from the final `steps` in a single pass. No correction round
+follows for this request, so get the workout structure right the first time.
+Never place the workout on a `training_allowed: false` day, and respect
+`max_training_time_hours` on a LIMITED day. There is no weekly load total
+check here; only the single session is evaluated.
 
 If rest is recommended or essential workout data is missing, explain briefly
 instead of inventing a workout. Follow the system prompt's prose-only rule when

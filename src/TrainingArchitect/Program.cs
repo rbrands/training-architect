@@ -291,9 +291,16 @@ builder.Services.AddSingleton(sp =>
     var endpoint = cfg["FoundryProjectEndpoint"]
         ?? throw new InvalidOperationException("Configuration key 'FoundryProjectEndpoint' is required.");
 
+    // The 100 s default network timeout aborts long plan generations and retries them from scratch.
+    var options = new AIProjectClientOptions
+    {
+        NetworkTimeout = TimeSpan.FromMinutes(10)
+    };
+
     return new AIProjectClient(
         endpoint: new Uri(endpoint),
-        tokenProvider: new DefaultAzureCredential());
+        tokenProvider: new DefaultAzureCredential(),
+        options: options);
 });
 
 // Repositories

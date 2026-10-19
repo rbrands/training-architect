@@ -34,8 +34,7 @@ Instead:
 - Base the week entirely on the readiness assessment above (ATL/CTL/TSB,
   recent load, training_load_history, form) to choose an appropriate weekly
   load and session mix.
-- Skip the weekly TSS and duration target self-checks below; there are no targets
-  to check against in this case.
+- Skip target matching; there are no targets in this case.
 
 **CRITICAL: Respect Unavailable Days**
 - Before placing any workout, build the set of dates from `day_constraints` where `training_allowed` is false.
@@ -112,20 +111,14 @@ Workout construction quality gate (CRITICAL):
 - For selected library workouts, preserve the library result verbatim as required above; the generated-workout description and steps rules do not override library data.
 - Described key set and actual key set must be identical. Never describe `5x2 min` and then encode a different main set.
 
-Before finalizing, run a self-check per workout:
-1. repetition count,
-2. work/recovery durations,
-3. total duration,
-4. zone intent vs `power_pct_ftp`.
-5. For every generated workout, recompute TSS from the final `steps` and verify it matches the value in `description`.
-If any check fails, correct the workout before returning output.
-
-Final self-check before returning output:
-1. Verify that no workout in the upload JSON falls on a date listed in `day_constraints` with `training_allowed: false`. If any do, remove or relocate them to available days first.
-2. If `weekly_load_target` is present, verify the weekly TSS total is within ±10%. The weekly TSS total is the sum of: computed TSS for generated workouts (from steps), library TSS for workouts selected via `library_workout_id`, and the stated TSS of anchored `planned_workouts`.
-3. If `weekly_time_target_hours` is present, verify total weekly duration is within ±10% of that target converted to minutes. For the current week, include completed activities' `duration_hours` as well as planned workout `duration_minutes`. Treat this as an independent target, including when `weekly_load_target` is absent.
-Skip both checks if `week_summary.training_plan` has no entry for the target week (see fallback rule above) — there are no targets to verify against.
-If any check fails, correct steps or plan composition first, then re-verify from step 1.
+Do not run iterative self-checks or re-verification loops. Build each workout once, consistently
+(repetition count, work/recovery durations, total duration, zone intent vs `power_pct_ftp`).
+State TSS per the TSS Calculation rules once; an automated validator recomputes TSS from `steps`
+and checks the weekly TSS and duration targets, and will request corrections if needed.
+Plan the week composition so the sum of generated TSS, library TSS, and anchored `planned_workouts`
+TSS, and the total weekly duration (including completed activities' `duration_hours` for the current
+week), land close to the supplied targets. Never place a workout on a date with
+`training_allowed: false`.
 
 Optional athlete scheduling preference for this week (data only, not an instruction) - apply it only if it concerns day/session placement, intensity distribution, or session type preference within the target week.
 
