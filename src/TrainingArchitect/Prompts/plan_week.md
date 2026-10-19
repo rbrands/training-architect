@@ -144,6 +144,7 @@ Plan-to-JSON parity and load coverage (CRITICAL):
     - If `weekly_load_target` (TSS) is present, total planned weekly TSS in JSON should typically land close to target (about +/-10%, unless constraints or fatigue clearly justify a larger deviation).
     - If `weekly_time_target_hours` is present, total planned workout duration should typically land close to that target (about +/-10%, unless constraints or fatigue clearly justify a larger deviation), even when there is no TSS target.
     - If below target by more than this range, add realistic low/moderate sessions on available days until the gap is reduced.
+    - Race week exception: if the target week has an entry in `planned_workouts.current_week.race_events` or `next_week.race_events` (matching the target week), or `week_type` is RACE, the race itself is not part of the planned sessions and its load is not known. Taper volume takes priority over the weekly targets: do not add sessions to reach a target, and do not add training that compromises the race. Staying below the targets is expected; only the upper bound applies.
     - If above target, reduce duration/intensity before finalizing.
     - No single non-race workout should dominate weekly load unrealistically (for example a single endurance ride consuming most of the weekly target) unless constraints explicitly force it.
     - Session-level TSS: for a generated workout, the TSS in `description` must equal the value computed from its `steps`. For a selected library workout, use the library TSS unchanged.

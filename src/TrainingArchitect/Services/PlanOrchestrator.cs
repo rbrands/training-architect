@@ -14,7 +14,7 @@ public sealed class PlanOrchestrator(
     IUsageCounterRepository usageCounterRepository,
     ILogger<PlanOrchestrator> logger) : IPlanOrchestrator
 {
-    private const int MaxCorrectionRounds = 2;
+    private const int MaxCorrectionRounds = 1;
 
     /// <inheritdoc />
     public async IAsyncEnumerable<PlanProgressEvent> RunAsync(

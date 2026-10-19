@@ -39,12 +39,14 @@ public sealed class TssPlanValidator(
                     "Return exactly one workout for the main recommendation. Keep the easier alternative in prose only.");
         }
 
+        var isRaceWeek = WeeklyLoadTargetResolver.IsRaceWeek(request.WeekDataJson, request.Scope);
         var timeTarget = WeeklyTimeTargetResolver.Resolve(request.WeekDataJson, request.Scope);
         if (timeTarget is > 0)
         {
             var plannedHours = ResolvePlannedHours(uploadJson)
                 + ResolveCompletedHours(request.WeekDataJson, request.Scope);
-            if (plannedHours < timeTarget.Value * 0.9 || plannedHours > timeTarget.Value * 1.1)
+            // Race weeks are tapered and the race itself is not part of the plan, so only the upper bound applies.
+            if ((!isRaceWeek && plannedHours < timeTarget.Value * 0.9) || plannedHours > timeTarget.Value * 1.1)
             {
                 return PlanValidationResult.FromFinding(
                     "plan.duration_deviation",
@@ -101,6 +103,13 @@ public sealed class TssPlanValidator(
         if (checkResult.Valid)
         {
             return WithSummary(PlanValidationResult.Valid, summary);
+        }
+
+        if (isRaceWeek
+            && checkResult.Week is { DeviationPct: < 0 }
+            && checkResult.Workouts.All(workout => !workout.Mismatch))
+        {
+            return WithSummary(PlanValidationResult.Valid, $"{summary} Accepted: tapered race week below target.");
         }
 
         var issues = checkResult.Issues.Where(issue => !string.IsNullOrWhiteSpace(issue)).ToArray();
