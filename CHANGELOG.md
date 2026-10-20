@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.11.1] - 2026-10-20
+
+### Added
+- Added Cross to the Athlete Goal selector. It is sent to the coaching agent as `cross` for assessments and training plans and is remembered with the connection settings.
+
 ## [1.11.0] - 2026-10-18
 
 ### Added
