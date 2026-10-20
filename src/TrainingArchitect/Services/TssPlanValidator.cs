@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using TrainingArchitect.Core.Models;
 using TrainingArchitect.Core.Services;
@@ -38,6 +39,21 @@ public sealed class TssPlanValidator(
                     "Return exactly one workout for the main recommendation. Keep the easier alternative in prose only.");
         }
 
+        var isRaceWeek = WeeklyLoadTargetResolver.IsRaceWeek(request.WeekDataJson, request.Scope);
+        var timeTarget = WeeklyTimeTargetResolver.Resolve(request.WeekDataJson, request.Scope);
+        if (timeTarget is > 0)
+        {
+            var plannedHours = ResolvePlannedHours(uploadJson)
+                + ResolveCompletedHours(request.WeekDataJson, request.Scope);
+            // Race weeks are tapered and the race itself is not part of the plan, so only the upper bound applies.
+            if ((!isRaceWeek && plannedHours < timeTarget.Value * 0.9) || plannedHours > timeTarget.Value * 1.1)
+            {
+                return PlanValidationResult.FromFinding(
+                    "plan.duration_deviation",
+                    $"The planned weekly duration of {plannedHours:0.#} hours is outside the ±10% range for the target of {timeTarget.Value:0.#} hours. Adjust workout durations to bring the weekly total within range.");
+            }
+        }
+
         var loadTarget = request.Constraints?.WeeklyTssTarget is > 0
             ? request.Constraints.WeeklyTssTarget.Value
             : WeeklyLoadTargetResolver.Resolve(request.WeekDataJson, request.Scope);
@@ -45,7 +61,10 @@ public sealed class TssPlanValidator(
         if (loadTarget is null or <= 0)
         {
             logger.LogWarning("Skipping TSS validation because no weekly load target could be resolved.");
-            return WithSummary(PlanValidationResult.Valid, "TSS check skipped: no weekly load target in the dataset.");
+            var skipSummary = timeTarget is > 0
+                ? "Duration check passed; TSS check skipped: no weekly TSS target in the dataset."
+                : "TSS check skipped: no weekly TSS target in the dataset.";
+            return WithSummary(PlanValidationResult.Valid, skipSummary);
         }
 
         if (string.IsNullOrWhiteSpace(intervalsAthleteId) || string.IsNullOrWhiteSpace(intervalsApiKey))
@@ -86,6 +105,13 @@ public sealed class TssPlanValidator(
             return WithSummary(PlanValidationResult.Valid, summary);
         }
 
+        if (isRaceWeek
+            && checkResult.Week is { DeviationPct: < 0 }
+            && checkResult.Workouts.All(workout => !workout.Mismatch))
+        {
+            return WithSummary(PlanValidationResult.Valid, $"{summary} Accepted: tapered race week below target.");
+        }
+
         var issues = checkResult.Issues.Where(issue => !string.IsNullOrWhiteSpace(issue)).ToArray();
         var findings = issues.Length == 0
             ? [new PlanValidationFinding("plan.tss_deviation", BuildFallbackMessage(checkResult))]
@@ -96,6 +122,85 @@ public sealed class TssPlanValidator(
             findings.Length);
 
         return new PlanValidationResult(findings) { Summary = summary };
+    }
+
+    private static double ResolvePlannedHours(string uploadJson)
+    {
+        using var document = JsonDocument.Parse(uploadJson);
+        var totalMinutes = 0d;
+
+        foreach (var workout in document.RootElement.GetProperty("workouts").EnumerateArray())
+        {
+            if (workout.ValueKind == JsonValueKind.Object
+                && workout.TryGetProperty("duration_minutes", out var duration)
+                && duration.ValueKind == JsonValueKind.Number
+                && duration.TryGetDouble(out var minutes)
+                && double.IsFinite(minutes)
+                && minutes > 0)
+            {
+                totalMinutes += minutes;
+            }
+        }
+
+        return totalMinutes / 60;
+    }
+
+    private static double ResolveCompletedHours(string? weekDataJson, PlanningScope scope)
+    {
+        if (scope != PlanningScope.CurrentWeek || string.IsNullOrWhiteSpace(weekDataJson))
+        {
+            return 0;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(weekDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !TryGetDate(root, "week_starting", out var weekStart)
+                || !root.TryGetProperty("activities", out var activities)
+                || activities.ValueKind != JsonValueKind.Array)
+            {
+                return 0;
+            }
+
+            var weekEnd = weekStart.AddDays(7);
+            var totalHours = 0d;
+            foreach (var activity in activities.EnumerateArray())
+            {
+                if (activity.ValueKind == JsonValueKind.Object
+                    && TryGetDate(activity, "date", out var activityDate)
+                    && activityDate >= weekStart
+                    && activityDate < weekEnd
+                    && activity.TryGetProperty("duration_hours", out var duration)
+                    && duration.ValueKind == JsonValueKind.Number
+                    && duration.TryGetDouble(out var hours)
+                    && double.IsFinite(hours)
+                    && hours > 0)
+                {
+                    totalHours += hours;
+                }
+            }
+
+            return totalHours;
+        }
+        catch (JsonException)
+        {
+            return 0;
+        }
+    }
+
+    private static bool TryGetDate(JsonElement parent, string propertyName, out DateOnly value)
+    {
+        value = default;
+        return parent.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.String
+            && DateOnly.TryParseExact(
+                property.GetString(),
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out value);
     }
 
     private static PlanValidationResult WithSummary(PlanValidationResult result, string summary) =>

@@ -40,34 +40,54 @@ public sealed class PromptBuilderTests
 
         Assert.Contains(athleteData, prompt);
         Assert.Contains("Use only the attached athlete data", prompt);
-        Assert.Contains("Never call prepare_week_data", prompt);
-        Assert.Contains("even if the attached data is incomplete or outdated", prompt);
+        Assert.Contains("The only tool you may call", prompt);
+        Assert.Contains("even if the attached data is incomplete or\noutdated", prompt.Replace("\r\n", "\n"));
         Assert.DoesNotContain("Fetch the current data from intervals.icu", prompt);
         Assert.Contains("exactly one workout", prompt);
         Assert.Contains("At most 100 words", prompt);
         Assert.Contains("BEGIN_UPLOAD_JSON / END_UPLOAD_JSON", prompt);
         Assert.Contains("prose-only rule", prompt);
-        Assert.Contains("Upload only if validation succeeds", prompt);
-        Assert.Contains("Do not upload automatically or ask for confirmation now", prompt);
+        Assert.Contains("Validation and upload are performed by", prompt);
+        Assert.Contains("Do not describe or simulate an upload", prompt);
         Assert.DoesNotContain("VO2max on Tuesday", prompt);
         Assert.DoesNotContain("Plan target: next week", prompt);
     }
 
     [Fact]
-    public void BuildPlanPrompt_NextTraining_UsesAthleteDateAndTomorrowContext()
+    public void BuildPlanPrompt_NextTraining_UsesApplicationDateAndPreliminaryContext()
     {
         var request = new PlanRequest("{}", "fitness", "en", PlanningScope.CurrentWeek,
             new PlanConstraints(null, []), Mode: PlanningMode.NextTraining);
 
         var prompt = PromptBuilder.BuildPlanPrompt(request);
 
-        Assert.Contains("Use the athlete data's `current_date` for today", prompt);
-        Assert.Contains("add one\ncalendar day", prompt);
+        Assert.Contains("The recommendation date is determined by the application", prompt);
+        Assert.Contains("Do not derive it yourself", prompt);
+        Assert.Contains("for the recommendation date current_date", prompt);
         Assert.Contains("tomorrow is in a new week", prompt);
-        Assert.Contains("mark it as preliminary", prompt);
-        Assert.Contains("Do not treat today's readiness as tomorrow's measured readiness", prompt);
+        Assert.Contains("mark the recommendation as preliminary", prompt);
+        Assert.Contains("Do not treat today's readiness as the recommendation date's measured readiness", prompt);
         Assert.Contains("recommend conservatively instead of asking", prompt);
         Assert.Contains("training_allowed: false", prompt);
         Assert.Contains("max_training_time_hours", prompt);
+    }
+
+    [Theory]
+    [InlineData("{\"current_date\":\"2026-10-18\",\"activities\":[{\"date\":\"2026-10-18\"}]}", "2026-10-19")]
+    [InlineData("{\"current_date\":\"2026-10-18\"}", "2026-10-18")]
+    [InlineData("{\"current_date\":\"unknown\"}", "unknown")]
+    [InlineData("{}", "current_date")]
+    [InlineData("not JSON", "current_date")]
+    public void BuildPlanPrompt_NextTraining_ReplacesRecommendationDate(string json, string expected)
+    {
+        var request = new PlanRequest(json, "fitness", "en", PlanningScope.CurrentWeek,
+            new PlanConstraints(null, []), Mode: PlanningMode.NextTraining);
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains($"for the recommendation date {expected}", prompt);
+        Assert.Contains($"Evaluate the plan, week target, and constraints of {expected}", prompt);
+        Assert.Contains(json, prompt);
+        Assert.DoesNotContain("{{recommendation_date}}", prompt);
     }
 }

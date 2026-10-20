@@ -1,6 +1,9 @@
 // TrainingArchitect.Server/Services/PromptBuilder.cs
 namespace TrainingArchitect.Services;
+using System.Globalization;
+using System.Text.Json;
 using TrainingArchitect.Core.Models;
+using TrainingArchitect.Core.Services;
 public static class PromptBuilder
 {
     public static string BuildAssessPrompt(AssessRequest request)
@@ -26,6 +29,7 @@ public static class PromptBuilder
         if (request.Mode == PlanningMode.NextTraining)
         {
             return PromptLoader.Load("plan_next_training")
+                .Replace("{{recommendation_date}}", ResolveRecommendationDateText(request.WeekDataJson))
                 .Replace("{{athlete_data}}", string.IsNullOrWhiteSpace(request.WeekDataJson)
                     ? "{}"
                     : request.WeekDataJson);
@@ -50,6 +54,28 @@ public static class PromptBuilder
             .Replace("{{athlete_data}}", string.IsNullOrWhiteSpace(request.WeekDataJson)
                 ? "{}"
                 : request.WeekDataJson);
+    }
+
+    private static string ResolveRecommendationDateText(string? weekDataJson)
+    {
+        var resolved = RecommendationDateResolver.Resolve(weekDataJson);
+        if (resolved is { } date)
+            return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        try
+        {
+            using var document = JsonDocument.Parse(weekDataJson ?? "{}");
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("current_date", out var currentDate)
+                && currentDate.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(currentDate.GetString()))
+                return currentDate.GetString()!;
+        }
+        catch (JsonException)
+        {
+        }
+
+        return "current_date";
     }
 
     /// <summary>

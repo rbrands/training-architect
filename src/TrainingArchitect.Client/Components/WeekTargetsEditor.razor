@@ -1,0 +1,147 @@
+@using System.Globalization
+@using TrainingArchitect.Core.Services
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Inputs
+@inject IAthleteSession Session
+
+@if (_targets.Count > 0)
+{
+    <section class="week-targets" aria-label="Weekly targets">
+        @foreach (var target in _targets)
+        {
+            var id = $"{(PhaseOnly ? "next-training-phase" : "week-target")}-{target.WeekStart:yyyyMMdd}";
+            var isRace = TrainingPlanOverrideApplier.Read(Session.AthleteDataJson, target.WeekStart).WeekType == "RACE";
+            <fieldset class="week-target-row" @key="target.WeekStart" disabled="@Disabled">
+                <legend>Week starting @target.WeekStart.ToString("d MMM", CultureInfo.InvariantCulture)</legend>
+                <div class="week-target-fields @(PhaseOnly ? "week-target-fields--compact" : string.Empty)">
+                    <div class="week-target-field">
+                        <div class="week-target-phase-label">
+                            <label for="@(id + "-phase")">Phase</label>
+                            <a href="/blog/training-phases" class="week-target-phase-help"
+                               aria-label="About training phases" title="About training phases">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                        <SfDropDownList TValue="TrainingPhase" TItem="TrainingPhase" ID="@(id + "-phase")"
+                                        CssClass="week-target-phase" DataSource="@Phases" Value="@target.Phase" Enabled="@(!Disabled)"
+                                        ValueChanged="@(value => Change(target, target with { Phase = value }, true))" />
+                    </div>
+                    @if (!PhaseOnly)
+                    {
+                    <div class="week-target-field">
+                        <label for="@(id + "-hours")">Weekly hours</label>
+                        <SfNumericTextBox TValue="double?" ID="@(id + "-hours")" Value="@target.WeeklyHours"
+                                          Min="0" Max="40" Step="0.5" Decimals="1" Format="n1" ValidateDecimalOnType="true" Enabled="@(!Disabled)"
+                                          ValueChanged="@(value => Change(target, target with { WeeklyHours = value }, true))" />
+                    </div>
+                    <div class="week-target-field">
+                        <label for="@(id + "-tss")">Target TSS</label>
+                        <SfNumericTextBox TValue="int?" ID="@(id + "-tss")" Value="@target.WeeklyTss"
+                                          Min="0" Step="1" Decimals="0" Format="n0" ValidateDecimalOnType="true" Enabled="@(!Disabled)"
+                                          ValueChanged="@(value => Change(target, target with { WeeklyTss = value }))" />
+                    </div>
+                    }
+                </div>
+                <div class="week-target-recovery">
+                    <SfCheckBox TChecked="bool" Label="Recovery week" Checked="@target.IsRecovery"
+                                CheckedChanged="@(value => Change(target, target with { IsRecovery = value }))"
+                                Disabled="@(Disabled || isRace)" />
+                    @if (isRace)
+                    {
+                        <span class="week-target-race">Race week</span>
+                    }
+                    @if (!PhaseOnly && target.WeeklyHours is > 0 && target.WeeklyTss is >= 0)
+                    {
+                        var rate = target.WeeklyTss.Value / target.WeeklyHours.Value;
+                        <small class="week-target-rate">@rate.ToString("F1", CultureInfo.InvariantCulture) TSS/h; IF @Math.Sqrt(rate / 100).ToString("F2", CultureInfo.InvariantCulture)</small>
+                    }
+                </div>
+            </fieldset>
+        }
+    </section>
+}
+
+@code {
+    /// <summary>Disables editing while a coach request or data operation is in flight.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Selects the single week currently in planning focus.</summary>
+    [Parameter]
+    public PlanningScope Scope { get; set; }
+
+    /// <summary>Shows phase and recovery only, without changing numeric targets.</summary>
+    [Parameter]
+    public bool PhaseOnly { get; set; }
+
+    /// <summary>Gets the application-resolved date for the next training recommendation.</summary>
+    [Parameter]
+    public DateOnly? RecommendationDate { get; set; }
+
+    /// <summary>Gets the overrides owned by the current Coach page instance.</summary>
+    [Parameter]
+    public Dictionary<DateOnly, WeekTargetOverride> Overrides { get; set; } = [];
+
+    /// <summary>Notifies the page that an athlete edited weekly values.</summary>
+    [Parameter]
+    public EventCallback<WeekTargetOverride> Changed { get; set; }
+
+    private static readonly TrainingPhase[] Phases = Enum.GetValues<TrainingPhase>();
+    private readonly List<WeekTargetOverride> _targets = [];
+    private string? _loadedJson;
+    private PlanningScope? _loadedScope;
+    private WeekTargetOverride? _loadedOverride;
+    private bool _loadedPhaseOnly;
+
+    /// <summary>Loads original or edited values without recalculating their TSS.</summary>
+    protected override void OnParametersSet()
+    {
+        var scope = PhaseOnly ? PlanningScope.CurrentWeek : Scope;
+        var currentWeek = TrainingPlanOverrideApplier.ReadCurrentWeekStart(Session.AthleteDataJson);
+        var week = scope == PlanningScope.NextWeek ? currentWeek?.AddDays(7) : currentWeek;
+        if (PhaseOnly)
+        {
+            var date = RecommendationDate ?? RecommendationDateResolver.Resolve(Session.AthleteDataJson)
+                ?? TrainingPlanOverrideApplier.ReadCurrentDate(Session.AthleteDataJson);
+            if (date is { } recommendationDate)
+                week = recommendationDate.AddDays(-(((int)recommendationDate.DayOfWeek + 6) % 7));
+        }
+        var edited = week is { } start && Overrides.TryGetValue(start, out var existing) ? existing : null;
+        if (_loadedJson == Session.AthleteDataJson && _loadedScope == scope
+            && (_targets.Count == 0 ? week is null : _targets[0].WeekStart == week)
+            && _loadedOverride == edited && _loadedPhaseOnly == PhaseOnly)
+            return;
+
+        _loadedJson = Session.AthleteDataJson;
+        _loadedScope = scope;
+        _loadedOverride = edited;
+        _loadedPhaseOnly = PhaseOnly;
+        _targets.Clear();
+        if (week is not { } weekStart)
+            return;
+
+        var values = TrainingPlanOverrideApplier.Read(_loadedJson, weekStart);
+        var target = edited ?? new WeekTargetOverride(weekStart, values.Phase, values.WeekType == "RECOVERY", values.WeeklyHours, values.WeeklyTss);
+        if (edited is { UpdateTargets: false })
+            target = target with { WeeklyHours = values.WeeklyHours, WeeklyTss = values.WeeklyTss };
+        _targets.Add(target with { UpdateTargets = !PhaseOnly });
+    }
+
+    private Task Change(WeekTargetOverride previous, WeekTargetOverride updated, bool estimate = false)
+    {
+        if (Disabled || previous == updated)
+            return Task.CompletedTask;
+
+        updated = updated with { UpdateTargets = !PhaseOnly };
+        if (!PhaseOnly && estimate && updated.WeeklyHours is { } hours)
+            updated = updated with { WeeklyTss = WeeklyTssEstimator.Estimate(updated.Phase, hours) };
+
+        _targets[_targets.FindIndex(target => target.WeekStart == updated.WeekStart)] = updated;
+        var stored = PhaseOnly && Overrides.TryGetValue(updated.WeekStart, out var existing)
+            ? existing with { Phase = updated.Phase, IsRecovery = updated.IsRecovery }
+            : updated;
+        Overrides[updated.WeekStart] = stored;
+        _loadedOverride = stored;
+        return Changed.InvokeAsync(updated);
+    }
+}

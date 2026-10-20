@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using TrainingArchitect.Core.Constants;
@@ -61,6 +62,66 @@ public sealed class NextTrainingPlanTests
 
         Assert.Equal(["tss"], service.Calls);
         Assert.Equal(500d, service.LoadTarget);
+    }
+
+    [Theory]
+    [InlineData(0.75, true)]
+    [InlineData(1, false)]
+    public async Task ValidateAsync_WeeklyMode_ChecksDurationAgainstHoursOnlyTarget(double targetHours, bool expectedValid)
+    {
+        var athleteData = JsonSerializer.Serialize(new
+        {
+            week_starting = "2026-10-12",
+            week_summary = new
+            {
+                training_plan = new[]
+                {
+                    new { week = "2026-10-19", weekly_time_target_hours = targetHours }
+                }
+            }
+        });
+        var request = Request with
+        {
+            WeekDataJson = athleteData,
+            Constraints = new PlanConstraints(null, []),
+            Scope = PlanningScope.NextWeek,
+            Mode = PlanningMode.Week
+        };
+        var validator = new TssPlanValidator(new RecordingAthleteDataService(), NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(PlanJson, request, null, null);
+
+        Assert.Equal(expectedValid, result.IsValid);
+        if (!expectedValid)
+            Assert.Equal("plan.duration_deviation", Assert.Single(result.Findings).Code);
+        else
+            Assert.Contains("Duration check passed", result.Summary);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_CurrentWeekDurationIncludesCompletedActivities()
+    {
+        const string athleteData = """
+            {"week_starting":"2026-10-19","week_summary":{"training_plan":[
+              {"week":"2026-10-19","weekly_time_target_hours":1}
+            ]},"activities":[
+              {"date":"2026-10-19","duration_hours":0.25},
+              {"date":"2026-10-18","duration_hours":4}
+            ]}
+            """;
+        var request = Request with
+        {
+            WeekDataJson = athleteData,
+            Constraints = new PlanConstraints(null, []),
+            Scope = PlanningScope.CurrentWeek,
+            Mode = PlanningMode.Week
+        };
+        var validator = new TssPlanValidator(new RecordingAthleteDataService(), NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(PlanJson, request, null, null);
+
+        Assert.True(result.IsValid);
+        Assert.Contains("Duration check passed", result.Summary);
     }
 
     [Theory]

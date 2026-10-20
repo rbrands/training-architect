@@ -45,7 +45,7 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenPlanStaysInvalid_StopsAfterTwoCorrectionsAndReportsWarnings()
+    public async Task RunAsync_WhenPlanStaysInvalid_StopsAfterOneCorrectionAndReportsWarnings()
     {
         var agent = new FakeCoachingAgent();
         var orchestrator = CreateOrchestrator(agent, new FakeValidator(invalidRounds: int.MaxValue));
@@ -53,7 +53,7 @@ public class PlanOrchestratorTests
         var events = await CollectAsync(orchestrator);
         var completed = events.Single(progressEvent => progressEvent.Stage == PlanProgressStage.Completed);
 
-        Assert.Equal(3, agent.CallCount);
+        Assert.Equal(2, agent.CallCount);
         Assert.NotNull(completed.Warnings);
         Assert.Single(completed.Warnings!);
         Assert.NotNull(completed.Result);
@@ -158,8 +158,8 @@ public class PlanOrchestratorTests
 
         var events = await CollectAsync(CreateOrchestrator(agent, validator));
 
-        Assert.Equal(3, agent.CallCount);
-        Assert.Equal(3, validator.CallCount);
+        Assert.Equal(2, agent.CallCount);
+        Assert.Equal(2, validator.CallCount);
         Assert.NotNull(events[^1].Warnings);
     }
 
@@ -174,7 +174,7 @@ public class PlanOrchestratorTests
         await CollectAsync(CreateOrchestrator(agent, validator),
             Request with { Mode = PlanningMode.NextTraining });
 
-        Assert.Equal(3, validator.CallCount);
+        Assert.Equal(2, validator.CallCount);
     }
 
     [Fact]
@@ -194,9 +194,9 @@ public class PlanOrchestratorTests
 
     [Theory]
     [InlineData(100, false, 1)]
-    [InlineData(101, false, 3)]
+    [InlineData(101, false, 2)]
     [InlineData(100, true, 1)]
-    [InlineData(101, true, 3)]
+    [InlineData(101, true, 2)]
     public async Task RunAsync_NextTraining_EnforcesProseWordLimit(int wordCount, bool includeWorkout, int expectedCalls)
     {
         var prose = string.Join(" ", Enumerable.Repeat("word", wordCount));

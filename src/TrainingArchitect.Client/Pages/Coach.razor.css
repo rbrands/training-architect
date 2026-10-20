@@ -1219,9 +1219,47 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: stretch;
     gap: 1rem;
+}
+
+.coach-plan-targets {
+    min-width: 0;
+}
+
+.coach-plan-layout > .coach-plan-actions {
+    margin-top: auto;
+}
+
+@media (min-width: 992px) {
+    .coach-planning-grid {
+        grid-template-rows: auto auto auto auto;
+    }
+
+    .coach-planning-grid ::deep .coach-plan-card,
+    .coach-planning-grid ::deep .coach-plan-card .e-card-content,
+    .coach-plan-layout {
+        display: grid;
+        grid-row: span 4;
+        grid-template-rows: subgrid;
+    }
+
+    .coach-plan-copy {
+        grid-row: 1;
+    }
+
+    .coach-plan-targets {
+        grid-row: 2;
+    }
+
+    .coach-plan-preference {
+        grid-row: 3;
+    }
+
+    .coach-plan-layout > .coach-plan-actions {
+        grid-row: 4;
+    }
 }
 
 .coach-plan-copy {

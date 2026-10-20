@@ -167,6 +167,7 @@
                         <select disabled="@IsBusy" @bind="_profileGoal">
                             <option value="@AthleteProfileGoal.Climber">Climber</option>
                             <option value="@AthleteProfileGoal.Criterium">Criterium</option>
+                            <option value="@AthleteProfileGoal.Cross">Cross</option>
                             <option value="@AthleteProfileGoal.Fitness">Fitness</option>
                             <option value="@AthleteProfileGoal.Marathon">Marathon</option>
                             <option value="@AthleteProfileGoal.RoadRace">Road Race</option>
@@ -415,6 +416,7 @@
     {
         var isActiveMode = _planMode == mode;
         var isNextTraining = mode == PlanningMode.NextTraining;
+        var recommendationDate = isNextTraining ? NextTrainingRecommendationDate : null;
     <SfCard CssClass="coach-plan-card">
         <CardContent>
             <div class="coach-plan-layout">
@@ -496,10 +498,22 @@
                             </ul>
                         </div>
                     }
+                    @if (recommendationDate is { } date)
+                    {
+                        <p class="mb-0">Recommendation for @date.ToString("ddd, d MMM", CultureInfo.InvariantCulture)</p>
+                    }
                 </div>
 
                 @if (!isNextTraining)
                 {
+                <div class="coach-plan-targets">
+                <WeekTargetsEditor Scope="@ResolvePlanningScope()" Overrides="@_weekTargetOverrides" Changed="OnWeekTargetChanged"
+                                   Disabled="@(!CanUseCoachActions || IsAnyRequestInFlight)" />
+                @if (!HasRequiredWeeklyTarget)
+                {
+                    <small role="status">Plan Week is disabled: enter weekly hours or target TSS greater than zero for the week starting @PlannedWeekStart?.ToString("d MMM", CultureInfo.InvariantCulture).</small>
+                }
+                </div>
                 <label class="field coach-plan-preference">
                     <span>Scheduling preference (optional)</span>
                     <input type="text"
@@ -513,6 +527,13 @@
                         <small class="text-muted">@($"{_planSchedulingPreference.Length}/150")</small>
                     </div>
                 </label>
+                }
+                else
+                {
+                    <div class="coach-plan-targets">
+                    <WeekTargetsEditor PhaseOnly="true" RecommendationDate="@recommendationDate" Overrides="@_weekTargetOverrides" Changed="OnWeekTargetChanged"
+                                       Disabled="@(!CanUseCoachActions || IsAnyRequestInFlight)" />
+                    </div>
                 }
 
                 <div class="coach-plan-actions">
@@ -538,7 +559,7 @@
                     }
 
                     <SfButton CssClass="e-btn coach-primary-button"
-                              Disabled="@(!CanUsePlanButton)"
+                              Disabled="@(!CanUsePlanButton || (!isNextTraining && !HasRequiredWeeklyTarget))"
                               @onclick="() => HandlePlanButtonAsync(mode)">
                         @if (isActiveMode && _isPlanRequestInFlight)
                         {
@@ -1219,21 +1240,9 @@
 
     private JsonElement? GetOverviewRoot()
     {
-        var parsed = Session.AthleteDataParsed;
-        if (parsed is not null && parsed.Value.ValueKind == JsonValueKind.Object)
-        {
-            return parsed;
-        }
-
-        var fallbackJson = Session.AthleteDataJson;
-        if (string.IsNullOrWhiteSpace(fallbackJson))
-        {
-            return null;
-        }
-
         try
         {
-            using var document = JsonDocument.Parse(fallbackJson);
+            using var document = JsonDocument.Parse(EffectiveWeekDataJson);
             var root = document.RootElement.Clone();
             return root.ValueKind == JsonValueKind.Object ? root : null;
         }
@@ -1903,20 +1912,67 @@
         return string.Join("\n", lines);
     }
 
+    private readonly Dictionary<DateOnly, WeekTargetOverride> _weekTargetOverrides = [];
+    private string? _overrideAthleteId;
+
+    private DateOnly? NextTrainingRecommendationDate => RecommendationDateResolver.Resolve(Session.AthleteDataJson)
+        ?? TrainingPlanOverrideApplier.ReadCurrentDate(Session.AthleteDataJson);
+
+    private DateOnly? PlannedWeekStart
+    {
+        get
+        {
+            var current = TrainingPlanOverrideApplier.ReadCurrentWeekStart(Session.AthleteDataJson);
+            return ResolvePlanningScope() == PlanningScope.NextWeek ? current?.AddDays(7) : current;
+        }
+    }
+
+    private bool HasRequiredWeeklyTarget
+    {
+        get
+        {
+            if (PlannedWeekStart is not { } week)
+                return false;
+
+            if (_weekTargetOverrides.TryGetValue(week, out var edited) && edited.UpdateTargets)
+                return edited.WeeklyHours is > 0 || edited.WeeklyTss is > 0;
+
+            var values = TrainingPlanOverrideApplier.Read(Session.AthleteDataJson, week);
+            return values.WeeklyHours is > 0 || values.WeeklyTss is > 0;
+        }
+    }
+
+    private void OnWeekTargetChanged(WeekTargetOverride target)
+    {
+        InvalidateAssessResults();
+    }
+
+    private string EffectiveWeekDataJson
+    {
+        get
+        {
+            var original = Session.AthleteDataJson ?? Session.AthleteDataParsed?.GetRawText() ?? "{}";
+            return TrainingPlanOverrideApplier.Apply(original, _weekTargetOverrides.Values.ToArray());
+        }
+    }
+
     private string DataParsedPrettyJson
     {
         get
         {
-            var parsed = Session.AthleteDataParsed;
-            if (parsed is null)
+            var json = EffectiveWeekDataJson;
+            try
             {
-                return string.IsNullOrWhiteSpace(Session.AthleteDataJson) ? "{}" : Session.AthleteDataJson;
+                using var document = JsonDocument.Parse(json);
+                return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
             }
-
-            return JsonSerializer.Serialize(parsed.Value, new JsonSerializerOptions
+            catch (JsonException)
             {
-                WriteIndented = true
-            });
+                return json;
+            }
         }
     }
 
@@ -2677,7 +2733,7 @@
 
     private async Task HandlePlanButtonAsync(PlanningMode mode)
     {
-        if (!CanUsePlanButton)
+        if (!CanUsePlanButton || (mode == PlanningMode.Week && !HasRequiredWeeklyTarget))
         {
             return;
         }
@@ -2751,7 +2807,7 @@
 
     private async Task CreatePlanAsync()
     {
-        if (!CanUsePlanButton)
+        if (!CanUsePlanButton || (_planMode == PlanningMode.Week && !HasRequiredWeeklyTarget))
         {
             return;
         }
@@ -3105,7 +3161,7 @@
 
     private PlanRequest BuildPlanRequest()
     {
-        var weekDataJson = Session.AthleteDataJson;
+        var weekDataJson = EffectiveWeekDataJson;
         var schedulingPreference = _planSchedulingPreference.Trim();
         var planningScope = ResolvePlanningScope();
 
@@ -3285,7 +3341,7 @@
 
     private AssessRequest BuildAssessRequest(AssessCardType cardType)
     {
-        var weekDataJson = Session.AthleteDataJson;
+        var weekDataJson = EffectiveWeekDataJson;
 
         return new AssessRequest(
             weekDataJson ?? "{}",
@@ -3488,6 +3544,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _overrideAthleteId = Session.AthleteId;
         Session.Changed += OnSessionChanged;
         RestoreCoachViewState();
 
@@ -3522,6 +3579,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            SynchronizeWeekTargetOverrides();
             try
             {
                 await RefreshRememberedHintAsync();
@@ -3533,6 +3591,20 @@
 
             StateHasChanged();
         });
+    }
+
+    private void SynchronizeWeekTargetOverrides()
+    {
+        if (!string.Equals(_overrideAthleteId, Session.AthleteId, StringComparison.Ordinal))
+        {
+            _weekTargetOverrides.Clear();
+            _overrideAthleteId = Session.AthleteId;
+        }
+
+        var currentWeek = TrainingPlanOverrideApplier.ReadCurrentWeekStart(Session.AthleteDataJson);
+        var nextWeek = currentWeek?.AddDays(7);
+        foreach (var week in _weekTargetOverrides.Keys.Where(week => week != currentWeek && week != nextWeek).ToArray())
+            _weekTargetOverrides.Remove(week);
     }
 
     private async Task RefreshRememberedHintAsync()

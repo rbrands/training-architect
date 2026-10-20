@@ -1,11 +1,14 @@
 Use only the attached athlete data to recommend the next best training session
-for today. The only tool you may call is `list_library_workouts` (see below).
+for the recommendation date {{recommendation_date}}. The only tool you may call
+is `list_library_workouts` (see below).
 Do not ask follow-up questions, even if the attached data is incomplete or
 outdated; decide based on the available data and explicitly state any limitations.
 
-If a session has already been completed today, give a recommendation for the
-next day instead and mark it as preliminary, because tomorrow's sleep and HRV
-are not yet available (re-check in the morning).
+The recommendation date is determined by the application: it is today's
+`current_date` if no activity has been completed today, otherwise the next day.
+Do not derive it yourself. If {{recommendation_date}} is later than
+`current_date`, mark the recommendation as preliminary, because that day's sleep
+and HRV are not yet available (re-check in the morning).
 
 Take the following into account:
 
@@ -15,7 +18,8 @@ Take the following into account:
 - Wellness: sleep, HRV, resting heart rate - only if available
 
 **Plan context**
-- Current phase (Base/Build/Peak) and weekly target (`weekly_load_target` or time target)
+- Current phase (Base/Build/Peak/Transition); if no phase is provided, apply Base.
+- Weekly target (`weekly_load_target` or time target)
 - Weekly TSS completed so far vs. remaining budget for the remaining days
 - Today's planned workout from the calendar (`planned_workouts` for the
   recommendation date, if any) - does it still fit? See the rule below.
@@ -24,7 +28,8 @@ Take the following into account:
   week, including when tomorrow is in a new week. Never use another week's target.
 - Respect `training_allowed: false` absolutely; LIMITED days must respect
   `max_training_time_hours` and allow only short, easy training.
-- An absent season plan is valid: do not invent a phase or weekly target.
+- An absent weekly target is valid: do not invent one. If no phase is provided,
+  apply Base.
 
 **Already planned workout on the recommendation date**
 - If it still fits readiness, form, budget, and constraints: confirm it in prose
@@ -64,9 +69,8 @@ Take the following into account:
 If readiness is "Unknown" or key data is missing, state this explicitly and
 recommend conservatively instead of asking.
 
-Use the athlete data's `current_date` for today; if already trained today, add one
-calendar day and evaluate that day's plan, week target, and constraints instead.
-Do not treat today's readiness as tomorrow's measured readiness.
+Evaluate the plan, week target, and constraints of {{recommendation_date}}.
+Do not treat today's readiness as the recommendation date's measured readiness.
 
 **Recommendation and output**
 Use the plan/workout generation output format and upload JSON markers defined in
@@ -162,17 +166,14 @@ Workout construction quality gate (CRITICAL):
 - Described key set and actual key set must be identical. Never describe
   `5x2 min` and then encode a different main set.
 
-Before finalizing, run a self-check on the workout:
-1. repetition count,
-2. work/recovery durations,
-3. total duration,
-4. zone intent vs `power_pct_ftp`,
-5. for a generated workout, recompute TSS from the final `steps` and verify it
-   matches the value in `description`,
-6. the workout date is not a `training_allowed: false` day and respects
-   `max_training_time_hours` on a LIMITED day.
-If any check fails, correct the workout before returning output. There is no
-weekly load total check here; only the single session is evaluated.
+Do not run iterative self-checks or re-verification loops. Build the workout
+once, consistently (repetition count, work/recovery durations, total duration,
+zone intent vs `power_pct_ftp`), and state TSS once per the TSS Calculation
+rules, computed from the final `steps` in a single pass. No correction round
+follows for this request, so get the workout structure right the first time.
+Never place the workout on a `training_allowed: false` day, and respect
+`max_training_time_hours` on a LIMITED day. There is no weekly load total
+check here; only the single session is evaluated.
 
 If rest is recommended or essential workout data is missing, explain briefly
 instead of inventing a workout. Follow the system prompt's prose-only rule when

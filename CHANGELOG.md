@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.11.1] - 2026-10-20
+
+### Added
+- Added Cross to the Athlete Goal selector. It is sent to the coaching agent as `cross` for assessments and training plans and is remembered with the connection settings.
+
+## [1.11.0] - 2026-10-18
+
+### Added
+- Added a single-week target editor headed "Week starting <date>" for the week in planning focus (current week Monday to Wednesday, next week Thursday to Sunday). Weekly planning requires positive weekly hours or positive target TSS; either value alone is sufficient. A validation hint explains why Plan Week is disabled when neither is provided. Includes phase-based TSS estimates and resulting TSS/h and IF hints.
+- Added a compact phase and recovery editor to Next Best Training that leaves hours and TSS untouched and edits only the recommendation date's week. The application uses the dataset's current_date, advancing one day when any activity has that date; the editor shows "Recommendation for <date>" and matches the date supplied to the coach prompt. Sunday activities therefore select the following Monday's week without copying overrides to another week. Race classifications remain protected.
+- Weekly target edits live only in component state for the current Coach page and are applied through dataset JSON to planning, assessments, and data views without changing the original intervals.icu data, agent, or MCP tools. Existing targets are preserved on load; data reload drops expired weeks, and disconnecting or switching athletes clears edits.
+- Next Best Training's prompt now supports Transition and defaults missing phases to Base without inventing absent weekly targets.
+- View Data's Overview and Parsed JSON tabs, copy actions, and downloads include weekly target overrides, matching the coach request dataset; Raw JSON remains the original response.
+
 ## [1.10.1] - 2026-10-18
 
 ### Fixed
