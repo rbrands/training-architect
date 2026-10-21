@@ -16,6 +16,7 @@ public class AthleteProfileGoalTests
     [InlineData(AthleteProfileGoal.RoadRace, "roadrace")]
     [InlineData(AthleteProfileGoal.Fitness, "fitness")]
     [InlineData(AthleteProfileGoal.Cross, "cross")]
+    [InlineData(AthleteProfileGoal.ZwiftRacing, "zwift")]
     public void CoachRequests_UseSelectedGoalAsDisciplineType(AthleteProfileGoal goal, string expected)
     {
         var coach = new Coach();
@@ -42,6 +43,7 @@ public class AthleteProfileGoalTests
     [InlineData(2, AthleteProfileGoal.Marathon)]
     [InlineData(3, AthleteProfileGoal.RoadRace)]
     [InlineData(4, AthleteProfileGoal.Fitness)]
+    [InlineData(5, AthleteProfileGoal.Cross)]
     public void StoredCredential_ExistingGoalValuesRemainCompatible(int storedValue, AthleteProfileGoal expected)
     {
         var credential = JsonSerializer.Deserialize<StoredCredential>($"{{\"ProfileGoal\":{storedValue}}}");
@@ -70,5 +72,16 @@ public class AthleteProfileGoalTests
 
         Assert.NotNull(restored);
         Assert.Equal(AthleteProfileGoal.Cross, restored.ProfileGoal);
+    }
+
+    [Fact]
+    public void StoredCredential_ZwiftRacingRoundTrips()
+    {
+        var credential = new StoredCredential { ProfileGoal = AthleteProfileGoal.ZwiftRacing };
+
+        var restored = JsonSerializer.Deserialize<StoredCredential>(JsonSerializer.Serialize(credential));
+
+        Assert.NotNull(restored);
+        Assert.Equal(AthleteProfileGoal.ZwiftRacing, restored.ProfileGoal);
     }
 }

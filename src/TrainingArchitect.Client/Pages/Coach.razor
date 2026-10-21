@@ -171,6 +171,7 @@
                             <option value="@AthleteProfileGoal.Fitness">Fitness</option>
                             <option value="@AthleteProfileGoal.Marathon">Marathon</option>
                             <option value="@AthleteProfileGoal.RoadRace">Road Race</option>
+                            <option value="@AthleteProfileGoal.ZwiftRacing">Zwift Racing</option>
                         </select>
                     </label>
 
@@ -3353,6 +3354,11 @@
     private string GetDisciplineType()
     {
         var source = Session.ProfileGoal ?? _profileGoal;
+        if (source == AthleteProfileGoal.ZwiftRacing)
+        {
+            return "zwift";
+        }
+
         return source.ToString().ToLowerInvariant();
     }
 

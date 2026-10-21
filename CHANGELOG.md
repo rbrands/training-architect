@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-10-21
+
+### Added
+- Added Zwift Racing to the Athlete Goal selector. It is sent to the coaching agent as `zwift` and is remembered with the connection settings.
+
 ## [1.11.1] - 2026-10-20
 
 ### Added
