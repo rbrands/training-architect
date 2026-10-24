@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.3] - 2026-10-24
+
+### Fixed
+- Next Best Training no longer recommends a rest day for a fresh athlete when readiness is red for mild reasons, the weekly load target is absent, or the recommendation date equals today. Today's readiness is now treated as the measured value for a same-day recommendation, a missing weekly target falls back to a CTL-based session size instead of counting as missing key data, and a red readiness or safety veto rules out hard work but still allows a short easy Z1/Z2 session unless form is negative, yesterday was hard, or illness/injury is indicated.
+
 ## [1.11.2] - 2026-10-21
 
 ### Added

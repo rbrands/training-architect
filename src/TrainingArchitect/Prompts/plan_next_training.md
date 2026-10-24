@@ -6,9 +6,14 @@ outdated; decide based on the available data and explicitly state any limitation
 
 The recommendation date is determined by the application: it is today's
 `current_date` if no activity has been completed today, otherwise the next day.
-Do not derive it yourself. If {{recommendation_date}} is later than
-`current_date`, mark the recommendation as preliminary, because that day's sleep
-and HRV are not yet available (re-check in the morning).
+Do not derive it yourself.
+- If {{recommendation_date}} equals `current_date`, today's
+  `training_readiness` and wellness values ARE the measured readiness for the
+  recommendation date. Use them directly; never call them unavailable or
+  non-authoritative.
+- Only if {{recommendation_date}} is later than `current_date`,
+  mark the recommendation as preliminary, because that day's sleep and HRV are
+  not yet available (re-check in the morning); today's readiness is then a proxy.
 
 Take the following into account:
 
@@ -28,7 +33,13 @@ Take the following into account:
   week, including when tomorrow is in a new week. Never use another week's target.
 - Respect `training_allowed: false` absolutely; LIMITED days must respect
   `max_training_time_hours` and allow only short, easy training.
-- An absent weekly target is valid: do not invent one. If no phase is provided,
+- An absent `weekly_load_target` is a valid, expected state (no season plan or
+  no target configured) - it is NOT missing key data and never justifies a
+  rest day on its own. Do not invent a target and do not compute a remaining
+  budget. Size the session from `ctl` instead: a daily load near CTL maintains
+  fitness; use roughly 0.5-1.0 x CTL for an easy/aerobic day and up to about
+  1.5 x CTL for a key session, bounded by phase, readiness, and day constraints.
+  `training_load_history` is secondary context only. If no phase is provided,
   apply Base.
 
 **Already planned workout on the recommendation date**
@@ -47,7 +58,7 @@ Take the following into account:
 - Fueling pattern of the recent sessions
 
 **Remaining budget and rest-day rules**
-- Compute the remaining budget: `weekly_load_target` minus `total_training_load`
+- If a `weekly_load_target` exists, compute the remaining budget: `weekly_load_target` minus `total_training_load`
   of the matching `training_plan` week, divided by the remaining days including
   the recommendation date. Only activities dated within that week count against
   its budget; older lookback activities belong to the previous week.
@@ -60,17 +71,31 @@ Take the following into account:
 - `is_hard_session` is a coarse flag (Z3+Z4 >= 20%). Judge real stress by
   `training_load`, `rpe`, `norm_power` vs FTP, and the activity notes, not by
   the flag alone.
-- Recommend a rest day only if at least one applies: readiness is red or has a
-  safety veto; `training_allowed` is false; yesterday was a hard session and
-  form is negative; the remaining budget is near zero; or key data is missing.
+- Readiness red or a safety veto means "no hard training", not "no training".
+  Read the `training_readiness.recommendation` text and the individual
+  `signals`: mild deviations (for example HRV a few percent below its 7-day
+  average with a stable trend, or average-quality sleep of 7+ hours) rule out
+  Z4+ and high-dose work but still allow a short, easy Z1/Z2 session
+  (`recovery-low` or `aerobic-threshold-low`, typically 45-75 min). Prefer that
+  easy session over rest when form is positive and there was no hard session
+  in the last 48 hours; state in prose that the athlete should stop if feeling
+  unwell.
+- Recommend a full rest day only if at least one applies: `training_allowed`
+  is false; readiness is red or has a safety veto AND form is negative or
+  yesterday was a hard session; the signals or notes indicate illness, injury,
+  or strongly depressed HRV / clearly elevated resting HR (not a few percent);
+  a `weekly_load_target` exists and the remaining budget is near zero; or
+  essential metrics (`ctl`/`atl` and all wellness data) are missing entirely.
   If readiness is green with positive form and budget remains, recommend a
   session, not rest - even in a RECOVERY week.
 
-If readiness is "Unknown" or key data is missing, state this explicitly and
-recommend conservatively instead of asking.
+Key data is missing only when `training_readiness` is absent or "Unknown" AND
+no wellness values are available, or when `ctl`/`atl` are absent. An absent
+weekly target, phase, or planned workout is not missing key data. If key data
+is truly missing, state this explicitly and recommend conservatively (an easy
+Z1/Z2 session unless a rest-day rule applies) instead of asking.
 
 Evaluate the plan, week target, and constraints of {{recommendation_date}}.
-Do not treat today's readiness as the recommendation date's measured readiness.
 
 **Recommendation and output**
 Use the plan/workout generation output format and upload JSON markers defined in

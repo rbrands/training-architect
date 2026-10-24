@@ -66,8 +66,11 @@ public sealed class PromptBuilderTests
         Assert.Contains("for the recommendation date current_date", prompt);
         Assert.Contains("tomorrow is in a new week", prompt);
         Assert.Contains("mark the recommendation as preliminary", prompt);
-        Assert.Contains("Do not treat today's readiness as the recommendation date's measured readiness", prompt);
-        Assert.Contains("recommend conservatively instead of asking", prompt);
+        Assert.Contains("ARE the measured readiness for the", prompt);
+        Assert.Contains("today's readiness is then a proxy", prompt);
+        Assert.Contains("means \"no hard training\", not \"no training\"", prompt);
+        Assert.Contains("it is NOT missing key data", prompt);
+        Assert.Contains("instead of asking", prompt);
         Assert.Contains("training_allowed: false", prompt);
         Assert.Contains("max_training_time_hours", prompt);
     }
