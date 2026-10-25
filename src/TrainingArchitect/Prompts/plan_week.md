@@ -61,6 +61,9 @@ Instead:
 - This is non-negotiable: planned sessions take absolute priority over automatic session generation
 
 Planning requirements:
+- Schedule at most one workout per calendar day. Never split a day's load into two
+  entries and never add a second session to a day that already has one (anchored
+  `planned_workouts` are the only exception and are reproduced as given).
 - Place key sessions first (VO2max, threshold, long ride), then fill support/recovery sessions.
 - Avoid duplicating key sessions already completed or already planned.
 - Align weekly TSS and total planned duration to their respective supplied targets, and keep the week realistic for fatigue and availability.
@@ -143,7 +146,7 @@ Plan-to-JSON parity and load coverage (CRITICAL):
 - Weekly load guardrail:
     - If `weekly_load_target` (TSS) is present, total planned weekly TSS in JSON should typically land close to target (about +/-10%, unless constraints or fatigue clearly justify a larger deviation).
     - If `weekly_time_target_hours` is present, total planned workout duration should typically land close to that target (about +/-10%, unless constraints or fatigue clearly justify a larger deviation), even when there is no TSS target.
-    - If below target by more than this range, add realistic low/moderate sessions on available days until the gap is reduced.
+    - If below target by more than this range, add realistic low/moderate sessions only on available days that have no workout yet. If every available day is already used, lengthen the easy portions (Z2 blocks, warm-up, cool-down) of generated sessions instead; never stack a second workout on an occupied day.
     - Race week exception: if the target week has an entry in `planned_workouts.current_week.race_events` or `next_week.race_events` (matching the target week), or `week_type` is RACE, the race itself is not part of the planned sessions and its load is not known. Taper volume takes priority over the weekly targets: do not add sessions to reach a target, and do not add training that compromises the race. Staying below the targets is expected; only the upper bound applies.
     - If above target, reduce duration/intensity before finalizing.
     - No single non-race workout should dominate weekly load unrealistically (for example a single endurance ride consuming most of the weekly target) unless constraints explicitly force it.

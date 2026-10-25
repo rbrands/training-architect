@@ -146,6 +146,57 @@ public sealed class NextTrainingPlanTests
         Assert.Equal(expectedCompletedTss, service.CompletedTss);
     }
 
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_RejectsTwoWorkoutsOnSameDate()
+    {
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-30","duration_minutes":75,"tss":57,"library_workout_id":82},
+              {"date":"2026-10-30","duration_minutes":30,"tss":13,"steps":[{"duration_seconds":1800,"power_pct_ftp":50}]},
+              {"date":"2026-10-31","duration_minutes":47,"tss":45,"library_workout_id":51}
+            ]}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, Request with { Mode = PlanningMode.Week }, "test-athlete", "test-key");
+
+        Assert.False(result.IsValid);
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("plan.duplicate_date", finding.Code);
+        Assert.Contains("2026-10-30", finding.Message);
+        Assert.DoesNotContain("2026-10-31", finding.Message);
+        Assert.Empty(service.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_AllowsAnchoredPlannedWorkoutsOnSameDate()
+    {
+        const string athleteData = """
+            {"planned_workouts":{"next_week":{"planned_workouts":[
+              {"date":"2026-10-30","name":"Morning spin"},
+              {"date":"2026-10-30","name":"Evening ride"}
+            ],"race_events":[]}}}
+            """;
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-30","duration_minutes":30,"tss":13,"steps":[{"duration_seconds":1800,"power_pct_ftp":50}]},
+              {"date":"2026-10-30","duration_minutes":75,"tss":57,"library_workout_id":82}
+            ]}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(
+            planJson,
+            Request with { WeekDataJson = athleteData, Scope = PlanningScope.NextWeek, Mode = PlanningMode.Week },
+            "test-athlete",
+            "test-key");
+
+        Assert.Equal(["tss"], service.Calls);
+        Assert.DoesNotContain(result.Findings, finding => finding.Code == "plan.duplicate_date");
+    }
+
     [Theory]
     [InlineData("valid", null, 200)]
     [InlineData("invalid", null, 422)]

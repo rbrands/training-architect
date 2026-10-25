@@ -40,6 +40,12 @@ public sealed class TssPlanValidator(
         }
 
         var isRaceWeek = WeeklyLoadTargetResolver.IsRaceWeek(request.WeekDataJson, request.Scope);
+        var duplicateDateFinding = ValidateOneWorkoutPerDay(uploadJson, request.WeekDataJson, request.Scope);
+        if (duplicateDateFinding is not null)
+        {
+            return duplicateDateFinding;
+        }
+
         var timeTarget = WeeklyTimeTargetResolver.Resolve(request.WeekDataJson, request.Scope);
         if (timeTarget is > 0)
         {
@@ -122,6 +128,97 @@ public sealed class TssPlanValidator(
             findings.Length);
 
         return new PlanValidationResult(findings) { Summary = summary };
+    }
+
+    /// <summary>
+    /// Weekly plans must schedule at most one workout per calendar day. Days that already carry
+    /// several anchored <c>planned_workouts</c> entries are tolerated up to that anchor count, because
+    /// the prompt requires those sessions to be reproduced verbatim.
+    /// </summary>
+    private static PlanValidationResult? ValidateOneWorkoutPerDay(string uploadJson, string? weekDataJson, PlanningScope scope)
+    {
+        var workoutsPerDate = new Dictionary<DateOnly, int>();
+        using (var document = JsonDocument.Parse(uploadJson))
+        {
+            foreach (var workout in document.RootElement.GetProperty("workouts").EnumerateArray())
+            {
+                if (workout.ValueKind == JsonValueKind.Object && TryGetDate(workout, "date", out var date))
+                {
+                    workoutsPerDate[date] = workoutsPerDate.GetValueOrDefault(date) + 1;
+                }
+            }
+        }
+
+        var anchorsPerDate = ResolvePlannedWorkoutsPerDate(weekDataJson, scope);
+        var duplicateDates = workoutsPerDate
+            .Where(entry => entry.Value > Math.Max(1, anchorsPerDate.GetValueOrDefault(entry.Key)))
+            .Select(entry => entry.Key)
+            .OrderBy(date => date)
+            .ToArray();
+
+        if (duplicateDates.Length == 0)
+        {
+            return null;
+        }
+
+        var dateList = string.Join(", ", duplicateDates.Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        return PlanValidationResult.FromFinding(
+            "plan.duplicate_date",
+            $"More than one workout is scheduled on {dateList}. Schedule at most one workout per day: merge or remove the extra session and, if load or duration must be preserved, extend an existing generated session or move the extra session to an available day without a workout.");
+    }
+
+    private static Dictionary<DateOnly, int> ResolvePlannedWorkoutsPerDate(string? weekDataJson, PlanningScope scope)
+    {
+        var result = new Dictionary<DateOnly, int>();
+        if (string.IsNullOrWhiteSpace(weekDataJson))
+        {
+            return result;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(weekDataJson);
+            var root = document.RootElement;
+            var weekBlock = scope == PlanningScope.NextWeek ? "next_week" : "current_week";
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("planned_workouts", out var plannedWorkouts)
+                || plannedWorkouts.ValueKind != JsonValueKind.Object
+                || !plannedWorkouts.TryGetProperty(weekBlock, out var block)
+                || block.ValueKind != JsonValueKind.Object
+                || !block.TryGetProperty("planned_workouts", out var anchors)
+                || anchors.ValueKind != JsonValueKind.Array)
+            {
+                return result;
+            }
+
+            foreach (var anchor in anchors.EnumerateArray())
+            {
+                if (anchor.ValueKind == JsonValueKind.Object
+                    && (TryGetDate(anchor, "date", out var date) || TryGetDatePrefix(anchor, "start_date_local", out date)))
+                {
+                    result[date] = result.GetValueOrDefault(date) + 1;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return result;
+        }
+
+        return result;
+    }
+
+    private static bool TryGetDatePrefix(JsonElement parent, string propertyName, out DateOnly value)
+    {
+        value = default;
+        if (!parent.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var text = property.GetString();
+        return text is { Length: >= 10 }
+            && DateOnly.TryParseExact(text[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out value);
     }
 
     private static double ResolvePlannedHours(string uploadJson)
