@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.4] - 2026-10-26
+
+### Fixed
+- The Wellness & Metrics assessment now addresses the current week first instead of only the following week. The prompt identifies the current-week entry in `training_plan` via `week_starting`, uses its phase, week type, targets, and day constraints together with `training_readiness`, states explicitly when the current week has no load or time target instead of borrowing next week's target, and limits next week to a clearly labelled one-sentence outlook.
+
 ## [1.11.3] - 2026-10-24
 
 ### Fixed

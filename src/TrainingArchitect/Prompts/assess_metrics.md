@@ -33,7 +33,27 @@ only the discipline-specific comparison.
 **Assessment**
 - What is the current form state (fresh / transition / optimal / high risk)?
 - Are there any anomalies in the wellness data indicating overload or insufficient recovery?
-- Recommendation: Can training load be increased next week, or is recovery the priority?
+- Recommendation for the **current week**: Can training load be increased
+  this week, or is recovery the priority?
+
+Week context: the week entries live in `week_summary.training_plan`. The
+current week is the entry whose `week` equals `week_starting`; next week is
+the entry whose `week` equals `week_starting` + 7 days. Today is
+`current_date`, so the current-week recommendation covers the remaining days
+of this week.
+
+- Always address the current week first. Use `phase`, `week_type`,
+  `weekly_load_target`, `weekly_time_target_hours`, and `day_constraints` of
+  the current-week entry together with `week_summary.training_readiness`.
+  Mention days with `training_allowed: false` or LIMITED constraints, as they
+  reduce the available training days this week.
+- If the current-week entry has no `weekly_load_target` or
+  `weekly_time_target_hours`, say so explicitly and base the current-week
+  recommendation on readiness, form, and the recent load pattern. Never present
+  next week's target as this week's target.
+- Outlook for next week: only if a next-week entry exists, add one sentence on
+  its `phase`, `week_type`, and targets and whether the current wellness state
+  supports them. Label it clearly as next week.
 
 Keep the summary compact and action-oriented.
 ...
