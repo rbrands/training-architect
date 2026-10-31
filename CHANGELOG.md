@@ -13,6 +13,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Weekly assessments now use available DFA a1 estimates for concrete aerobic pacing recommendations below LT1, without recommending zone changes from the estimate alone.
 - Single-workout assessments now include available DFA a1 summaries, comparing the aerobic reading with the Zone 2 ceiling and treating it as a day-form observation rather than a zone verdict. Both assessments omit DFA a1 when the relevant field is absent and continue using the supplied athlete data.
 
+### Changed
+- Renamed the AI Coach page and navigation entries to Training Studio and the assessment result heading to Training Insights. Dashboard, Plan Week, Next Best Training, and the `/coach` URL remain unchanged.
+
 ## [1.11.4] - 2026-10-26
 
 ### Fixed

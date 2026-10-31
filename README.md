@@ -8,7 +8,8 @@ It is the user interface for the data and coaching layer published in [intervals
 
 **Key capabilities:**
 
-- **Virtual coach** — structured prompt interface powered by a Microsoft Foundry Agent (coaching orchestration)
+- **Training Studio** — analyse fitness and training, review **Training Insights**, and use **Plan Week** or **Next Best Training** to plan upcoming sessions. The page remains available at `/coach` and is powered by a Microsoft Foundry Agent.
+- **DFA a1 weekly summary** — the Dashboard displays available aerobic-threshold estimates from `week_summary.aerobic_threshold_estimate`, including power, heart rate, the Zone 2 ceiling comparison, and ride/window counts as confidence context. The block is omitted when no usable estimate is supplied; it does not fetch additional data or prescribe zone changes.
 - **Athlete goals** — choose Climber, Criterium, Cross, Fitness, Marathon, Road Race, or Zwift Racing in the coaching panel. Zwift Racing is sent to the agent as `zwift`; the selection is remembered with your connection settings.
 - **intervals.icu integration** — reads athlete fitness data and workout library via the intervals.icu REST API
 - **Structured plan proposals** — weekly training plans with day-by-day workouts including zone, TSS, IF, and coaching notes
