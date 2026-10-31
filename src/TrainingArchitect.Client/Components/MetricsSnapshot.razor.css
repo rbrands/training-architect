@@ -345,16 +345,26 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.6rem;
     margin-bottom: 0.55rem;
 }
 
 .coach-dfa-a1-weekly-header h5 {
+    min-width: 0;
     margin: 0;
     color: #285d4a;
     font-size: 0.78rem;
     font-weight: 700;
+}
+
+.coach-dfa-a1-weekly-header span {
+    min-width: 0;
+    text-align: center;
+}
+
+.coach-dfa-a1-weekly-header .coach-ftp-category-help {
+    flex-shrink: 0;
 }
 
 .coach-dfa-a1-weekly-header span,
