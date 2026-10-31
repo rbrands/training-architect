@@ -1,4 +1,5 @@
-Analyze the current metrics including wellness data if available and the training week.
+Analyze the current metrics, including wellness data if available, and the
+training week.
 
 Please cover the following points:
 
@@ -19,6 +20,15 @@ Summarize and assess:
 - Which key sessions were completed?
 - How was intensity distribution (Zone 1-2 vs. Zone 4-6)?
 - Is an important training stimulus missing?
+- If `week_summary.aerobic_threshold_estimate` is present, report
+  `power_at_0_75` and `hr_at_0_75`, with `rides_used` and
+  `threshold_windows_total` as confidence context. Compare the estimate with
+  the Zone 2 ceiling (`z2_upper_power`, `delta_pct`) and give a concrete
+  pacing recommendation for this week's long aerobic rides: specify the
+  wattage and heart-rate range to stay below LT1. Treat one ride as a day-form
+  reading and three rides as a pattern. Do not recommend changing training
+  zones based on this estimate alone. If the field is absent, skip this point
+  entirely.
 
 **Fueling**
 - Average carb intake per hour

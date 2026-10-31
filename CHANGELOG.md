@@ -6,6 +6,13 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-10-31
+
+### Added
+- Added an optional DFA a1 weekly summary to the Coach dashboard using the supplied `week_summary.aerobic_threshold_estimate`. It shows available power and heart-rate estimates, the Zone 2 ceiling and percentage difference, and the number of rides and threshold windows as confidence context.
+- Weekly assessments now use available DFA a1 estimates for concrete aerobic pacing recommendations below LT1, without recommending zone changes from the estimate alone.
+- Single-workout assessments now include available DFA a1 summaries, comparing the aerobic reading with the Zone 2 ceiling and treating it as a day-form observation rather than a zone verdict. Both assessments omit DFA a1 when the relevant field is absent and continue using the supplied athlete data.
+
 ## [1.11.4] - 2026-10-26
 
 ### Fixed

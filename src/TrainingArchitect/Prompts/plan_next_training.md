@@ -78,8 +78,8 @@ Take the following into account:
   Z4+ and high-dose work but still allow a short, easy Z1/Z2 session
   (`recovery-low` or `aerobic-threshold-low`, typically 45-75 min). Prefer that
   easy session over rest when form is positive and there was no hard session
-  in the last 48 hours; state in prose that the athlete should stop if feeling
-  unwell.
+  in the last 48 hours. Only in this degraded-readiness case, add one short
+  sentence that the athlete should stop if feeling unwell.
 - Recommend a full rest day only if at least one applies: `training_allowed`
   is false; readiness is red or has a safety veto AND form is negative or
   yesterday was a hard session; the signals or notes indicate illness, injury,
@@ -101,8 +101,11 @@ Evaluate the plan, week target, and constraints of {{recommendation_date}}.
 Use the plan/workout generation output format and upload JSON markers defined in
 the system prompt, but for exactly one workout:
 - At most 100 words of prose: date, session type, duration, target zone, TSS and
-  carbs/h, one short reason, and an easier alternative with a downgrade/stop criterion.
-  No separate analysis or metrics table.
+  carbs/h, one short reason, and an easier alternative with a concrete downgrade
+  criterion (for example shorten the ride or drop the sprints when fatigued).
+  No separate analysis or metrics table. Do not add generic safety disclaimers
+  such as "stop if feeling unwell" when readiness is green; they are
+  self-evident and only allowed in the degraded-readiness case above.
 - Then emit the upload JSON for the main recommendation using the system prompt's
   existing schema, BEGIN_UPLOAD_JSON / END_UPLOAD_JSON markers, and TSS rules.
   The alternative stays in prose only. Do not add other calendar workouts.

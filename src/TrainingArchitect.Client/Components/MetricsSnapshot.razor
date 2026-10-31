@@ -182,6 +182,68 @@
             </section>
         }
 
+        @if (DfaA1WeeklyEstimate is not null)
+        {
+            <section class="coach-dfa-a1-weekly" aria-labelledby="coach-dfa-a1-weekly-title">
+                <div class="coach-dfa-a1-weekly-header">
+                    <h5 id="coach-dfa-a1-weekly-title">DFA a1 Weekly Estimate</h5>
+                    <span>LT1 aerobic reading</span>
+                </div>
+                <dl class="coach-dfa-a1-weekly-metrics">
+                    @if (DfaA1WeeklyEstimate.PowerAt075 is not null)
+                    {
+                        <div><dt>Power at DFA a1 0.75</dt><dd>@FormatWatts(DfaA1WeeklyEstimate.PowerAt075.Value)</dd></div>
+                    }
+                    @if (DfaA1WeeklyEstimate.HrAt075 is not null)
+                    {
+                        <div><dt>Heart rate at DFA a1 0.75</dt><dd>@FormatHeartRate(DfaA1WeeklyEstimate.HrAt075.Value)</dd></div>
+                    }
+                    @if (DfaA1WeeklyEstimate.PowerAt075PctFtp is not null)
+                    {
+                        <div><dt>Power at DFA a1 (% FTP)</dt><dd>@FormatPercent(DfaA1WeeklyEstimate.PowerAt075PctFtp.Value)%</dd></div>
+                    }
+                    @if (DfaA1WeeklyEstimate.Z2UpperPower is not null)
+                    {
+                        <div><dt>Zone 2 ceiling</dt><dd>@FormatWatts(DfaA1WeeklyEstimate.Z2UpperPower.Value)</dd></div>
+                    }
+                    @if (DfaA1WeeklyEstimate.DeltaPct is not null)
+                    {
+                        <div><dt>Difference vs. Zone 2 ceiling</dt><dd>@FormatSignedPercent(DfaA1WeeklyEstimate.DeltaPct.Value)</dd></div>
+                    }
+                </dl>
+                @if (DfaA1WeeklyEstimate.RidesUsed is not null || DfaA1WeeklyEstimate.ThresholdWindowsTotal is not null)
+                {
+                    <p class="coach-dfa-a1-weekly-confidence">
+                        Confidence:
+                        @if (DfaA1WeeklyEstimate.RidesUsed is not null)
+                        {
+                            <span>@DfaA1WeeklyEstimate.RidesUsed ride@(DfaA1WeeklyEstimate.RidesUsed == 1 ? string.Empty : "s")</span>
+                        }
+                        @if (DfaA1WeeklyEstimate.ThresholdWindowsTotal is not null)
+                        {
+                            <span>@DfaA1WeeklyEstimate.ThresholdWindowsTotal threshold window@(DfaA1WeeklyEstimate.ThresholdWindowsTotal == 1 ? string.Empty : "s")</span>
+                        }
+                        @if (DfaA1WeeklyEstimate.RidesUsed == 1)
+                        {
+                            <span>— day-form observation, not a zone verdict.</span>
+                        }
+                        else if (DfaA1WeeklyEstimate.RidesUsed >= 3)
+                        {
+                            <span>— a repeated reading can indicate a pattern, not a zone verdict.</span>
+                        }
+                        else
+                        {
+                            <span>— limited repeatability; treat as context, not a zone verdict.</span>
+                        }
+                    </p>
+                }
+                else
+                {
+                    <p class="coach-dfa-a1-weekly-confidence">Treat this as a day-form observation, not a zone verdict.</p>
+                }
+            </section>
+        }
+
         @if (FtpCategory is not null)
         {
             <section class="coach-ftp-category" aria-labelledby="coach-ftp-category-title">
@@ -391,6 +453,9 @@
 
     [Parameter]
     public IReadOnlyList<TrainingLoadWeekSnapshot> TrainingLoadHistory { get; set; } = [];
+
+    [Parameter]
+    public DfaA1WeeklyEstimateSnapshot? DfaA1WeeklyEstimate { get; set; }
 
     private static readonly IReadOnlyList<FtpCategorySnapshot> FtpCategories =
     [
@@ -776,6 +841,18 @@
         return value.ToString("0.0", CultureInfo.InvariantCulture);
     }
 
+    private static string FormatWatts(double value) => $"{value.ToString("0.#", CultureInfo.InvariantCulture)} W";
+
+    private static string FormatHeartRate(double value) => $"{value.ToString("0.#", CultureInfo.InvariantCulture)} bpm";
+
+    private static string FormatPercent(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private static string FormatSignedPercent(double value)
+    {
+        var prefix = value > 0 ? "+" : string.Empty;
+        return $"{prefix}{FormatPercent(value)}%";
+    }
+
     private static string FormatTsbDisplay(FitnessKpiSnapshot snapshot)
     {
         return string.IsNullOrWhiteSpace(snapshot.FormPercentDisplay)
@@ -850,6 +927,25 @@
     private sealed record CtlChartPoint(double X, double Y, int WeekIndex);
 
     public sealed record FitnessKpiSnapshot(double Ctl, double Atl, double Tsb, string? FormPercentDisplay, double? FormPercent, string? FormZone);
+
+    public sealed record DfaA1WeeklyEstimateSnapshot(
+        double? PowerAt075,
+        double? HrAt075,
+        double? PowerAt075PctFtp,
+        double? Z2UpperPower,
+        double? DeltaPct,
+        int? RidesUsed,
+        int? ThresholdWindowsTotal)
+    {
+        public bool HasData =>
+            PowerAt075 is not null
+            || HrAt075 is not null
+            || PowerAt075PctFtp is not null
+            || Z2UpperPower is not null
+            || DeltaPct is not null
+            || RidesUsed is not null
+            || ThresholdWindowsTotal is not null;
+    }
 
     public sealed record TrainingLoadWeekSnapshot(
         DateOnly WeekStarting,

@@ -1,7 +1,13 @@
 Summarize the current metrics and wellness data.
 
 **Performance Metrics**
-- FTP and eFTP (current value and trend)
+- FTP and eFTP (current value and trend). Use only `metrics.ftp`,
+  `metrics.rolling_ftp`, `metrics.eftp`, and `metrics.ftp_eftp_delta_pct` for
+  this. Ignore the per-activity `activity_eftp` values in `recent_activities`:
+  they only reflect the best effort within that single session, so low values
+  from endurance or recovery rides are expected and are **not** evidence of a
+  fitness change or of a power-meter/trainer calibration problem. Never
+  speculate about equipment or sensor discrepancies based on them.
 - VO2max (current value and trend)
 - W' (anaerobic capacity)
 - CTL (fitness), ATL (fatigue), form (TSB) — absolute and as %

@@ -318,6 +318,7 @@
             var fitnessKpis = BuildFitnessKpis();
             var trainingReadiness = BuildTrainingReadiness();
             var trainingLoadHistory = BuildTrainingLoadHistory();
+            var dfaA1WeeklyEstimate = BuildDfaA1WeeklyEstimate();
 
             <div class="coach-prompt-expanded">
                 <SfCard CssClass="coach-prompt-card">
@@ -375,7 +376,8 @@
                             <MetricsSnapshot Items="metricsSnapshot"
                                              FitnessKpis="fitnessKpis"
                                              TrainingReadiness="trainingReadiness"
-                                             TrainingLoadHistory="trainingLoadHistory" />
+                                             TrainingLoadHistory="trainingLoadHistory"
+                                             DfaA1WeeklyEstimate="dfaA1WeeklyEstimate" />
                         }
 
                         <div class="coach-assess-result-actions">
@@ -1456,6 +1458,28 @@
         }
 
         return items;
+    }
+
+    private MetricsSnapshot.DfaA1WeeklyEstimateSnapshot? BuildDfaA1WeeklyEstimate()
+    {
+        var estimate = GetNestedProperty(
+            GetObjectProperty(GetOverviewRoot(), "week_summary"),
+            "aerobic_threshold_estimate");
+        if (estimate is null)
+        {
+            return null;
+        }
+
+        var snapshot = new MetricsSnapshot.DfaA1WeeklyEstimateSnapshot(
+            GetDoubleProperty(estimate.Value, "power_at_0_75"),
+            GetDoubleProperty(estimate.Value, "hr_at_0_75"),
+            GetDoubleProperty(estimate.Value, "power_at_0_75_pct_ftp"),
+            GetDoubleProperty(estimate.Value, "z2_upper_power"),
+            GetDoubleProperty(estimate.Value, "delta_pct"),
+            GetIntProperty(estimate.Value, "rides_used"),
+            GetIntProperty(estimate.Value, "threshold_windows_total"));
+
+        return snapshot.HasData ? snapshot : null;
     }
 
     private IReadOnlyList<MetricsSnapshot.TrainingLoadWeekSnapshot> BuildTrainingLoadHistory()
