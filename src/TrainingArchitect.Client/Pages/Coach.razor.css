@@ -1400,6 +1400,8 @@
 .coach-plan-week-duration,
 .coach-plan-week-tss,
 .coach-plan-week-library,
+.coach-plan-week-strength,
+.coach-plan-week-strength-phase,
 .coach-plan-week-tag,
 .coach-plan-week-warning {
     display: inline-flex;
@@ -1426,6 +1428,16 @@
 .coach-plan-week-library {
     background: #ecfdf5;
     color: #1b7d58;
+}
+
+.coach-plan-week-strength {
+    background: #f0eaff;
+    color: #6546a5;
+}
+
+.coach-plan-week-strength-phase {
+    background: #f6f1ff;
+    color: #6546a5;
 }
 
 .coach-plan-week-tag {

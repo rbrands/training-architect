@@ -118,8 +118,25 @@
     color: #52627a;
 }
 
+.coach-readiness-strength-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.coach-readiness-strength-row.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .coach-metrics-kpi--readiness {
     align-items: stretch;
+    text-align: left;
+}
+
+.coach-metrics-kpi--strength {
+    align-items: stretch;
+    gap: 0.35rem;
     text-align: left;
 }
 
@@ -128,6 +145,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.35rem;
+}
+
+.coach-metrics-kpi--strength .coach-metrics-kpi-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    width: 100%;
 }
 
 .coach-metrics-kpi-help {
@@ -262,6 +287,86 @@
 .coach-metrics-kpi-article-link:focus-visible {
     color: #1f4d78;
     text-decoration: underline;
+}
+
+.coach-strength-phase {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    margin-top: 0.05rem;
+    color: #1f2d42;
+    line-height: 1.1;
+}
+
+.coach-strength-phase-name {
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.coach-strength-phase-abbreviation {
+    color: #6546a5;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.coach-strength-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.coach-strength-progress-segments {
+    position: relative;
+    display: flex;
+    gap: 0.16rem;
+    min-height: 0.55rem;
+}
+
+.coach-strength-progress-segment {
+    flex: 1 1 0;
+    border-radius: 3px;
+    background: #e8e2f2;
+}
+
+.coach-strength-progress-segment.is-filled {
+    background: #8054c7;
+}
+
+.coach-strength-progress-minimum-tick {
+    position: absolute;
+    top: -0.12rem;
+    bottom: -0.12rem;
+    width: 2px;
+    transform: translateX(-1px);
+    background: #4a3471;
+    pointer-events: none;
+}
+
+.coach-strength-progress-label,
+.coach-strength-this-week,
+.coach-strength-history,
+.coach-strength-tracking-hint {
+    color: #64748b;
+    font-size: 0.68rem;
+    line-height: 1.3;
+}
+
+.coach-strength-progress-label {
+    color: #6546a5;
+    font-weight: 700;
+}
+
+.coach-strength-this-week {
+    color: #314b73;
+    font-weight: 700;
+}
+
+.coach-strength-tracking-hint {
+    font-size: 0.63rem;
+}
+
+.coach-strength-details p {
+    margin: 0;
 }
 
 .coach-readiness-details {
@@ -574,6 +679,14 @@
     color: #738196;
     font-size: 0.62rem;
     line-height: 1.2;
+    white-space: nowrap;
+}
+
+.coach-load-history-sport-values {
+    margin-top: 0.08rem;
+    color: #6546a5;
+    font-size: 0.58rem;
+    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -1076,6 +1189,12 @@
     line-height: 1.3;
 }
 
+@media (max-width: 640px) {
+    .coach-readiness-strength-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 @media (max-width: 430px) {
     .coach-load-history {
         padding-right: 0.55rem;
@@ -1117,8 +1236,8 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .coach-metrics-kpi--readiness {
-        grid-column: 1 / -1;
+    .coach-readiness-strength-row {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .coach-readiness-details {

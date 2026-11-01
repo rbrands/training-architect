@@ -21,7 +21,7 @@
 
         @if (FitnessKpis is not null)
         {
-            <div class="coach-metrics-kpis" aria-label="CTL ATL TSB and training readiness summary">
+            <div class="coach-metrics-kpis" aria-label="CTL ATL and TSB summary">
                 <div class="coach-metrics-kpi coach-metrics-kpi--ctl">
                     <span class="coach-metrics-kpi-label">CTL (Fitness)</span>
                     <span class="coach-metrics-kpi-value">@FormatKpiValue(FitnessKpis.Ctl)</span>
@@ -34,40 +34,106 @@
                     <span class="coach-metrics-kpi-label">TSB (Form)</span>
                     <span class="coach-metrics-kpi-value @GetTsbZoneCssClass(FitnessKpis)">@FormatTsbDisplay(FitnessKpis)</span>
                 </div>
-                @if (TrainingReadiness is not null)
-                {
-                    <div class="coach-metrics-kpi coach-metrics-kpi--readiness coach-metrics-kpi--@GetReadinessStatusClass(TrainingReadiness.Status)">
-                        <div class="coach-metrics-kpi-label-row">
-                            <span class="coach-metrics-kpi-label">Training Readiness</span>
-                            <button type="button"
-                                    class="coach-metrics-kpi-help"
-                                    aria-label="Show training readiness details"
-                                    aria-expanded="@TrainingReadiness.DetailsVisible"
-                                    @onclick="ToggleReadinessDetails">
-                                ?
-                            </button>
-                        </div>
-                        <div class="coach-metrics-kpi-readiness-status"
-                             aria-label="Current readiness: @GetReadinessLabel(TrainingReadiness.Status)">
-                            <span class="coach-readiness-traffic-light" aria-hidden="true">
-                                <span class="coach-readiness-light coach-readiness-light--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)"></span>
-                                <span class="coach-readiness-light coach-readiness-light--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)"></span>
-                                <span class="coach-readiness-light coach-readiness-light--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)"></span>
-                            </span>
-                            <span class="coach-readiness-traffic-labels">
-                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)">Caution</span>
-                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)">Adjust</span>
-                                <span class="coach-readiness-traffic-label coach-readiness-traffic-label--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)">Ready</span>
-                            </span>
-                        </div>
-                        <span class="coach-metrics-kpi-recommendation">@TrainingReadiness.Recommendation</span>
-                        <a class="coach-metrics-kpi-article-link"
-                           href="/blog/training-readiness">
-                            Learn more about Training Readiness
-                        </a>
-                    </div>
-                }
             </div>
+
+            @if (TrainingReadiness is not null || Strength is not null)
+            {
+                <div class="coach-readiness-strength-row @(TrainingReadiness is null || Strength is null ? "is-single" : string.Empty)">
+                    @if (TrainingReadiness is not null)
+                    {
+                        <div class="coach-metrics-kpi coach-metrics-kpi--readiness coach-metrics-kpi--@GetReadinessStatusClass(TrainingReadiness.Status)">
+                            <div class="coach-metrics-kpi-label-row">
+                                <span class="coach-metrics-kpi-label">Training Readiness</span>
+                                <button type="button"
+                                        class="coach-metrics-kpi-help"
+                                        aria-label="Show training readiness details"
+                                        aria-expanded="@TrainingReadiness.DetailsVisible"
+                                        @onclick="ToggleReadinessDetails">
+                                    ?
+                                </button>
+                            </div>
+                            <div class="coach-metrics-kpi-readiness-status"
+                                 aria-label="Current readiness: @GetReadinessLabel(TrainingReadiness.Status)">
+                                <span class="coach-readiness-traffic-light" aria-hidden="true">
+                                    <span class="coach-readiness-light coach-readiness-light--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)"></span>
+                                    <span class="coach-readiness-light coach-readiness-light--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)"></span>
+                                    <span class="coach-readiness-light coach-readiness-light--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)"></span>
+                                </span>
+                                <span class="coach-readiness-traffic-labels">
+                                    <span class="coach-readiness-traffic-label coach-readiness-traffic-label--red @(IsReadinessStatusActive(TrainingReadiness.Status, "red") ? "is-active" : string.Empty)">Caution</span>
+                                    <span class="coach-readiness-traffic-label coach-readiness-traffic-label--yellow @(IsReadinessStatusActive(TrainingReadiness.Status, "yellow") ? "is-active" : string.Empty)">Adjust</span>
+                                    <span class="coach-readiness-traffic-label coach-readiness-traffic-label--green @(IsReadinessStatusActive(TrainingReadiness.Status, "green") ? "is-active" : string.Empty)">Ready</span>
+                                </span>
+                            </div>
+                            <span class="coach-metrics-kpi-recommendation">@TrainingReadiness.Recommendation</span>
+                            <a class="coach-metrics-kpi-article-link"
+                               href="/blog/training-readiness">
+                                Learn more about Training Readiness
+                            </a>
+                        </div>
+                    }
+                    @if (Strength is not null)
+                    {
+                        <div class="coach-metrics-kpi coach-metrics-kpi--strength">
+                            <div class="coach-metrics-kpi-label-row">
+                                <span class="coach-metrics-kpi-label">Strength</span>
+                                <button type="button"
+                                        class="coach-metrics-kpi-help"
+                                        aria-label="Show strength phase details"
+                                        aria-expanded="@StrengthDetailsVisible"
+                                        @onclick="ToggleStrengthDetails">
+                                    ?
+                                </button>
+                            </div>
+                            <div class="coach-strength-phase"
+                                 aria-label="Strength phase: @Strength.PhaseLabel">
+                                <span class="coach-strength-phase-name">@Strength.PhaseLabel</span>
+                                @if (Strength.Phase is not null)
+                                {
+                                    <span class="coach-strength-phase-abbreviation">@GetStrengthPhaseAbbreviation(Strength.Phase)</span>
+                                }
+                            </div>
+                            @if (Strength.Phase is "maintenance")
+                            {
+                                <span class="coach-strength-progress-label">ongoing</span>
+                            }
+                            else if (Strength.PhaseTargetMin is int phaseTargetMin
+                                     && Strength.PhaseTargetMax is int phaseTargetMax)
+                            {
+                                <div class="coach-strength-progress"
+                                     role="img"
+                                     aria-label="@Strength.PhaseSessionCount of @phaseTargetMin–@phaseTargetMax sessions">
+                                    <div class="coach-strength-progress-segments">
+                                        @for (var segment = 1; segment <= phaseTargetMax; segment++)
+                                        {
+                                            <span class="coach-strength-progress-segment @(segment <= Strength.PhaseSessionCount ? "is-filled" : string.Empty)"></span>
+                                        }
+                                        <span class="coach-strength-progress-minimum-tick"
+                                              style="@GetStrengthProgressTickStyle(phaseTargetMin, phaseTargetMax)"
+                                              aria-hidden="true"></span>
+                                    </div>
+                                    <span class="coach-strength-progress-label">
+                                        @Strength.PhaseSessionCount of @phaseTargetMin–@phaseTargetMax sessions
+                                    </span>
+                                </div>
+                            }
+                            <span class="coach-strength-this-week">
+                                This week @Strength.SessionsThisWeek · @FormatLastStrengthSession(Strength.DaysSinceLast)
+                            </span>
+                            @if (Strength.SessionsPerWeekLast4.Count > 0)
+                            {
+                                <span class="coach-strength-history">
+                                    @string.Join(" · ", Strength.SessionsPerWeekLast4) sessions/week
+                                </span>
+                            }
+                            @if (Strength.Phase is null)
+                            {
+                                <span class="coach-strength-tracking-hint">Tag sessions or let the coach plan strength to track the phase</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
 
             @if (TrainingReadiness is not null && TrainingReadiness.DetailsVisible)
             {
@@ -108,6 +174,13 @@
                     }
                 </div>
             }
+
+            @if (Strength is not null && StrengthDetailsVisible)
+            {
+                <div class="coach-readiness-details coach-strength-details" role="region" aria-label="Strength phase details">
+                    <p>Friel’s four strength phases are Anatomical Adaptation, Max Transition, Max Strength, and Strength Maintenance. The phase advances automatically as strength sessions are tagged.</p>
+                </div>
+            }
         }
 
         @if (TrainingLoadHistory.Count > 0)
@@ -142,6 +215,10 @@
                                 <span class="coach-load-history-week-type" aria-label="Recovery week">Recovery</span>
                             }
                             <span class="coach-load-history-values">@FormatLoadValues(week)</span>
+                            @if (week.IsCurrentWeek && (week.RideLoad is not null || week.StrengthLoad is not null))
+                            {
+                                <span class="coach-load-history-sport-values">@FormatSportLoads(week)</span>
+                            }
                             @if (HasFitnessTrend(week))
                             {
                                 <span class="coach-load-history-fitness">
@@ -461,6 +538,11 @@
     [Parameter]
     public DfaA1WeeklyEstimateSnapshot? DfaA1WeeklyEstimate { get; set; }
 
+    [Parameter]
+    public StrengthSnapshot? Strength { get; set; }
+
+    private bool StrengthDetailsVisible { get; set; }
+
     private static readonly IReadOnlyList<FtpCategorySnapshot> FtpCategories =
     [
         new("beginner", "Beginner", 1, "#6f8eaa"),
@@ -534,6 +616,31 @@
             TrainingReadiness.DetailsVisible = !TrainingReadiness.DetailsVisible;
         }
     }
+
+    private void ToggleStrengthDetails()
+    {
+        StrengthDetailsVisible = !StrengthDetailsVisible;
+    }
+
+    private static string GetStrengthPhaseAbbreviation(string phase) => phase switch
+    {
+        "adaptation" => "AA",
+        "transition" => "MT",
+        "maximum" => "MS",
+        "maintenance" => "SM",
+        _ => string.Empty
+    };
+
+    private static string FormatLastStrengthSession(int? daysSinceLast) => daysSinceLast switch
+    {
+        0 => "last session today",
+        1 => "last session 1 day ago",
+        > 1 => $"last session {daysSinceLast} days ago",
+        _ => "last session date unavailable"
+    };
+
+    private static string GetStrengthProgressTickStyle(int minimum, int maximum) =>
+        FormattableString.Invariant($"left: {(double)minimum / maximum * 100:0.##}%");
 
     private static string GetReadinessStatusClass(string status) => status.Trim().ToLowerInvariant() switch
     {
@@ -779,6 +886,22 @@
             : actual;
     }
 
+    private static string FormatSportLoads(TrainingLoadWeekSnapshot week)
+    {
+        var values = new List<string>(2);
+        if (week.RideLoad is not null)
+        {
+            values.Add($"Ride load {week.RideLoad.Value.ToString("0.#", CultureInfo.InvariantCulture)}");
+        }
+
+        if (week.StrengthLoad is not null)
+        {
+            values.Add($"Strength {week.StrengthLoad.Value.ToString("0.#", CultureInfo.InvariantCulture)}");
+        }
+
+        return string.Join(" · ", values);
+    }
+
     private static string FormatAchievement(TrainingLoadWeekSnapshot week)
     {
         return week.AchievementPercent is null
@@ -895,6 +1018,17 @@
 
     public sealed record MetricSnapshotItem(string Label, string Value, string? Trend = null);
 
+    public sealed record StrengthSnapshot(
+        string? Phase,
+        string PhaseLabel,
+        int PhaseSessionCount,
+        int? PhaseTargetMin,
+        int? PhaseTargetMax,
+        int SessionsThisWeek,
+        int? DaysSinceLast,
+        IReadOnlyList<int> SessionsPerWeekLast4,
+        int UntaggedCount);
+
     public sealed class TrainingReadinessSnapshot(
         string status,
         string recommendation,
@@ -960,5 +1094,7 @@
         bool IsRecoveryWeek,
         double? Ctl = null,
         double? Atl = null,
-        double? FormPercentDisplay = null);
+        double? FormPercentDisplay = null,
+        double? RideLoad = null,
+        double? StrengthLoad = null);
 }

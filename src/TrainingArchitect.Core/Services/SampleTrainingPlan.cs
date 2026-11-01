@@ -59,6 +59,18 @@ public static class SampleTrainingPlan
                 },
                 new PlannedWorkout
                 {
+                    Day = "Wednesday",
+                    Title = "Strength — Adaptation",
+                    Description = "Session 1 of 4–6. Build movement quality and general strength with controlled repetitions.",
+                    Type = WorkoutType.Strength,
+                    StrengthPhase = StrengthPhase.Adaptation,
+                    DurationMinutes = 45,
+                    Tss = 0,
+                    IntensityFactor = 0,
+                    Zone = "Off-bike"
+                },
+                new PlannedWorkout
+                {
                     Day = "Thursday",
                     Title = "VO₂max Efforts",
                     Description = "6 × 3 min @ 110–115 % FTP, 3 min easy between. " +
