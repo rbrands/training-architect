@@ -7,7 +7,8 @@ Summarize the current metrics and wellness data.
   they only reflect the best effort within that single session, so low values
   from endurance or recovery rides are expected and are **not** evidence of a
   fitness change or of a power-meter/trainer calibration problem. Never
-  speculate about equipment or sensor discrepancies based on them.
+  speculate about equipment or sensor discrepancies based on them. Do not use
+  `WeightTraining` activity values as cycling-performance evidence.
 - VO2max (current value and trend)
 - W' (anaerobic capacity)
 - CTL (fitness), ATL (fatigue), form (TSB) — absolute and as %

@@ -1,5 +1,10 @@
 Analyse ONLY the most recent activity in the data. Ignore all other activities.
 
+If the most recent activity has `type: "WeightTraining"`, do not infer cycling
+zones, power-based training quality, or ride fueling from it. Strength activity
+data omits those ride-specific fields; assess the strength session only from
+available strength-relevant context and do not treat absent ride metrics as zero.
+
 Answer the following questions:
 1. What was the training quality (VO2max stimulus, threshold stimulus, base)?
 2. How was load management (pacing, heart rate decoupling, W' usage)?

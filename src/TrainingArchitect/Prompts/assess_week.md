@@ -12,13 +12,14 @@ Summarize and assess:
 - Assess target achievement and actual Ride load across the four completed
   weeks in `training_load_history`
 - Distinguish a single-week outlier from a repeated over- or under-target pattern
-- Compare the current week's load (TSS, hours) with the recent pattern
+- Compare the current week's Ride load (TSS, hours) with the recent pattern
 - Development of CTL, ATL, and form (TSB)
 - Assessment: Was the week overdone, appropriate, or too light?
 
 **Training Quality**
-- Which key sessions were completed?
-- How was intensity distribution (Zone 1-2 vs. Zone 4-6)?
+- Which key ride sessions were completed?
+- How was ride intensity distribution (Zone 1-2 vs. Zone 4-6)? Do not include
+  `WeightTraining` in ride zones or intensity distribution.
 - Is an important training stimulus missing?
 - If `week_summary.aerobic_threshold_estimate` is present, report
   `power_at_0_75` and `hr_at_0_75`, with `rides_used` and
@@ -30,10 +31,20 @@ Summarize and assess:
   zones based on this estimate alone. If the field is absent, skip this point
   entirely.
 
+**Strength**
+- If `week_summary.strength` is absent, skip this block. Also skip it when
+  `current_phase` is null and `strength_sessions` is 0.
+- Report the current phase and session count versus the phase target, sessions
+  this week versus the phase frequency rule, and placement relative to key
+  sessions.
+- If `current_phase` is null but strength sessions exist, name adaptation as a
+  working assumption and add one sentence that tagging sessions or letting the
+  coach plan strength enables phase tracking. This is not a warning.
+
 **Fueling**
-- Average carb intake per hour
-- Critical sessions with insufficient fueling
-- Relationship between fueling and performance drops
+- Average carb intake per hour on rides
+- Critical ride sessions with insufficient fueling
+- Relationship between ride fueling and performance drops
 
 **Limiter**
 - What is the primary performance limiter this week?

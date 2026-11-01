@@ -16,6 +16,10 @@ public sealed class NextTrainingPlanTests
         {"workouts":[{"date":"2026-10-19","duration_minutes":45,"tss":25,
         "description":"Easy ride.\n- 45m 60%","steps":[{"duration_seconds":2700,"power_pct_ftp":60}]}]}
         """;
+    private const string StrengthPlanJson = """
+        {"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining",
+        "duration_minutes":45,"tags":["strength-adaptation"]}]}
+        """;
     private static readonly PlanRequest Request = new(
         "{}", "fitness", "en", PlanningScope.CurrentWeek,
         new PlanConstraints(500, []), Mode: PlanningMode.NextTraining);
@@ -105,7 +109,9 @@ public sealed class NextTrainingPlanTests
             {"week_starting":"2026-10-19","week_summary":{"training_plan":[
               {"week":"2026-10-19","weekly_time_target_hours":1}
             ]},"activities":[
-              {"date":"2026-10-19","duration_hours":0.25},
+              {"date":"2026-10-19","type":"Ride","duration_hours":0.25},
+              {"date":"2026-10-19","type":"WeightTraining","duration_hours":4},
+              {"date":"2026-10-19","type":"Run","duration_hours":2},
               {"date":"2026-10-18","duration_hours":4}
             ]}
             """;
@@ -114,6 +120,60 @@ public sealed class NextTrainingPlanTests
             WeekDataJson = athleteData,
             Constraints = new PlanConstraints(null, []),
             Scope = PlanningScope.CurrentWeek,
+            Mode = PlanningMode.Week
+        };
+        var validator = new TssPlanValidator(new RecordingAthleteDataService(), NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(PlanJson, request, null, null);
+
+        Assert.True(result.IsValid);
+        Assert.Contains("Duration check passed", result.Summary);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_PlannedHoursIgnoreStrengthEntries()
+    {
+        const string athleteData = """
+            {"week_starting":"2026-10-19","week_summary":{"training_plan":[
+              {"week":"2026-10-19","weekly_time_target_hours":0.75}
+            ]}}
+            """;
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-19","activity_type":"Ride","duration_minutes":45},
+              {"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":60,
+               "tags":["strength-adaptation"]}
+            ]}
+            """;
+        var request = Request with
+        {
+            WeekDataJson = athleteData,
+            Constraints = new PlanConstraints(null, []),
+            Mode = PlanningMode.Week
+        };
+        var validator = new TssPlanValidator(new RecordingAthleteDataService(), NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, request, null, null);
+
+        Assert.True(result.IsValid);
+        Assert.Contains("Duration check passed", result.Summary);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_CompletedHoursPreferRideTimeHoursSummary()
+    {
+        const string athleteData = """
+            {"week_starting":"2026-10-19","week_summary":{
+              "ride_time_hours":0.25,
+              "training_plan":[{"week":"2026-10-19","weekly_time_target_hours":1}]
+            },"activities":[
+              {"date":"2026-10-19","type":"WeightTraining","duration_hours":4}
+            ]}
+            """;
+        var request = Request with
+        {
+            WeekDataJson = athleteData,
+            Constraints = new PlanConstraints(null, []),
             Mode = PlanningMode.Week
         };
         var validator = new TssPlanValidator(new RecordingAthleteDataService(), NullLogger<TssPlanValidator>.Instance);
@@ -147,13 +207,172 @@ public sealed class NextTrainingPlanTests
     }
 
     [Fact]
-    public async Task ValidateAsync_WeeklyMode_RejectsTwoWorkoutsOnSameDate()
+    public async Task ValidateAsync_WeeklyMode_PrefersRideLoadForCompletedTss()
+    {
+        const string athleteData = """
+            {"week_summary":{"ride_load":92,"total_training_load":135}}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        await validator.ValidateAsync(
+            PlanJson,
+            Request with { WeekDataJson = athleteData, Mode = PlanningMode.Week },
+            "test-athlete",
+            "test-key");
+
+        Assert.Equal(92d, service.CompletedTss);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_DoesNotFindMismatchForUncountedWorkout()
+    {
+        var service = new RecordingAthleteDataService
+        {
+            TssResult = new PlanTssCheckResult
+            {
+                Valid = false,
+                Workouts =
+                [
+                    new PlanTssWorkoutCheck
+                    {
+                        Date = "2026-10-19",
+                        StatedTss = 25,
+                        ComputedTss = 40,
+                        Mismatch = true,
+                        Counted = false
+                    }
+                ],
+                Week = new PlanTssWeekCheck
+                {
+                    TotalTss = 0,
+                    LoadTarget = 500,
+                    WithinTolerance = true,
+                    PlannedOtherTss = 25
+                },
+                Issues = ["TSS mismatch for workout on 2026-10-19."]
+            }
+        };
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(
+            PlanJson,
+            Request with { Mode = PlanningMode.Week },
+            "test-athlete",
+            "test-key");
+
+        Assert.True(result.IsValid);
+        Assert.Contains("(+25 TSS strength/run, not counted)", result.Summary);
+    }
+
+    [Fact]
+    public void PlanTssCheckResult_DeserializesOldAndExtendedPayloads()
+    {
+        const string oldPayload = """
+            {"workouts":[{"date":"2026-10-19","stated_tss":25,"computed_tss":25,"mismatch":false}],
+             "week":{"total_tss":25,"load_target":25,"deviation_pct":0,"within_tolerance":true},
+             "valid":true,"issues":[]}
+            """;
+        const string extendedPayload = """
+            {"workouts":[{"date":"2026-10-19","stated_tss":25,"computed_tss":25,"mismatch":false,"counted":false}],
+             "week":{"total_tss":25,"load_target":25,"deviation_pct":0,"within_tolerance":true,
+             "planned_ride_tss":20,"planned_other_tss":5,"planned_ride_hours":1,"planned_other_hours":0.5},
+             "valid":true,"issues":[]}
+            """;
+
+        var oldResult = JsonSerializer.Deserialize<PlanTssCheckResult>(oldPayload)!;
+        var extendedResult = JsonSerializer.Deserialize<PlanTssCheckResult>(extendedPayload)!;
+
+        Assert.Null(Assert.Single(oldResult.Workouts).Counted);
+        Assert.Null(oldResult.Week!.PlannedOtherTss);
+        Assert.False(Assert.Single(extendedResult.Workouts).Counted);
+        Assert.Equal(5d, extendedResult.Week!.PlannedOtherTss);
+        Assert.Equal(1d, extendedResult.Week.PlannedRideHours);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_NextTraining_AllowsValidStrengthSession()
+    {
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(StrengthPlanJson, Request, null, null);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(service.Calls);
+    }
+
+    [Theory]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["vo2max-high"]}]}""")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"],"steps":[{"duration_seconds":60}]}]}""")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":20,"tags":["strength-adaptation"]}]}""")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":90,"tags":["strength-adaptation"]}]}""")]
+    public async Task ValidateAsync_NextTraining_RejectsInvalidStrengthEntry(string planJson)
+    {
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, Request, null, null);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("plan.strength_entry_invalid", Assert.Single(result.Findings).Code);
+        Assert.Contains("2026-10-19", result.Findings[0].Message);
+        Assert.Empty(service.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_AllowsRideAndStrengthOnSameDate()
     {
         const string planJson = """
             {"workouts":[
-              {"date":"2026-10-30","duration_minutes":75,"tss":57,"library_workout_id":82},
-              {"date":"2026-10-30","duration_minutes":30,"tss":13,"steps":[{"duration_seconds":1800,"power_pct_ftp":50}]},
-              {"date":"2026-10-31","duration_minutes":47,"tss":45,"library_workout_id":51}
+              {"date":"2026-10-19","activity_type":"Ride","duration_minutes":45,
+               "steps":[{"duration_seconds":2700,"power_pct_ftp":60}]},
+              {"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,
+               "tags":["strength-adaptation"]}
+            ]}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(
+            planJson,
+            Request with { Mode = PlanningMode.Week },
+            "test-athlete",
+            "test-key");
+
+        Assert.True(result.IsValid);
+        Assert.Equal(["tss"], service.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_RejectsTwoStrengthEntriesOnSameDate()
+    {
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,
+               "tags":["strength-adaptation"]},
+              {"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,
+               "tags":["strength-adaptation"]}
+            ]}
+            """;
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, Request with { Mode = PlanningMode.Week }, null, null);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("plan.duplicate_date", Assert.Single(result.Findings).Code);
+        Assert.Empty(service.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WeeklyMode_RejectsTwoRidesOnSameDate()
+    {
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-30","activity_type":"Ride","duration_minutes":75,"tss":57,"library_workout_id":82},
+              {"date":"2026-10-30","activity_type":"Ride","duration_minutes":30,"tss":13,"steps":[{"duration_seconds":1800,"power_pct_ftp":50}]},
+              {"date":"2026-10-31","activity_type":"Ride","duration_minutes":47,"tss":45,"library_workout_id":51}
             ]}
             """;
         var service = new RecordingAthleteDataService();
@@ -165,6 +384,7 @@ public sealed class NextTrainingPlanTests
         var finding = Assert.Single(result.Findings);
         Assert.Equal("plan.duplicate_date", finding.Code);
         Assert.Contains("2026-10-30", finding.Message);
+        Assert.Contains("at most one ride and one strength session per day", finding.Message);
         Assert.DoesNotContain("2026-10-31", finding.Message);
         Assert.Empty(service.Calls);
     }
@@ -262,6 +482,7 @@ public sealed class NextTrainingPlanTests
         public string? ValidatedJson { get; private set; }
         public string? UploadedJson { get; private set; }
         public PlanValidationCheckResult Validation { get; init; } = new() { Status = "valid" };
+        public PlanTssCheckResult TssResult { get; init; } = new() { Valid = true };
 
         public Task<AthleteDataResponse> GetAsync(string athleteId, string apiKey, CancellationToken ct) =>
             throw new NotSupportedException();
@@ -279,7 +500,7 @@ public sealed class NextTrainingPlanTests
             Calls.Add("tss");
             LoadTarget = loadTarget;
             CompletedTss = completedTss;
-            return Task.FromResult(new PlanTssCheckResult { Valid = true });
+            return Task.FromResult(TssResult);
         }
 
         public Task<PlanValidationCheckResult> ValidateWeekPlanAsync(
