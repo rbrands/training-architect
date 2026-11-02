@@ -396,10 +396,11 @@
                     <dl class="coach-ftp-category-metrics coach-vo2max-category-metrics">
                         @foreach (var item in Vo2MaxMetricItems)
                         {
-                            <div><dt>@item.Label</dt><dd>@item.Value</dd></div>
+                            <div><dt>@item.Label</dt><dd class="@(item.Label == "VO2Max Power" && Vo2MaxNotice is not null ? $"coach-ftp-delta-value--{Vo2MaxNotice.Severity}" : null)">@item.Value</dd></div>
                         }
                     </dl>
-                    <div class="coach-ftp-category-gauge-slot" role="img" aria-label="@Vo2MaxCategory.AriaLabel">
+                    <div class="coach-ftp-category-gauge-slot @(Vo2MaxNotice is not null ? "coach-ftp-category-gauge-slot--muted" : null)"
+                         role="img" aria-label="@(Vo2MaxCategory.AriaLabel + (Vo2MaxNotice is not null ? " (estimate)" : string.Empty))">
                         <SfCircularGauge Width="100%" Height="180px">
                             <CircularGaugeAxes><CircularGaugeAxis Minimum="1" Maximum="5" StartAngle="210" EndAngle="150" Radius="90%">
                                 <CircularGaugeAxisLineStyle Width="14" Color="#e6edf5"></CircularGaugeAxisLineStyle>
@@ -423,6 +424,16 @@
                         }
                     </ul>
                 </div>
+                @if (Vo2MaxNotice is not null)
+                {
+                    <div class="coach-ftp-delta-notice coach-ftp-delta-notice--@Vo2MaxNotice.Severity" role="status">
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <div>
+                            <strong>@Vo2MaxNotice.Title</strong>
+                            <span>@Vo2MaxNotice.Message</span>
+                        </div>
+                    </div>
+                }
             </section>
         }
 
@@ -537,6 +548,12 @@
     [Parameter]
     public TrainingReadinessSnapshot? TrainingReadiness { get; set; }
 
+    /// <summary>
+    /// Optional quality assessment for the power-derived VO2max estimate.
+    /// </summary>
+    [Parameter]
+    public Vo2MaxRepresentativeness? Vo2MaxRepresentativeness { get; set; }
+
     [Parameter]
     public IReadOnlyList<TrainingLoadWeekSnapshot> TrainingLoadHistory { get; set; } = [];
 
@@ -613,6 +630,37 @@
     private IEnumerable<MetricSnapshotItem> FtpMetricItems => Items.Where(item => FtpMetricLabels.Contains(item.Label, StringComparer.Ordinal));
 
     private FtpDeltaNoticeSnapshot? FtpDeltaNotice => CreateFtpDeltaNotice(GetMetricValue("FTP/eFTP Delta"));
+
+    private FtpDeltaNoticeSnapshot? Vo2MaxNotice
+    {
+        get
+        {
+            if (Vo2MaxRepresentativeness?.EstimateRepresentative is not
+                (Vo2MaxEstimateRepresentativeness.NotRepresentative or Vo2MaxEstimateRepresentativeness.LikelyUnderstated))
+            {
+                return null;
+            }
+
+            var percentage = Vo2MaxRepresentativeness.P5minPctFtp?.ToString("0.##", CultureInfo.InvariantCulture);
+            if (Vo2MaxRepresentativeness.EstimateRepresentative == Vo2MaxEstimateRepresentativeness.LikelyUnderstated)
+            {
+                var powerDescription = percentage is not null
+                    ? $"Your best 5-minute power is only {percentage} % of your FTP; recent data"
+                    : "Recent data";
+                return new("warning", "VO2max estimate may be understated",
+                    $"{powerDescription} probably lacks a maximal 5-minute effort. VO2max and the category may be understated.");
+            }
+
+            var period = Vo2MaxRepresentativeness.PeriodDays is int days
+                ? FormattableString.Invariant($" in the last {days} days")
+                : string.Empty;
+            var ratio = percentage is not null
+                ? $" is {percentage} % of your FTP, so it"
+                : string.Empty;
+            return new("critical", "VO2max estimate not representative",
+                $"Your best 5-minute power{period}{ratio} does not reflect a maximal effort. VO2max and the category are derived from it and are likely understated. Do a 5-minute test or a hard VO2max session to update them.");
+        }
+    }
 
     private void ToggleReadinessDetails()
     {

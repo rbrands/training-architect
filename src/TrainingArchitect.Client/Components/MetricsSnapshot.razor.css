@@ -906,6 +906,10 @@
     min-height: 180px;
 }
 
+.coach-ftp-category-gauge-slot--muted {
+    opacity: 0.45;
+}
+
 .coach-ftp-category-legend {
     display: grid;
     gap: 0.45rem;

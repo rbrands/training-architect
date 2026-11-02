@@ -318,6 +318,7 @@
             var metricsSnapshot = BuildMetricsSnapshot();
             var fitnessKpis = BuildFitnessKpis();
             var trainingReadiness = BuildTrainingReadiness();
+            var vo2MaxRepresentativeness = BuildVo2MaxRepresentativeness();
             var trainingLoadHistory = BuildTrainingLoadHistory();
             var dfaA1WeeklyEstimate = BuildDfaA1WeeklyEstimate();
             var strengthSnapshot = BuildStrengthSnapshot();
@@ -378,6 +379,7 @@
                             <MetricsSnapshot Items="metricsSnapshot"
                                              FitnessKpis="fitnessKpis"
                                              TrainingReadiness="trainingReadiness"
+                                             Vo2MaxRepresentativeness="vo2MaxRepresentativeness"
                                              TrainingLoadHistory="trainingLoadHistory"
                                              Strength="strengthSnapshot"
                                              DfaA1WeeklyEstimate="dfaA1WeeklyEstimate" />
@@ -1479,6 +1481,31 @@
         }
 
         return items;
+    }
+
+    private Vo2MaxRepresentativeness? BuildVo2MaxRepresentativeness()
+    {
+        var classification = GetObjectProperty(
+            GetObjectProperty(GetOverviewRoot(), "metrics"), "vo2max_classification");
+        if (classification is null)
+        {
+            return null;
+        }
+
+        var estimateRepresentative = GetAnyProperty(classification, "estimate_representative");
+        var status = estimateRepresentative?.ValueKind switch
+        {
+            JsonValueKind.True => Vo2MaxEstimateRepresentativeness.Representative,
+            JsonValueKind.False => Vo2MaxEstimateRepresentativeness.NotRepresentative,
+            JsonValueKind.String when estimateRepresentative.Value.GetString() == "likely_understated"
+                => Vo2MaxEstimateRepresentativeness.LikelyUnderstated,
+            _ => (Vo2MaxEstimateRepresentativeness?)null
+        };
+
+        return new Vo2MaxRepresentativeness(
+            status,
+            GetDoubleProperty(classification.Value, "p5min_pct_ftp"),
+            GetIntProperty(classification.Value, "power_profile_period_days"));
     }
 
     private MetricsSnapshot.DfaA1WeeklyEstimateSnapshot? BuildDfaA1WeeklyEstimate()
