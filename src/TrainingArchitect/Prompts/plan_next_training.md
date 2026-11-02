@@ -22,11 +22,14 @@ Take the following into account:
 - CTL/ATL/TSB and the load of the last 48-72 hours (last hard session?)
 - Wellness: sleep, HRV, resting heart rate - only if available
 - Strength: current phase, sessions this week versus the phase frequency rule,
-  and days since the last session from `week_summary.strength`. When
-  `week_summary.strength` is absent, or `current_phase` is null and the strength
-  session count (`strength_sessions` or `sessions_this_week`) is 0, do not plan
-  strength unless the athlete asks. When `current_phase` is null but strength
-  sessions exist, use adaptation as a working assumption and say so.
+  and days since the last session from `week_summary.strength`. Strength is in
+  use when `week_summary.strength` shows any WeightTraining session in the last
+  16 weeks: the sum of `sessions_per_week_last_4` is greater than 0,
+  `phase_session_count` is greater than 0, or
+  `untagged_sessions_last_16_weeks` is greater than 0. An explicit athlete
+  request for strength also makes it in use. Otherwise, do not plan or mention
+  strength. When strength is in use and `current_phase` is null, use adaptation
+  as a working assumption and say so.
 
 **Plan context**
 - Current phase (Base/Build/Peak/Transition); if no phase is provided, apply Base.
@@ -35,13 +38,17 @@ Take the following into account:
   remaining days; strength never counts toward either weekly ride target
 - Today's planned workout from the calendar (`planned_workouts` for the
   recommendation date, if any) - does it still fit? See the rule below.
-- A strength session may be recommended when `decision-process.md`, Strength
-  says one is due today and no ride is advisable. It may also be recommended on
-  a day with a completed easy ride when the strength placement rules allow it.
-  During maximum strength, never place it on the day of or the day before a
-  VO2max session, or the day before the long ride.
-- Include all workouts already completed that day when checking
-  `max_training_time_hours`.
+- When strength is in use (D7) and due today (`sessions_this_week` is below the
+  phase's weekly frequency, the last strength session was at least two days
+  ago, and placement rules allow it), you may recommend a ride plus one
+  `WeightTraining` entry on the same date, or the strength entry alone when no
+  ride is advisable. Do not place strength on a VO2max, long-ride, or race day.
+  During maximum strength, also do not place it the day before a planned VO2max
+  or long ride in `planned_workouts`.
+- Readiness applies fully: yellow readiness rules out `strength-maximum` today;
+  red readiness rules out all strength today.
+- The combined ride and strength duration, plus workouts already completed
+  that day, must not exceed `max_training_time_hours`.
 - Upcoming races (RACE_A/B/C) and day constraints (Sick/Travel)
 - Use the entry in `week_summary.training_plan` matching the recommendation date's
   week, including when tomorrow is in a new week. Never use another week's target.
@@ -115,17 +122,21 @@ Evaluate the plan, week target, and constraints of {{recommendation_date}}.
 
 **Recommendation and output**
 Use the plan/workout generation output format and upload JSON markers defined in
-the system prompt, but for exactly one workout:
+the system prompt, but for one main workout with an optional same-day strength
+entry:
 - At most 100 words of prose: date, session type, duration, target zone, TSS and
-  carbs/h for a ride; for strength, include phase and informational TSS. Add one
-  short reason and an easier alternative with a concrete downgrade criterion
-  (for example shorten the ride or drop the sprints when fatigued).
+  carbs/h for a ride; if strength is included, give it one sentence with the
+  phase and informational TSS. Add one short reason and an easier alternative
+  with a concrete downgrade criterion (for example shorten the ride or drop the
+  sprints when fatigued).
   No separate analysis or metrics table. Do not add generic safety disclaimers
   such as "stop if feeling unwell" when readiness is green; they are
   self-evident and only allowed in the degraded-readiness case above.
-- Then emit the upload JSON for the main recommendation using the system prompt's
-  existing schema, BEGIN_UPLOAD_JSON / END_UPLOAD_JSON markers, and ride TSS rules.
-  The alternative stays in prose only. Do not add other calendar workouts.
+- Then emit upload JSON for the main recommendation, optionally with one
+  same-date `WeightTraining` entry, using the system prompt's existing schema,
+  BEGIN_UPLOAD_JSON / END_UPLOAD_JSON markers, and ride TSS rules. The easier
+  alternative stays in prose only and is never a second upload entry. Do not add
+  other calendar workouts.
 - For a ride, include session goal, TSS determined per the TSS Calculation
   rules (system prompt), and fueling guidance in the description; the `tss`
   field must match. A `WeightTraining` TSS is informational only and never
@@ -233,8 +244,8 @@ steps and uses informational TSS. No correction round
 follows for this request, so get the workout structure right the first time.
 Never place the workout on a `training_allowed: false` day, and respect
 `max_training_time_hours` on a LIMITED day, including completed sessions that
-day. There is no weekly load total
-check here; only the single session is evaluated.
+day. There is no weekly load total check here; evaluate the main workout and
+any same-day strength entry together.
 
 If rest is recommended or essential workout data is missing, explain briefly
 instead of inventing a workout. Follow the system prompt's prose-only rule when

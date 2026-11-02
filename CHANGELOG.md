@@ -6,6 +6,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Strength planning and weekly analysis now opt in only when the last-16-week strength summary shows sessions or the athlete explicitly asks for strength. Otherwise, prompts omit strength; the Coach strength card follows the summary's session signals.
+- Next Best Training can recommend one main session with an optional same-day strength session when phase frequency, readiness, placement, and daily duration constraints allow it.
+
 ## [1.12.0] - 2026-10-31
 
 ### Added

@@ -32,12 +32,16 @@ Summarize and assess:
   entirely.
 
 **Strength**
-- If `week_summary.strength` is absent, skip this block. Also skip it when
-  `current_phase` is null and `strength_sessions` is 0.
+- Strength is in use when `week_summary.strength` shows any WeightTraining
+  session in the last 16 weeks: the sum of `sessions_per_week_last_4` is greater
+  than 0, `phase_session_count` is greater than 0, or
+  `untagged_sessions_last_16_weeks` is greater than 0. An explicit athlete
+  request for strength also makes it in use. If neither condition applies, skip
+  this block and do not mention strength in the analysis.
 - Report the current phase and session count versus the phase target, sessions
   this week versus the phase frequency rule, and placement relative to key
   sessions.
-- If `current_phase` is null but strength sessions exist, name adaptation as a
+- If strength is in use and `current_phase` is null, name adaptation as a
   working assumption and add one sentence that tagging sessions or letting the
   coach plan strength enables phase tracking. This is not a warning.
 

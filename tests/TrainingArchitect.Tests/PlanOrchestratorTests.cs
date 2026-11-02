@@ -178,7 +178,7 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
-    public async Task RunAsync_NextTraining_CorrectionKeepsSingleSessionContract()
+    public async Task RunAsync_NextTraining_CorrectionKeepsOptionalStrengthContract()
     {
         var agent = new FakeCoachingAgent();
         var validator = new FakeValidator(invalidRounds: 1);
@@ -187,7 +187,7 @@ public class PlanOrchestratorTests
             Request with { Mode = PlanningMode.NextTraining });
 
         Assert.Equal(2, agent.CallCount);
-        Assert.Contains("exactly one workout", agent.Prompts[1]);
+        Assert.Contains("one main workout optionally plus one same-day strength session", agent.Prompts[1]);
         Assert.Contains("do not fill the weekly TSS target or upload", agent.Prompts[1]);
         Assert.Equal("response-1", agent.PreviousResponseIds[1]);
     }

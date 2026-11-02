@@ -12,11 +12,13 @@ First infer the current weekly training context (current week / last 7 days):
   readiness and never add missed historical load to the coming week.
 - Fueling issues or under-fueled key sessions, if available.
 - Strength: current phase, sessions this week versus the phase frequency rule,
-  and days since the last strength session from `week_summary.strength`. When
-  `week_summary.strength` is absent, or `current_phase` is null and the strength
-  session count (`strength_sessions` or `sessions_this_week`) is 0,
-  treat strength as not in use and do not plan it unless the athlete asks. When
-  `current_phase` is null but strength sessions exist, start with adaptation
+  and days since the last strength session from `week_summary.strength`.
+  Strength is in use when `week_summary.strength` shows any WeightTraining
+  session in the last 16 weeks: the sum of `sessions_per_week_last_4` is
+  greater than 0, `phase_session_count` is greater than 0, or
+  `untagged_sessions_last_16_weeks` is greater than 0. An explicit athlete
+  request for strength also makes it in use. Otherwise, do not plan or mention
+  strength. When strength is in use and `current_phase` is null, use adaptation
   as a working assumption and say so.
 
 Use this short assessment to justify session selection, dose, and recovery placement in the target-week plan.

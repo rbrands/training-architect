@@ -1502,11 +1502,13 @@
         var sessionsThisWeek = GetIntProperty(strength.Value, "sessions_this_week") ?? 0;
         var phaseSessionCount = GetIntProperty(strength.Value, "phase_session_count") ?? 0;
         var untaggedCount = GetIntProperty(strength.Value, "untagged_sessions_last_16_weeks") ?? 0;
-        var strengthSessions = GetIntProperty(strength.Value, "strength_sessions") ?? 0;
-        if (strengthSessions <= 0
-            && sessionsThisWeek <= 0
-            && phaseSessionCount <= 0
-            && untaggedCount <= 0)
+        var sessionsPerWeek = GetAnyProperty(strength, "sessions_per_week_last_4") is { ValueKind: JsonValueKind.Array } weeks
+            ? weeks.EnumerateArray()
+                .Where(week => week.ValueKind == JsonValueKind.Number && week.TryGetInt32(out _))
+                .Select(week => week.GetInt32())
+                .ToArray()
+            : [];
+        if (sessionsPerWeek.Sum() <= 0 && phaseSessionCount <= 0 && untaggedCount <= 0)
         {
             return null;
         }
@@ -1527,12 +1529,6 @@
             "maintenance" => ("Maintenance", (int?)null, null),
             _ => ("Unknown", (int?)null, null)
         };
-        var sessionsPerWeek = GetAnyProperty(strength, "sessions_per_week_last_4") is { ValueKind: JsonValueKind.Array } weeks
-            ? weeks.EnumerateArray()
-                .Where(week => week.ValueKind == JsonValueKind.Number && week.TryGetInt32(out _))
-                .Select(week => week.GetInt32())
-                .ToArray()
-            : [];
 
         return new MetricsSnapshot.StrengthSnapshot(
             phase,

@@ -136,7 +136,8 @@ public sealed class PlanOrchestrator(
             prompt = PromptBuilder.BuildPlanCorrectionPrompt(findings);
             if (request.Mode == PlanningMode.NextTraining)
             {
-                prompt += "\nKeep the next-training contract: at most 100 words of prose, exactly one workout, "
+                prompt += "\nKeep the next-training contract: at most 100 words of prose, one main workout "
+                    + "optionally plus one same-day strength session, "
                     + "or prose only if rest is recommended or essential workout data is missing. "
                     + "Keep the original recommendation date; do not fill the weekly TSS target or upload.";
             }

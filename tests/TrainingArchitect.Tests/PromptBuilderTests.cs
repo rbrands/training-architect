@@ -30,7 +30,7 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
-    public void BuildPlanPrompt_NextTraining_IncludesDataAndSingleSessionContract()
+    public void BuildPlanPrompt_NextTraining_IncludesDataAndOptionalStrengthContract()
     {
         const string athleteData = """{"current_date":"2026-10-18","activities":[{"start_date_local":"2026-10-18T09:00:00"}]}""";
         var request = new PlanRequest(athleteData, "fitness", "en", PlanningScope.NextWeek,
@@ -43,7 +43,11 @@ public sealed class PromptBuilderTests
         Assert.Contains("The only tool you may call", prompt);
         Assert.Contains("even if the attached data is incomplete or\noutdated", prompt.Replace("\r\n", "\n"));
         Assert.DoesNotContain("Fetch the current data from intervals.icu", prompt);
-        Assert.Contains("exactly one workout", prompt);
+        Assert.Contains("one main workout with an optional same-day strength", prompt);
+        Assert.Contains("the last strength session was at least two days", prompt);
+        Assert.Contains("yellow readiness rules out `strength-maximum`", prompt);
+        Assert.Contains("red readiness rules out all strength", prompt);
+        Assert.Contains("easier\n  alternative stays in prose only and is never a second upload entry", prompt.Replace("\r\n", "\n"));
         Assert.Contains("At most 100 words", prompt);
         Assert.Contains("BEGIN_UPLOAD_JSON / END_UPLOAD_JSON", prompt);
         Assert.Contains("prose-only rule", prompt);

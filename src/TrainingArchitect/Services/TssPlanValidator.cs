@@ -9,8 +9,8 @@ namespace TrainingArchitect.Services;
 /// <summary>
 /// Validates the structure of the upload JSON and verifies the weekly TSS via the
 /// <c>check_plan_tss</c> MCP tool. The TSS check is a backstop: technical failures never
-/// block plan generation. Single-session recommendations must contain exactly one workout
-/// and are not compared with a full week's TSS target.
+/// block plan generation. Next-training recommendations may contain one main workout
+/// and one same-day strength session, and are not compared with a full week's TSS target.
 /// </summary>
 public sealed class TssPlanValidator(
     IAthleteDataService athleteDataService,
@@ -36,17 +36,16 @@ public sealed class TssPlanValidator(
 
         if (request.Mode == PlanningMode.NextTraining)
         {
-            using var document = JsonDocument.Parse(uploadJson);
-            if (document.RootElement.GetProperty("workouts").GetArrayLength() != 1)
+            if (!HasValidNextTrainingWorkoutCombination(uploadJson))
             {
                 return PlanValidationResult.FromFinding(
                     "plan.single_workout_required",
-                    "Return exactly one workout for the main recommendation. Keep the easier alternative in prose only.");
+                    "Return one main workout, optionally plus one strength session on the same day. Keep the easier alternative in prose only.");
             }
 
             var strengthFinding = ValidateStrengthEntries(uploadJson);
             return strengthFinding
-                ?? WithSummary(PlanValidationResult.Valid, "Single-workout structure checked; weekly TSS target check does not apply.");
+                ?? WithSummary(PlanValidationResult.Valid, "Next-training structure checked; weekly TSS target check does not apply.");
         }
 
         var weeklyStrengthFinding = ValidateStrengthEntries(uploadJson);
@@ -164,6 +163,41 @@ public sealed class TssPlanValidator(
             && (issue.Contains("mismatch", StringComparison.OrdinalIgnoreCase)
                 || issue.Contains("stated", StringComparison.OrdinalIgnoreCase)
                 || issue.Contains("computed", StringComparison.OrdinalIgnoreCase)));
+
+    private static bool HasValidNextTrainingWorkoutCombination(string uploadJson)
+    {
+        using var document = JsonDocument.Parse(uploadJson);
+        var workouts = document.RootElement.GetProperty("workouts");
+        var count = workouts.GetArrayLength();
+        if (count is < 1 or > 2)
+        {
+            return false;
+        }
+
+        var entries = workouts.EnumerateArray().ToArray();
+        if (entries.Any(workout => workout.ValueKind != JsonValueKind.Object
+            || !TryGetDate(workout, "date", out _)))
+        {
+            return false;
+        }
+
+        if (count == 1)
+        {
+            return true;
+        }
+
+        if (!TryGetDate(entries[0], "date", out var firstDate)
+            || !TryGetDate(entries[1], "date", out var secondDate)
+            || firstDate != secondDate)
+        {
+            return false;
+        }
+
+        var firstType = ReadActivityType(entries[0]);
+        var secondType = ReadActivityType(entries[1]);
+        return ActivityTypeCategories.IsRide(firstType) && ActivityTypeCategories.IsStrength(secondType)
+            || ActivityTypeCategories.IsStrength(firstType) && ActivityTypeCategories.IsRide(secondType);
+    }
 
     /// <summary>
     /// Weekly plans may schedule at most one ride and one strength session per calendar day.

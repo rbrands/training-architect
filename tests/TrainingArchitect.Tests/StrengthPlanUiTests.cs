@@ -50,6 +50,27 @@ public sealed class StrengthPlanUiTests
         Assert.False(hasConflict);
     }
 
+    [Fact]
+    public void NextTrainingPlanEditor_ParsesRideAndStrengthOnSameDateWithoutConflict()
+    {
+        using var document = JsonDocument.Parse("""
+            {"workouts":[
+              {"date":"2026-11-02","activity_type":"Ride","name":"Easy ride","duration_minutes":45,"tss":30},
+              {"date":"2026-11-02","activity_type":"WeightTraining","name":"Strength","duration_minutes":45,"tss":0,"tags":["strength-adaptation"]}
+            ]}
+            """);
+
+        var workouts = document.RootElement.GetProperty("workouts").EnumerateArray()
+            .Select((workout, index) => PlanWorkoutViewModel.TryCreate(workout, index))
+            .ToArray();
+
+        Assert.All(workouts, Assert.NotNull);
+        Assert.Equal(2, workouts.Length);
+        Assert.All(workouts, workout => Assert.Equal(new DateOnly(2026, 11, 2), workout!.Date));
+        Assert.False(PlanWorkoutDateConflict.HasConflict(workouts.Select(workout => workout!.ActivityType)));
+        Assert.Null(workouts[1]!.TargetTss);
+    }
+
     [Theory]
     [InlineData("Ride", "VirtualRide")]
     [InlineData("WeightTraining", "WeightTraining")]

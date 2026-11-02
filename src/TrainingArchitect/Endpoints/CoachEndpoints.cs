@@ -489,7 +489,7 @@ public static class CoachEndpoints
                 });
             }
 
-            // Pasted plans and single-session recommendations require a formal schema check before upload.
+            // Pasted plans and next-training recommendations require a formal schema check before upload.
             var planJson = request.WeekPlanJson;
             if (request.Validate)
             {

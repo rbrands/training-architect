@@ -106,7 +106,7 @@ Derived from `strength_history` (and the current week's activities):
 - `sessions_per_week_last_4`: all completed sessions per last four completed ISO weeks, oldest first and aligned with `training_load_history`.
 - `untagged_sessions_last_16_weeks`: only sessions whose internal `phase_source` is `none`.
 - `tagging_reminder_needed`: true when the current or previous ISO week contains unresolved strength sessions and no planned WeightTraining event existed in that same week. An untagged planned event also suppresses the reminder. Plan text mentions tagging only when this Boolean is true.
-- For analysis with `current_phase: null` and `strength_sessions > 0`, describe adaptation as a working assumption, not a finding, and add inside the Strength bullet: "Tag sessions or let the coach plan strength so the phase can be tracked." Never issue a separate warning or missing-RPE reminder.
+- When strength is in use and `current_phase: null`, describe adaptation as a working assumption, not a finding, and add inside the Strength bullet: "Tag sessions or let the coach plan strength so the phase can be tracked." Never issue a separate warning or missing-RPE reminder.
 
 ### 3.4 Load accounting
 
@@ -145,6 +145,14 @@ planned; intervals.icu derives it after the session.
 
 ### 4.2 `coach-logic/decision-process.md` — new section "Strength"
 
+Strength opt-in: strength is in use when `week_summary.strength` shows any
+WeightTraining session in the last 16 weeks: the sum of
+`sessions_per_week_last_4` is greater than 0, `phase_session_count` is greater
+than 0, or `untagged_sessions_last_16_weeks` is greater than 0. An explicit
+athlete request for strength also makes it in use. Otherwise, do not plan or
+mention strength and skip the Strength block in analysis. When strength is in
+use and `current_phase` is null, use adaptation as a working assumption.
+
 Phase selection, in priority order:
 
 1. Explicit athlete statement in the chat ("start max strength", "skip gym this week") wins for the target week.
@@ -166,6 +174,7 @@ Frequency (decision D2):
 - SM: 1 session per week.
 - RECOVERY week type: at most 1 session, never `maximum`.
 - RACE week: SM only, not within 3 days before the race.
+- Next training: one main session, optionally plus one strength session on the same day.
 
 Placement:
 

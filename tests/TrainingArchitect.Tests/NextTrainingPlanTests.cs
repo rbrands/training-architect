@@ -303,6 +303,51 @@ public sealed class NextTrainingPlanTests
     }
 
     [Theory]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"Ride"},{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"]}]}""", true)]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"]}]}""", true)]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"Ride"},{"date":"2026-10-19","activity_type":"VirtualRide"}]}""", false)]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"]},{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"]}]}""", false)]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"Ride"},{"date":"2026-10-20","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"]}]}""", false)]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"Ride"},{"date":"2026-10-19","activity_type":"Run"}]}""", false)]
+    public async Task ValidateAsync_NextTraining_ValidatesMainAndOptionalStrengthCombination(string planJson, bool expectedValid)
+    {
+        var service = new RecordingAthleteDataService();
+        var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, Request, null, null);
+
+        Assert.Equal(expectedValid, result.IsValid);
+        if (!expectedValid)
+        {
+            Assert.Equal("plan.single_workout_required", Assert.Single(result.Findings).Code);
+            Assert.Equal(
+                "Return one main workout, optionally plus one strength session on the same day. Keep the easier alternative in prose only.",
+                result.Findings[0].Message);
+        }
+
+        Assert.Empty(service.Calls);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_NextTraining_ValidatesStrengthEntryInRideAndStrengthPlan()
+    {
+        const string planJson = """
+            {"workouts":[
+              {"date":"2026-10-19","activity_type":"Ride"},
+              {"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":20,"tags":["strength-adaptation"]}
+            ]}
+            """;
+        var validator = new TssPlanValidator(
+            new RecordingAthleteDataService(),
+            NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(planJson, Request, null, null);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("plan.strength_entry_invalid", Assert.Single(result.Findings).Code);
+    }
+
+    [Theory]
     [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["vo2max-high"]}]}""")]
     [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"],"steps":[{"duration_seconds":60}]}]}""")]
     [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":20,"tags":["strength-adaptation"]}]}""")]
