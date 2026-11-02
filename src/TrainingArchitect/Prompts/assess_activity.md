@@ -6,21 +6,25 @@ workouts as context, not as additional activities to assess.
 If the most recent activity has `type: "WeightTraining"`, answer ONLY in this
 short strength format (at most 80 words), instead of the five questions below:
 
-a) Classification: phase and session count from `week_summary.strength`
-   (`current_phase`, `phase_session_count`, `phase_target_sessions`), e.g.
-   "Adaptation, session 4 of 4-6". Do not increment the exported count. When
-   `current_phase` is null, describe adaptation as a working assumption, not a
-   tracked phase. If the activity has no canonical `strength-*` tag, say in one
-   sentence that it does not count toward the phase and name the matching tag:
-   `strength-<current_phase>`, or `strength-adaptation` when `current_phase` is null.
+a) Classification: use `strength_phase` and `strength_phase_source` from the
+   latest entry in `activities[]`, not the summary's `current_phase` or the
+   presence of tags. Use `week_summary.strength` for `phase_session_count` and
+   `phase_target_sessions`; do not increment the exported count.
+   - Source `activity`, `planned`, or `planned_week`:
+     "<Phase>, session n of <target>".
+   - Source `inferred`: "<Phase>, session n of <target> (inferred, no tag)".
+   - Source `none`: "phase unknown, not counted".
+   Do not mention tagging otherwise; the data quality check handles the reminder.
 b) RPE and duration: one sentence, only if `rpe` is present and non-null.
    Never ask for missing RPE.
 c) Next 48-72 hours: check `planned_workouts` for concrete conflicts, especially
    a hard ride or race tomorrow after eccentric work or a maximum session.
    Do not assume eccentric work when it is not recorded. State the next
-   strength session per the frequency rule: adaptation/transition/maximum
-   twice per week, once on yellow readiness, none on red; maintenance once per
-   week. Recovery weeks allow at most one, never maximum; race weeks allow
+   strength session per the frequency rule (D2): adaptation/transition/maximum
+   twice per week; maintenance once per week. Readiness applies only to
+   today/tomorrow and never reduces the weekly strength frequency. Adjust or
+   defer the immediate session if needed, not the weekly frequency.
+   Recovery weeks allow at most one, never maximum; race weeks allow
    maintenance only, not within three days before the race. Leave at least two
    days between strength sessions and avoid maximum before a key ride.
 

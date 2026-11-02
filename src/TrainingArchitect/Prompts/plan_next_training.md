@@ -47,6 +47,11 @@ Take the following into account:
   or long ride in `planned_workouts`.
 - Readiness applies fully: yellow readiness rules out `strength-maximum` today;
   red readiness rules out all strength today.
+  These restrictions apply only to today/tomorrow (the recommendation date),
+  with tomorrow's readiness re-checked in the morning. Readiness never reduces
+  the weekly strength frequency (D2): adaptation/transition/maximum twice per
+  week; maintenance once per week, with at least two days between sessions.
+  Adjust or defer the immediate session if needed, not the weekly frequency.
 - The combined ride and strength duration, plus workouts already completed
   that day, must not exceed `max_training_time_hours`.
 - Upcoming races (RACE_A/B/C) and day constraints (Sick/Travel)

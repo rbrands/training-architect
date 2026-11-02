@@ -41,6 +41,9 @@ Summarize and assess:
 - Report the current phase and session count versus the phase target, sessions
   this week versus the phase frequency rule, and placement relative to key
   sessions.
+- Weekly strength frequency (D2): adaptation/transition/maximum twice per week;
+  maintenance once per week, with at least two days between sessions. Readiness
+  applies only to today/tomorrow and never reduces the weekly strength frequency.
 - If strength is in use and `current_phase` is null, name adaptation as a
   working assumption and add one sentence that tagging sessions or letting the
   coach plan strength enables phase tracking. This is not a warning.

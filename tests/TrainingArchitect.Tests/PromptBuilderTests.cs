@@ -6,20 +6,23 @@ namespace TrainingArchitect.Tests;
 public sealed class PromptBuilderTests
 {
     [Theory]
-    [InlineData("null", "null")]
-    [InlineData("\"adaptation\"", "6")]
-    [InlineData("\"maximum\"", "8")]
-    public void BuildAssessPrompt_UntaggedStrength_UsesShortStrengthContract(string phase, string rpe)
+    [InlineData("\"adaptation\"", "activity", "6")]
+    [InlineData("\"transition\"", "planned", "null")]
+    [InlineData("\"maximum\"", "planned_week", "8")]
+    [InlineData("\"adaptation\"", "inferred", "null")]
+    [InlineData("null", "none", "null")]
+    public void BuildAssessPrompt_Strength_UsesActivityPhaseAndSource(string phase, string source, string rpe)
     {
         var athleteData = $$$"""
             {
               "current_date":"2026-11-02",
               "activities":[
                 {"date":"2026-11-01","type":"Ride","ctl_delta":-0.2,"atl_delta":-1.4},
-                {"date":"2026-11-02","type":"WeightTraining","tags":[],"duration_hours":0.75,"rpe":{{{rpe}}}}
+                {"date":"2026-11-02","type":"WeightTraining","tags":[],"duration_hours":0.75,
+                 "strength_phase":{{{phase}}},"strength_phase_source":"{{{source}}}","rpe":{{{rpe}}}}
               ],
               "week_summary":{"strength":{
-                "current_phase":{{{phase}}},"phase_session_count":4,"phase_target_sessions":"4-6",
+                "current_phase":"maintenance","phase_session_count":4,"phase_target_sessions":"4-6",
                 "sessions_this_week":1,"days_since_last_strength":0
               }},
               "planned_workouts":{"current_week":{"planned_workouts":[
@@ -36,21 +39,49 @@ public sealed class PromptBuilderTests
         Assert.DoesNotContain("{{athlete_data}}", prompt);
         Assert.Contains("at most 80 words", strengthSection);
         Assert.Contains("instead of the five questions below", strengthSection);
-        Assert.Contains("`phase_session_count`, `phase_target_sessions`", strengthSection);
-        Assert.Contains("Do not increment the exported count", strengthSection);
-        Assert.Contains("does not count toward the phase", strengthSection);
-        Assert.Contains("`strength-<current_phase>`, or `strength-adaptation`", strengthSection);
-        Assert.Contains("working assumption", strengthSection);
+        Assert.Contains("`strength_phase` and `strength_phase_source`", strengthSection);
+        Assert.Contains("latest entry in `activities[]`, not the summary's `current_phase`", strengthSection);
+        Assert.Contains("`phase_session_count` and", strengthSection);
+        Assert.Contains("`phase_target_sessions`; do not increment the exported count", strengthSection);
+        Assert.Contains("Source `activity`, `planned`, or `planned_week`", strengthSection);
+        Assert.Contains("\"<Phase>, session n of <target>\"", strengthSection);
+        Assert.Contains("\"<Phase>, session n of <target> (inferred, no tag)\"", strengthSection);
+        Assert.Contains("Source `none`: \"phase unknown, not counted\"", strengthSection);
+        Assert.Contains("Do not mention tagging otherwise; the data quality check handles the reminder", strengthSection);
+        Assert.DoesNotContain("strength-<current_phase>", strengthSection);
+        Assert.DoesNotContain("working assumption", strengthSection);
         Assert.Contains("only if `rpe` is present and non-null", strengthSection);
         Assert.Contains("Never ask for missing RPE", strengthSection);
         Assert.Contains("check `planned_workouts`", strengthSection);
         Assert.Contains("a hard ride or race tomorrow", strengthSection);
-        Assert.Contains("twice per week, once on yellow readiness, none on red", strengthSection);
-        Assert.Contains("maintenance once per", strengthSection);
+        Assert.Contains("twice per week; maintenance once per week", strengthSection);
+        Assert.Contains("today/tomorrow and never reduces the weekly strength frequency", strengthSection);
+        Assert.DoesNotContain("once on yellow readiness", strengthSection);
+        Assert.DoesNotContain("none on red", strengthSection);
         Assert.Contains("at least two", strengthSection);
         Assert.Contains("Do not discuss fueling, pacing, decoupling, W'", strengthSection);
         Assert.Contains("or CTL/ATL/form for strength sessions", strengthSection);
         Assert.Contains("Stop here for WeightTraining", strengthSection);
+    }
+
+    [Theory]
+    [InlineData("assess_activity")]
+    [InlineData("assess_week")]
+    [InlineData("assess_metrics")]
+    [InlineData("plan_week")]
+    [InlineData("plan_next_training")]
+    public void StrengthPrompts_KeepWeeklyFrequencyIndependentOfDailyReadiness(string name)
+    {
+        var prompt = PromptLoader.Load(name).Replace("\r\n", "\n");
+        var normalized = System.Text.RegularExpressions.Regex.Replace(prompt, @"\s+", " ");
+
+        Assert.Contains("today/tomorrow", normalized);
+        Assert.Contains("never reduces the weekly strength frequency", normalized);
+        Assert.Contains("adaptation/transition/maximum twice per week", normalized);
+        Assert.Contains("maintenance once per week", normalized);
+        Assert.Contains("at least two days between", normalized);
+        Assert.DoesNotMatch(@"(?i)(once|1) (per week |session )?(on|when).*yellow", normalized);
+        Assert.DoesNotMatch(@"(?i)(none|0) (on|when).*red", normalized);
     }
 
     [Fact]

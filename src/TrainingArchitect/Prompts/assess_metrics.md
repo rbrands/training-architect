@@ -61,6 +61,11 @@ of this week.
 - Outlook for next week: only if a next-week entry exists, add one sentence on
   its `phase`, `week_type`, and targets and whether the current wellness state
   supports them. Label it clearly as next week.
+- For strength recommendations, readiness applies only to today/tomorrow and
+  never reduces the weekly strength frequency (D2): adaptation/transition/maximum
+  twice per week; maintenance once per week, with at least two days between
+  sessions. Adjust or defer the immediate session if needed, not the weekly
+  frequency.
 
 Keep the summary compact and action-oriented.
 ...

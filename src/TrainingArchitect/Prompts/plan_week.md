@@ -77,6 +77,11 @@ Planning requirements:
   sessions per `decision-process.md`, Strength (phase from
   `week_summary.strength`, frequency and placement rules), then fill
   support/recovery sessions. Strength sessions count for plan-to-JSON parity.
+- Weekly strength frequency (D2): adaptation/transition/maximum twice per week;
+  maintenance once per week, with at least two days between sessions. Readiness
+  applies only to today/tomorrow and never reduces the weekly strength frequency.
+  Adjust or defer the immediate session if needed; do not project today's
+  yellow/red readiness onto the entire target week.
 - Avoid duplicating key sessions already completed or already planned.
 - Align weekly ride TSS and ride duration to their respective supplied targets,
   and keep the week realistic for fatigue and availability.
