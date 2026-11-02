@@ -100,13 +100,14 @@
                             else if (Strength.PhaseTargetMin is int phaseTargetMin
                                      && Strength.PhaseTargetMax is int phaseTargetMax)
                             {
+                                var filledSegments = Math.Clamp(Strength.PhaseSessionCount, 0, phaseTargetMax);
                                 <div class="coach-strength-progress"
                                      role="img"
                                      aria-label="@Strength.PhaseSessionCount of @phaseTargetMin–@phaseTargetMax sessions">
                                     <div class="coach-strength-progress-segments">
                                         @for (var segment = 1; segment <= phaseTargetMax; segment++)
                                         {
-                                            <span class="coach-strength-progress-segment @(segment <= Strength.PhaseSessionCount ? "is-filled" : string.Empty)"></span>
+                                            <span class="coach-strength-progress-segment @(segment <= filledSegments ? "is-filled" : string.Empty)"></span>
                                         }
                                         <span class="coach-strength-progress-minimum-tick"
                                               style="@GetStrengthProgressTickStyle(phaseTargetMin, phaseTargetMax)"
@@ -114,6 +115,10 @@
                                     </div>
                                     <span class="coach-strength-progress-label">
                                         @Strength.PhaseSessionCount of @phaseTargetMin–@phaseTargetMax sessions
+                                        @if (Strength.PhaseOverdue == true)
+                                        {
+                                            <span class="coach-strength-phase-overdue"> · Phasenwechsel fällig</span>
+                                        }
                                     </span>
                                 </div>
                             }
@@ -1027,7 +1032,9 @@
         int SessionsThisWeek,
         int? DaysSinceLast,
         IReadOnlyList<int> SessionsPerWeekLast4,
-        int UntaggedCount);
+        int UntaggedCount,
+        int? InferredSessionsLast16Weeks = null,
+        bool? PhaseOverdue = null);
 
     public sealed class TrainingReadinessSnapshot(
         string status,

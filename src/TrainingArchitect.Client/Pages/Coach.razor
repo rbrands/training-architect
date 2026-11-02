@@ -1552,7 +1552,14 @@
             sessionsThisWeek,
             GetIntProperty(strength.Value, "days_since_last_strength"),
             sessionsPerWeek,
-            untaggedCount);
+            untaggedCount,
+            GetIntProperty(strength.Value, "inferred_sessions_last_16_weeks"),
+            GetAnyProperty(strength, "phase_overdue")?.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => (bool?)null
+            });
     }
 
     private IReadOnlyList<MetricsSnapshot.TrainingLoadWeekSnapshot> BuildTrainingLoadHistory()
