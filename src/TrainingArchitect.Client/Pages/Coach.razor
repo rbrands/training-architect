@@ -463,6 +463,14 @@
                         }
                     </p>
 
+                    <div>
+                        <SfCheckBox TChecked="bool"
+                                    @bind-Checked="_ignorePlannedWorkouts[mode]"
+                                    Label="Ignore already planned workouts"
+                                    Disabled="@(!CanUseCoachActions || IsActionBusy)" />
+                        <small class="d-block text-muted mt-1">Send no planned workouts for the current or next week. Race events are kept; existing workouts are not deleted from intervals.icu.</small>
+                    </div>
+
                     @if (isActiveMode && _planTotalTokens is not null)
                     {
                         <p class="coach-token-hint coach-token-hint--plan mb-0">Token usage: @_planTotalTokens.Value.ToString("N0")</p>
@@ -1131,6 +1139,11 @@
     private bool _isPlanValidationInFlight;
     private bool _isPlanExpanded;
     private PlanningMode _planMode;
+    private readonly Dictionary<PlanningMode, bool> _ignorePlannedWorkouts = new()
+    {
+        [PlanningMode.Week] = false,
+        [PlanningMode.NextTraining] = false
+    };
     private long? _planTotalTokens;
     private string? _planReadableText;
     private string? _planUploadJson;
@@ -2927,6 +2940,11 @@
 
             _isPlanExpanded = true;
         }
+        catch (JsonException ex)
+        {
+            _planErrorMessage = $"Plan request failed because the athlete dataset is invalid: {ex.Message}";
+            _isPlanExpanded = true;
+        }
         catch
         {
             _planErrorMessage = "Plan request failed. Please try again.";
@@ -3229,6 +3247,9 @@
     private PlanRequest BuildPlanRequest()
     {
         var weekDataJson = EffectiveWeekDataJson;
+        if (_ignorePlannedWorkouts[_planMode])
+            weekDataJson = PlannedWorkoutOverrideApplier.Clear(weekDataJson);
+
         var schedulingPreference = _planSchedulingPreference.Trim();
         var planningScope = ResolvePlanningScope();
 
@@ -3670,6 +3691,8 @@
         if (!string.Equals(_overrideAthleteId, Session.AthleteId, StringComparison.Ordinal))
         {
             _weekTargetOverrides.Clear();
+            _ignorePlannedWorkouts[PlanningMode.Week] = false;
+            _ignorePlannedWorkouts[PlanningMode.NextTraining] = false;
             _overrideAthleteId = Session.AthleteId;
         }
 
