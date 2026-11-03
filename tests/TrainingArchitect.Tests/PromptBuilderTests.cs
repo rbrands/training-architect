@@ -118,6 +118,41 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildAssessPrompt_Metrics_ExplainsVo2MaxEstimateQualityAndQualifiesDisciplineGap()
+    {
+        const string athleteData = """
+            {"metrics":{"vo2max_classification":{
+              "ml_per_kg_min":46.6,"category":"excellent",
+              "estimate_representative":false,"p5min_pct_ftp":99.25,"power_profile_period_days":42
+            }}}
+            """;
+
+        var prompt = PromptBuilder.BuildAssessPrompt(
+            new AssessRequest(athleteData, "zwift", "en", AssessmentType.Metrics));
+        var normalized = System.Text.RegularExpressions.Regex.Replace(prompt, @"\s+", " ");
+
+        Assert.Contains(athleteData, prompt);
+        Assert.Contains("`metrics.vo2max_classification.estimate_representative`", normalized);
+        Assert.Contains("When `estimate_representative` is `false`", normalized);
+        Assert.Contains("best five-minute power does not reflect a maximal effort", normalized);
+        Assert.Contains("VO2max and category are not representative and are likely understated", normalized);
+        Assert.Contains("Do not stop at \"not representative\"", normalized);
+        Assert.Contains("maximal five-minute test or a hard VO2max session", normalized);
+        Assert.Contains("When `estimate_representative` is `\"likely_understated\"`", normalized);
+        Assert.Contains("VO2max and category may be understated", normalized);
+        Assert.Contains("`p5min_pct_ftp`", normalized);
+        Assert.Contains("`power_profile_period_days`", normalized);
+        Assert.Contains("Omit missing context; never invent it", normalized);
+        Assert.Contains("observation window is not the age of the estimate", normalized);
+        Assert.Contains("When the status is `true`, do not add a quality warning", normalized);
+        Assert.Contains("When it is null or missing, representativeness is unknown", normalized);
+        Assert.Contains("Never infer a VO2max decline or improvement from a single estimate", normalized);
+        Assert.Contains("qualify any inferred 3-5-minute power gap", normalized);
+        Assert.Contains("missing maximal efforts rather than a confirmed physiological weakness", normalized);
+        Assert.Contains("prescribe extra VO2max training solely from that gap", normalized);
+    }
+
+    [Fact]
     public void BuildPlanPrompt_DefaultMode_PreservesWeeklyPlanning()
     {
         var request = new PlanRequest("{}", "fitness", "en", PlanningScope.NextWeek,
