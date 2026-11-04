@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using TrainingArchitect.Core.Models;
 
 namespace TrainingArchitect.Core.Services;
 
@@ -14,8 +15,12 @@ public static partial class PlanUploadNormalizer
     /// </summary>
     /// <param name="planJson">The generated weekly plan JSON.</param>
     /// <param name="onDurationChanged">Optional callback for logging the old and normalized duration in minutes.</param>
+    /// <param name="request">Optional planning request used to preserve fixed workout anchors.</param>
     /// <returns>The normalized weekly plan JSON.</returns>
-    public static string Normalize(string planJson, Action<double?, double>? onDurationChanged = null)
+    public static string Normalize(
+        string planJson,
+        Action<double?, double>? onDurationChanged = null,
+        PlanRequest? request = null)
     {
         var root = JsonNode.Parse(planJson) as JsonObject
             ?? throw new JsonException("Week plan JSON must be a JSON object.");
@@ -25,8 +30,20 @@ public static partial class PlanUploadNormalizer
             return root.ToJsonString();
         }
 
+        IReadOnlyList<JsonObject> anchors = request is null
+            ? []
+            : WeeklyRideBudget.ReadAnchors(
+                JsonNode.Parse(string.IsNullOrWhiteSpace(request.WeekDataJson) ? "{}" : request.WeekDataJson),
+                request.Scope);
+
         foreach (var workout in workouts.OfType<JsonObject>())
         {
+            if (request is not null && WeeklyRideBudget.ReadDate(workout) is { } date
+                && anchors.Any(anchor => WeeklyRideBudget.ReadDate(anchor) == date))
+            {
+                continue;
+            }
+
             var isStrength = workout["activity_type"] is JsonValue activityType
                 && activityType.TryGetValue<string>(out var type)
                 && string.Equals(type, "WeightTraining", StringComparison.OrdinalIgnoreCase);
@@ -130,6 +147,6 @@ public static partial class PlanUploadNormalizer
     [GeneratedRegex(@"^\s*\d+\s*x\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RepeatLineRegex();
 
-    [GeneratedRegex(@"TSS:\s*\d+")]
+    [GeneratedRegex(@"TSS:\s*\d+(?:[.,]\d+)?")]
     private static partial Regex TssMentionRegex();
 }

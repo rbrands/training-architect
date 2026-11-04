@@ -388,6 +388,7 @@ public sealed class TssPlanValidator(
             foreach (var anchor in anchors.EnumerateArray())
             {
                 if (anchor.ValueKind == JsonValueKind.Object
+                    && ActivityTypeCategories.IsRide(ReadActivityType(anchor))
                     && (TryGetDate(anchor, "date", out var date) || TryGetDatePrefix(anchor, "start_date_local", out date)))
                 {
                     result[date] = result.GetValueOrDefault(date) + 1;

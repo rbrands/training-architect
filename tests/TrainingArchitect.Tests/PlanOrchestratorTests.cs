@@ -23,7 +23,7 @@ public class PlanOrchestratorTests
         var agent = new FakeCoachingAgent
         {
             Content = """
-                Aerobic ride.
+                Today: 60-minute aerobic ride with TSS 999.
                 BEGIN_UPLOAD_JSON
                 {"workouts":[{"activity_type":"Ride","duration_minutes":70,"tss":999,
                 "description":"Aerobic ride. TSS: 999.",
@@ -41,10 +41,51 @@ public class PlanOrchestratorTests
         Assert.Equal("Aerobic ride. TSS: 32.",
             validated.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
         var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
-        Assert.Equal(validator.UploadJsons[0], PlanResponseParser.Split(completed.Result!.Content).UploadJson);
+        var (planText, uploadJson) = PlanResponseParser.Split(completed.Result!.Content);
+        Assert.Equal(validator.UploadJsons[0], uploadJson);
+        Assert.Contains("78 min", planText);
+        Assert.Contains("TSS 32", planText);
+        Assert.DoesNotContain("60-minute", planText);
+        Assert.DoesNotContain("TSS 999", planText);
         Assert.Null(completed.Warnings);
         Assert.Equal(1, agent.CallCount);
         Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotNormalizeFixedWorkoutAnchors()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":999,
+                "description":"Aerobic ride. TSS: 999.",
+                "steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var validator = new FakeValidator();
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """
+                {"week_starting":"2026-11-02","planned_workouts":{"current_week":{"planned_workouts":[
+                  {"date":"2026-11-04","type":"Ride","planned_load":45,"duration_hours":1}
+                ]}}}
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
+        var workout = validated.RootElement.GetProperty("workouts")[0];
+        Assert.Equal(60, workout.GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(999, workout.GetProperty("tss").GetDouble());
+        Assert.Equal("Aerobic ride. TSS: 999.", workout.GetProperty("description").GetString());
+        Assert.Equal(4680, workout.GetProperty("steps")[0].GetProperty("duration_seconds").GetDouble());
+        Assert.Null(Assert.Single(events, item => item.Stage == PlanProgressStage.Completed).Warnings);
     }
 
     [Fact]

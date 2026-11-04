@@ -41,6 +41,9 @@ public static class WeeklyRideTargetAdjuster
             return normalizedJson;
 
         var data = JsonNode.Parse(request.WeekDataJson);
+        var completedActivities = request.Scope == PlanningScope.CurrentWeek && data?["activities"] is JsonArray activities
+            ? activities.OfType<JsonObject>().ToArray()
+            : [];
         var anchors = WeeklyRideBudget.ReadAnchors(data, request.Scope);
         var week = WeeklyRideBudget.TargetWeekStart(data, request.Scope);
         if (week is null || rides.Any(ride => WeeklyRideBudget.ReadDate(ride) is not { } date
@@ -65,10 +68,12 @@ public static class WeeklyRideTargetAdjuster
                 && constraints.All(constraint => WeeklyRideBudget.ReadNumber(constraint, "max_training_time_hours") is not { } maximum
                     || workouts.OfType<JsonObject>()
                         .Where(entry => WeeklyRideBudget.ReadDate(entry) == WeeklyRideBudget.ReadDate(constraint))
-                        .Sum(WeeklyRideBudget.ReadHours) <= maximum))
+                        .Sum(WeeklyRideBudget.ReadHours)
+                        + completedActivities.Where(entry => WeeklyRideBudget.ReadDate(entry) == WeeklyRideBudget.ReadDate(constraint))
+                            .Sum(WeeklyRideBudget.ReadHours) <= maximum))
             {
                 adjusted = true;
-                return PlanUploadNormalizer.Normalize(root!.ToJsonString());
+                return PlanUploadNormalizer.Normalize(root!.ToJsonString(), request: request);
             }
 
             var changed = false;
@@ -92,6 +97,8 @@ public static class WeeklyRideTargetAdjuster
                 var dailyHours = workouts.OfType<JsonObject>()
                     .Where(entry => WeeklyRideBudget.ReadDate(entry) == date)
                     .Sum(WeeklyRideBudget.ReadHours)
+                    + completedActivities.Where(entry => WeeklyRideBudget.ReadDate(entry) == date)
+                        .Sum(WeeklyRideBudget.ReadHours)
                     + (minutes - workout["duration_minutes"]!.GetValue<double>()) / 60;
                 var dailyMaximum = WeeklyRideBudget.ReadNumber(constraint, "max_training_time_hours") ?? 24;
                 if (!valid || tss is null || seconds < 1800
