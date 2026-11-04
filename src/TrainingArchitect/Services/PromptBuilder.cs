@@ -12,7 +12,8 @@ public static class PromptBuilder
         - transition: 3-5 sets of 8-12 reps at 70-80% 1RM; rest 2-3 minutes.
         - maximum: 3-4 sets of 3-6 reps at 85-95% 1RM; rest 3-4 minutes.
         - maintenance: 2 sets, first 12 reps at 60% 1RM and second 6 reps at 85% 1RM; rest 1-2 minutes.
-        Each session uses 3-4 exercises: 1-2 primary lifts (squat, deadlift, step-up, lunge, or leg press), leg curl, and core. Do not prescribe power cleans unless the athlete asks. Keep duration 30-75 minutes, activity_type "WeightTraining", tss 0, no steps, no library_workout_id, and exactly the requested strength phase tag. Write the description in the response language with phase, session number of target, exercises, sets x reps @ % 1RM, rest, and a progression note.
+        Each session uses 3-4 exercises: 1-2 primary lifts, leg curl, and core. Do not prescribe power cleans unless the athlete asks. Keep duration 30-75 minutes, activity_type "WeightTraining", tss 0, no steps, no library_workout_id, and exactly the requested strength phase tag.
+        Write the description entirely in the response language, in this order: phase and session number of target; the phase-specific prescription (sets x reps @ % 1RM, rest) and a progression note; then "Exercise example: squat or leg press, lunge, leg curl, and core – or equivalent exercises from your own program". Localize both "Exercise example:" and "or equivalent exercises from your own program", as well as the exercise names. Present the exercises as examples, not mandatory choices, and never put them before the prescription.
         """;
 
     public static string BuildAssessPrompt(AssessRequest request)
@@ -60,7 +61,7 @@ public static class PromptBuilder
             ? string.Empty
             : request.SchedulingPreference.Trim();
 
-        return template
+        return ApplyRemainingRideBudget(template, request)
             .Replace("{{planning_scope_instruction}}", planningScopeInstruction)
             .Replace("{{scheduling_preference}}", schedulingPreference)
             .Replace("{{strength_phase}}", NormalizeStrengthPhase(request.StrengthPhase))
@@ -69,6 +70,25 @@ public static class PromptBuilder
             .Replace("{{athlete_data}}", string.IsNullOrWhiteSpace(request.WeekDataJson)
                 ? "{}"
                 : request.WeekDataJson);
+    }
+
+    private static string ApplyRemainingRideBudget(string template, PlanRequest request)
+    {
+        var budget = WeeklyRideBudget.Resolve(request);
+        return string.Join('\n', template.Split('\n').Select(line =>
+            line.Contains("{{remaining_ride_tss}}", StringComparison.Ordinal)
+                ? FillBudgetLine(line, "{{remaining_ride_tss}}", budget.TssTarget, (budget.CompletedTss ?? 0) + budget.AnchoredTss)
+                : line.Contains("{{remaining_ride_hours}}", StringComparison.Ordinal)
+                    ? FillBudgetLine(line, "{{remaining_ride_hours}}", budget.HoursTarget, budget.CompletedHours + budget.AnchoredHours)
+                    : line));
+
+        static string FillBudgetLine(string line, string valueToken, double? target, double fixedLoad)
+        {
+            return target is not { } value ? string.Empty : line
+                .Replace(valueToken, (value - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture))
+                .Replace("{{remaining_min}}", (value * 0.9 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture))
+                .Replace("{{remaining_max}}", (value * 1.1 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture));
+        }
     }
 
     private static string GetStrengthPhaseSelectionContext(PlanRequest request)

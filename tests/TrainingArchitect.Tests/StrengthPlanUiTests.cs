@@ -116,6 +116,39 @@ public sealed class StrengthPlanUiTests
     }
 
     [Fact]
+    public void PlanWorkoutViewModel_StrengthPhaseLabelHidesOnlyRedundantTagChips()
+    {
+        using var document = JsonDocument.Parse("""
+            {"date":"2026-11-02","activity_type":"WeightTraining",
+             "tags":["strength-transition","gym"]}
+            """);
+
+        var workout = PlanWorkoutViewModel.TryCreate(document.RootElement, 0);
+
+        Assert.NotNull(workout);
+        Assert.Equal(StrengthPhase.Transition, workout.StrengthPhase);
+        Assert.Equal(["gym"], workout.DisplayTags);
+        Assert.Equal(["strength-transition", "gym"], workout.Tags);
+        Assert.Equal("strength-transition", workout.OriginalWorkout.GetProperty("tags")[0].GetString());
+    }
+
+    [Theory]
+    [InlineData("WeightTraining", "strength-unknown")]
+    [InlineData("WeightTraining", "strength")]
+    [InlineData("Ride", "strength-transition")]
+    public void PlanWorkoutViewModel_WithoutDisplayedStrengthPhase_PreservesTagChips(string type, string tag)
+    {
+        using var document = JsonDocument.Parse($$"""
+            {"date":"2026-11-02","activity_type":"{{type}}","tags":["{{tag}}"]}
+            """);
+
+        var workout = PlanWorkoutViewModel.TryCreate(document.RootElement, 0);
+
+        Assert.NotNull(workout);
+        Assert.Equal([tag], workout.DisplayTags);
+    }
+
+    [Fact]
     public void PlanWorkoutDateOrdering_SortsRideBeforeStrengthWithinDate()
     {
         var date = new DateOnly(2026, 11, 2);

@@ -46,6 +46,11 @@ public sealed class PlanWorkoutViewModel
     /// <summary>Gets the workout tags.</summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
 
+    /// <summary>Gets tag chips, excluding redundant strength tags when the phase label is displayed.</summary>
+    public IEnumerable<string> DisplayTags => IsStrength && StrengthPhase is not null
+        ? Tags.Where(tag => !tag.StartsWith("strength-", StringComparison.Ordinal))
+        : Tags;
+
     /// <summary>Gets the source JSON preserved when the editor serializes changes.</summary>
     public required JsonElement OriginalWorkout { get; init; }
 

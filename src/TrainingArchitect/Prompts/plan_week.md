@@ -2,6 +2,9 @@ Based on the attached intervals.icu data, create a training plan for the target 
 
 {{planning_scope_instruction}}
 
+Remaining ride TSS budget for the days you plan: {{remaining_ride_tss}} (allowed range {{remaining_min}}–{{remaining_max}}). Choose workouts whose TSS sum lands in this range.
+Remaining ride hours budget for the days you plan: {{remaining_ride_hours}} (allowed range {{remaining_min}}–{{remaining_max}}). Choose workouts whose duration sum lands in this range.
+
 First infer the current weekly training context (current week / last 7 days):
 - Recent training load and intensity distribution.
 - Completed key sessions and missing key stimuli.

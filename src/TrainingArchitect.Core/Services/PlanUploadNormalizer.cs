@@ -54,37 +54,7 @@ public static partial class PlanUploadNormalizer
                 continue;
             }
 
-            var totalSeconds = 0d;
-            var totalTss = 0d;
-            var validDurations = true;
-            var validPower = true;
-            foreach (var step in steps)
-            {
-                if (step is not JsonObject stepObject
-                    || stepObject["duration_seconds"] is not JsonValue duration
-                    || !duration.TryGetValue<double>(out var seconds)
-                    || !double.IsFinite(seconds)
-                    || seconds <= 0)
-                {
-                    validDurations = false;
-                    break;
-                }
-
-                totalSeconds += seconds;
-                if (stepObject["power_pct_ftp"] is JsonValue power
-                    && power.TryGetValue<double>(out var powerPctFtp)
-                    && double.IsFinite(powerPctFtp)
-                    && powerPctFtp >= 0)
-                {
-                    totalTss += seconds / 3600 * Math.Pow(powerPctFtp / 100, 2) * 100;
-                }
-                else
-                {
-                    validPower = false;
-                }
-            }
-
-            if (!validDurations || !double.IsFinite(totalSeconds))
+            if (!TryGetStepTotals(steps, out var totalSeconds, out var totalTss))
             {
                 continue;
             }
@@ -98,9 +68,9 @@ public static partial class PlanUploadNormalizer
                 onDurationChanged?.Invoke(previousMinutes, normalizedMinutes);
             }
 
-            if (validPower && double.IsFinite(totalTss))
+            if (totalTss is { } tss)
             {
-                var normalizedTss = Math.Round(totalTss);
+                var normalizedTss = Math.Round(tss);
                 workout["tss"] = normalizedTss;
                 workout["description"] = TssMentionRegex().Replace(coachingDescription,
                     $"TSS: {normalizedTss.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
@@ -108,6 +78,35 @@ public static partial class PlanUploadNormalizer
         }
 
         return root.ToJsonString();
+    }
+
+    internal static bool TryGetStepTotals(JsonArray steps, out double totalSeconds, out double? totalTss)
+    {
+        totalSeconds = 0;
+        var tss = 0d;
+        var validPower = true;
+        totalTss = null;
+        foreach (var step in steps)
+        {
+            if (step is not JsonObject stepObject
+                || stepObject["duration_seconds"] is not JsonValue duration
+                || !duration.TryGetValue<double>(out var seconds)
+                || !double.IsFinite(seconds)
+                || seconds <= 0)
+                return false;
+
+            totalSeconds += seconds;
+            if (stepObject["power_pct_ftp"] is JsonValue power
+                && power.TryGetValue<double>(out var powerPctFtp)
+                && double.IsFinite(powerPctFtp)
+                && powerPctFtp >= 0)
+                tss += seconds / 3600 * Math.Pow(powerPctFtp / 100, 2) * 100;
+            else
+                validPower = false;
+        }
+        if (validPower && double.IsFinite(tss))
+            totalTss = tss;
+        return double.IsFinite(totalSeconds);
     }
 
     private static string GetCoachingDescription(JsonNode? descriptionNode)

@@ -48,6 +48,66 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_AdjustsEnduranceBeforeValidationAndReportsProgressWithoutCorrection()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":999,
+                "description":"Endurance. TSS: 999.","tags":["aerobic-threshold-moderate"],
+                "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+        var validator = new WeeklyTargetValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.Single(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        Assert.Equal(Assert.Single(validator.UploadJsons), PlanResponseParser.Split(completed.Result!.Content).UploadJson);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenEnduranceCannotReachTarget_UsesExistingCorrectionRound()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Library endurance ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":49,
+                "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new WeeklyTargetValidator()), request);
+
+        Assert.Equal(2, agent.CallCount);
+        Assert.Single(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.DoesNotContain(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        Assert.NotEmpty(events[^1].Warnings!);
+    }
+
+    [Fact]
     public async Task RunAsync_WhenFirstPlanIsValid_CallsAgentOnceAndCompletes()
     {
         var agent = new FakeCoachingAgent();
@@ -313,6 +373,24 @@ public class PlanOrchestratorTests
                 content,
                 totalTokensPerCall,
                 $"response-{CallCount}"));
+        }
+    }
+
+    private sealed class WeeklyTargetValidator : IPlanValidator
+    {
+        public List<string> UploadJsons { get; } = [];
+
+        public Task<PlanValidationResult> ValidateAsync(string uploadJson, PlanRequest request,
+            string? intervalsAthleteId, string? intervalsApiKey, CancellationToken ct = default)
+        {
+            UploadJsons.Add(uploadJson);
+            using var document = JsonDocument.Parse(uploadJson);
+            var total = document.RootElement.GetProperty("workouts").EnumerateArray()
+                .Sum(workout => workout.GetProperty("tss").GetDouble());
+            var target = request.Constraints.WeeklyTssTarget!.Value;
+            return Task.FromResult(total >= target * 0.9 && total <= target * 1.1
+                ? PlanValidationResult.Valid
+                : PlanValidationResult.FromFinding("plan.tss_deviation", "Weekly target missed."));
         }
     }
 

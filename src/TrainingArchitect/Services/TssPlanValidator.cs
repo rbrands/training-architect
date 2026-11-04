@@ -67,11 +67,12 @@ public sealed class TssPlanValidator(
             return duplicateDateFinding;
         }
 
-        var timeTarget = WeeklyTimeTargetResolver.Resolve(request.WeekDataJson, request.Scope);
+        var budget = WeeklyRideBudget.Resolve(request);
+        var timeTarget = budget.HoursTarget;
         if (timeTarget is > 0)
         {
             var plannedHours = ResolvePlannedHours(uploadJson)
-                + ResolveCompletedHours(request.WeekDataJson, request.Scope);
+                + budget.CompletedHours;
             // Race weeks are tapered and the race itself is not part of the plan, so only the upper bound applies.
             if ((!isRaceWeek && plannedHours < timeTarget.Value * 0.9) || plannedHours > timeTarget.Value * 1.1)
             {
@@ -81,9 +82,7 @@ public sealed class TssPlanValidator(
             }
         }
 
-        var loadTarget = request.Constraints?.WeeklyTssTarget is > 0
-            ? request.Constraints.WeeklyTssTarget.Value
-            : WeeklyLoadTargetResolver.Resolve(request.WeekDataJson, request.Scope);
+        var loadTarget = budget.TssTarget;
 
         if (loadTarget is null or <= 0)
         {
@@ -109,9 +108,7 @@ public sealed class TssPlanValidator(
                 intervalsApiKey,
                 uploadJson,
                 loadTarget.Value,
-                completedTss: request.Scope == PlanningScope.CurrentWeek
-                    ? ResolveCompletedTss(request.WeekDataJson)
-                    : null,
+                completedTss: budget.CompletedTss,
                 tolerancePct:  null,
                 ct);
         }
@@ -440,63 +437,6 @@ public sealed class TssPlanValidator(
         return totalMinutes / 60;
     }
 
-    private static double ResolveCompletedHours(string? weekDataJson, PlanningScope scope)
-    {
-        if (scope != PlanningScope.CurrentWeek || string.IsNullOrWhiteSpace(weekDataJson))
-        {
-            return 0;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(weekDataJson);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return 0;
-            }
-
-            if (root.TryGetProperty("week_summary", out var weekSummary)
-                && weekSummary.ValueKind == JsonValueKind.Object
-                && TryGetNonNegativeDouble(weekSummary, "ride_time_hours", out var rideTimeHours))
-            {
-                return rideTimeHours;
-            }
-
-            if (!TryGetDate(root, "week_starting", out var weekStart)
-                || !root.TryGetProperty("activities", out var activities)
-                || activities.ValueKind != JsonValueKind.Array)
-            {
-                return 0;
-            }
-
-            var weekEnd = weekStart.AddDays(7);
-            var totalHours = 0d;
-            foreach (var activity in activities.EnumerateArray())
-            {
-                if (activity.ValueKind == JsonValueKind.Object
-                    && ActivityTypeCategories.IsRide(ReadActivityType(activity))
-                    && TryGetDate(activity, "date", out var activityDate)
-                    && activityDate >= weekStart
-                    && activityDate < weekEnd
-                    && activity.TryGetProperty("duration_hours", out var duration)
-                    && duration.ValueKind == JsonValueKind.Number
-                    && duration.TryGetDouble(out var hours)
-                    && double.IsFinite(hours)
-                    && hours > 0)
-                {
-                    totalHours += hours;
-                }
-            }
-
-            return totalHours;
-        }
-        catch (JsonException)
-        {
-            return 0;
-        }
-    }
-
     private static bool TryGetDate(JsonElement parent, string propertyName, out DateOnly value)
     {
         value = default;
@@ -512,50 +452,6 @@ public sealed class TssPlanValidator(
 
     private static PlanValidationResult WithSummary(PlanValidationResult result, string summary) =>
         result with { Summary = summary };
-
-    private static double? ResolveCompletedTss(string? weekDataJson)
-    {
-        if (string.IsNullOrWhiteSpace(weekDataJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(weekDataJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object
-                || !document.RootElement.TryGetProperty("week_summary", out var weekSummary)
-                || weekSummary.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            if (weekSummary.TryGetProperty("ride_load", out _))
-            {
-                return TryGetNonNegativeDouble(weekSummary, "ride_load", out var rideLoad)
-                    ? rideLoad
-                    : null;
-            }
-
-            return TryGetNonNegativeDouble(weekSummary, "total_training_load", out var totalTrainingLoad)
-                ? totalTrainingLoad
-                : null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private static bool TryGetNonNegativeDouble(JsonElement parent, string propertyName, out double value)
-    {
-        value = default;
-        return parent.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.Number
-            && property.TryGetDouble(out value)
-            && double.IsFinite(value)
-            && value >= 0;
-    }
 
     private static string BuildSummary(PlanTssCheckResult checkResult)
     {

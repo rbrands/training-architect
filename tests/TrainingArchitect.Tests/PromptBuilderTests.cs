@@ -6,6 +6,37 @@ namespace TrainingArchitect.Tests;
 public sealed class PromptBuilderTests
 {
     [Theory]
+    [InlineData(PlanningMode.Week, "en")]
+    [InlineData(PlanningMode.Week, "de")]
+    [InlineData(PlanningMode.NextTraining, "en")]
+    [InlineData(PlanningMode.NextTraining, "de")]
+    public void BuildPlanPrompt_StrengthPrescription_PrecedesLocalizedExerciseExamples(PlanningMode mode, string language)
+    {
+        var request = new PlanRequest("{}", "fitness", language, PlanningScope.CurrentWeek,
+            new PlanConstraints(null, []), Mode: mode, StrengthPhase: "adaptation");
+
+        AssertStrengthDescriptionContract(PromptBuilder.BuildPlanPrompt(request));
+    }
+
+    [Fact]
+    public void BuildPlanCorrectionPrompt_UsesSameStrengthDescriptionContract()
+    {
+        AssertStrengthDescriptionContract(PromptBuilder.BuildPlanCorrectionPrompt(
+            [new PlanValidationFinding("plan.strength_entry_invalid", "Fix strength.")], "adaptation"));
+    }
+
+    private static void AssertStrengthDescriptionContract(string prompt)
+    {
+        Assert.Contains("Write the description entirely in the response language", prompt);
+        Assert.Contains("Localize both \"Exercise example:\" and \"or equivalent exercises from your own program\"", prompt);
+        Assert.Contains("Exercise example: squat or leg press, lunge, leg curl, and core – or equivalent exercises from your own program", prompt);
+        Assert.Contains("never put them before the prescription", prompt);
+        var prescription = prompt.IndexOf("the phase-specific prescription (sets x reps @ % 1RM, rest)", StringComparison.Ordinal);
+        var example = prompt.IndexOf("\"Exercise example: squat", StringComparison.Ordinal);
+        Assert.True(prescription >= 0 && example > prescription);
+    }
+
+    [Theory]
     [InlineData("\"adaptation\"", "activity", "6")]
     [InlineData("\"transition\"", "planned", "null")]
     [InlineData("\"maximum\"", "planned_week", "8")]

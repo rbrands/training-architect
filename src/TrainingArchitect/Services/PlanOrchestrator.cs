@@ -90,6 +90,7 @@ public sealed class PlanOrchestrator(
             previousResponseId = response.ResponseId;
             totalTokens += response.TotalTokens ?? 0;
             var (readableText, uploadJson) = PlanResponseParser.Split(response.Content);
+            var adjusted = false;
             if (!string.IsNullOrWhiteSpace(uploadJson))
             {
                 try
@@ -98,6 +99,11 @@ public sealed class PlanOrchestrator(
                         (previous, normalized) => logger.LogDebug(
                             "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
                             previous, normalized));
+                    normalizedJson = WeeklyRideTargetAdjuster.Adjust(normalizedJson, request, out adjusted);
+                    if (adjusted)
+                    {
+                        logger.LogInformation("Adjusted endurance rides to reach the weekly target in round {Round}.", round);
+                    }
                     lastResponse = response with
                     {
                         Content = response.Content.Replace(uploadJson, normalizedJson, StringComparison.Ordinal)
@@ -111,6 +117,11 @@ public sealed class PlanOrchestrator(
             }
 
             yield return new PlanProgressEvent(PlanProgressStage.Generated, "Plan received.", round);
+            if (adjusted)
+            {
+                yield return new PlanProgressEvent(PlanProgressStage.Validating,
+                    "Adjusted endurance rides to reach the weekly target", round);
+            }
             var isProseOnlyRecommendation = request.Mode == PlanningMode.NextTraining
                 && !string.IsNullOrWhiteSpace(readableText)
                 && string.IsNullOrWhiteSpace(uploadJson)

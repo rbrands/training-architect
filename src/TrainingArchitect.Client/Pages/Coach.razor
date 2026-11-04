@@ -627,11 +627,7 @@
         <p class="coach-overview-empty mt-2">@_planUploadFeedback</p>
     }
 
-    @if (_isPlanExpanded &&
-         (!string.IsNullOrWhiteSpace(_planErrorMessage) ||
-          !string.IsNullOrWhiteSpace(_planReadableText) ||
-          !string.IsNullOrWhiteSpace(_planUploadJson) ||
-          !string.IsNullOrWhiteSpace(_planRequestJson)))
+    @if (_isPlanExpanded && HasPlanResult)
     {
         <section class="coach-section">
             <h2 class="coach-section-title">@(_planMode == PlanningMode.NextTraining ? "Next Best Training Result" : "Plan Result")</h2>
@@ -807,7 +803,7 @@
                                                         </span>
                                                     }
 
-                                                    @foreach (var tag in workout.Tags)
+                                                    @foreach (var tag in workout.DisplayTags)
                                                     {
                                                         <span class="coach-plan-week-tag">@tag</span>
                                                     }
@@ -2687,7 +2683,6 @@
     private bool HasPlanResult =>
         !string.IsNullOrWhiteSpace(_planReadableText) ||
         !string.IsNullOrWhiteSpace(_planUploadJson) ||
-        !string.IsNullOrWhiteSpace(_planRequestJson) ||
         !string.IsNullOrWhiteSpace(_planErrorMessage);
 
     private bool HasCreatedPlanResult =>
