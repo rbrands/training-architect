@@ -479,7 +479,15 @@
                     </div>
 
                     <label class="coach-strength-selector">
-                        <span>Strength training</span>
+                        <span>
+                            Strength training
+                            <a class="coach-strength-help"
+                               href="/blog/strength-training"
+                               aria-label="Read more about strength training"
+                               title="Read more about strength training">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i>
+                            </a>
+                        </span>
                         <select value="@_strengthPhaseSelection"
                                 disabled="@(!CanUseCoachActions || IsActionBusy)"
                                 @onchange="OnStrengthPhaseSelectionChangedAsync">

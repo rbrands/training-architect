@@ -1241,6 +1241,24 @@
     font-weight: 600;
 }
 
+.coach-strength-help {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.25rem;
+    color: #204d8f;
+    text-decoration: none;
+}
+
+.coach-strength-help:hover,
+.coach-strength-help:focus-visible {
+    color: #2e67bf;
+}
+
+.coach-strength-help:focus-visible {
+    outline: 2px solid #2e67bf;
+    outline-offset: 2px;
+}
+
 .coach-strength-selector select {
     appearance: none;
     border: 1px solid #8eaddd;
