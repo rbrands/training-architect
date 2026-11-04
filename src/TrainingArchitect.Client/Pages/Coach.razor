@@ -470,7 +470,7 @@
                                     @bind-Checked="_ignorePlannedWorkouts[mode]"
                                     Label="Ignore already planned workouts"
                                     Disabled="@(!CanUseCoachActions || IsActionBusy)" />
-                        <small class="d-block text-muted mt-1">Send no planned workouts for the current or next week. Race events are kept; existing workouts are not deleted from intervals.icu.</small>
+                        <small class="d-block text-muted mt-1">Already planned workouts for the current and next week are ignored when creating the plan. Race events are still considered; existing workouts are not deleted from intervals.icu.</small>
                     </div>
 
                     @if (isActiveMode && _planTotalTokens is not null)
