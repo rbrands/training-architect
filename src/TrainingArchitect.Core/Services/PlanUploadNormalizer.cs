@@ -130,6 +130,6 @@ public static partial class PlanUploadNormalizer
     [GeneratedRegex(@"^\s*\d+\s*x\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RepeatLineRegex();
 
-    [GeneratedRegex(@"TSS:\s*\d+")]
+    [GeneratedRegex(@"TSS:\s*\d+(?:[.,]\d+)?")]
     private static partial Regex TssMentionRegex();
 }
