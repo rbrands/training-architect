@@ -8,7 +8,7 @@ How to fix each problem, depending on its kind:
 - Requested strength phase for this plan: {{strength_phase}}. Include strength
   at the recommended frequency when it is due and the planning constraints
   allow it; do not silently omit an eligible strength session. Return at most
-  one same-day strength session and one main workout.
+  one strength session and one main workout per calendar day.
   If the original plan omitted a strength session that is due and allowed,
   add it now. Do not use missing strength history as a reason to omit it.
   If there is no exact strength library match, use this prescription:
