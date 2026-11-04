@@ -18,14 +18,16 @@ public class PlanOrchestratorTests
         new PlanConstraints(null, []));
 
     [Fact]
-    public async Task RunAsync_NormalizesDurationBeforeValidationAndReturnsItWithoutCorrection()
+    public async Task RunAsync_NormalizesDurationAndTssBeforeValidationAndReturnsThemWithoutCorrection()
     {
         var agent = new FakeCoachingAgent
         {
             Content = """
                 Aerobic ride.
                 BEGIN_UPLOAD_JSON
-                {"workouts":[{"duration_minutes":70,"steps":[{"duration_seconds":4680}]}]}
+                {"workouts":[{"activity_type":"Ride","duration_minutes":70,"tss":999,
+                "description":"Aerobic ride. TSS: 999.",
+                "steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}]}
                 END_UPLOAD_JSON
                 """
         };
@@ -35,6 +37,9 @@ public class PlanOrchestratorTests
 
         using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
         Assert.Equal(78, validated.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(32, validated.RootElement.GetProperty("workouts")[0].GetProperty("tss").GetDouble());
+        Assert.Equal("Aerobic ride. TSS: 32.",
+            validated.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
         var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
         Assert.Equal(validator.UploadJsons[0], PlanResponseParser.Split(completed.Result!.Content).UploadJson);
         Assert.Null(completed.Warnings);

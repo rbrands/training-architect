@@ -9,7 +9,8 @@ public static partial class PlanUploadNormalizer
 {
     /// <summary>
     /// Keeps workout steps as structured JSON and removes any duplicated interval structure
-    /// from the coaching description. Derives generated non-strength workout durations from their steps.
+    /// from the coaching description. Derives generated non-strength workout durations and TSS from
+    /// their steps, updates existing TSS mentions, and sets strength workout TSS to zero.
     /// </summary>
     /// <param name="planJson">The generated weekly plan JSON.</param>
     /// <param name="onDurationChanged">Optional callback for logging the old and normalized duration in minutes.</param>
@@ -26,6 +27,14 @@ public static partial class PlanUploadNormalizer
 
         foreach (var workout in workouts.OfType<JsonObject>())
         {
+            var isStrength = workout["activity_type"] is JsonValue activityType
+                && activityType.TryGetValue<string>(out var type)
+                && string.Equals(type, "WeightTraining", StringComparison.OrdinalIgnoreCase);
+            if (isStrength)
+            {
+                workout["tss"] = 0;
+            }
+
             if (workout["steps"] is not JsonArray { Count: > 0 } steps)
             {
                 continue;
@@ -40,15 +49,15 @@ public static partial class PlanUploadNormalizer
             var coachingDescription = GetCoachingDescription(workout["description"]);
             workout["description"] = coachingDescription;
 
-            if (workout["activity_type"] is JsonValue activityType
-                && activityType.TryGetValue<string>(out var type)
-                && string.Equals(type, "WeightTraining", StringComparison.OrdinalIgnoreCase))
+            if (isStrength)
             {
                 continue;
             }
 
             var totalSeconds = 0d;
+            var totalTss = 0d;
             var validDurations = true;
+            var validPower = true;
             foreach (var step in steps)
             {
                 if (step is not JsonObject stepObject
@@ -62,6 +71,17 @@ public static partial class PlanUploadNormalizer
                 }
 
                 totalSeconds += seconds;
+                if (stepObject["power_pct_ftp"] is JsonValue power
+                    && power.TryGetValue<double>(out var powerPctFtp)
+                    && double.IsFinite(powerPctFtp)
+                    && powerPctFtp >= 0)
+                {
+                    totalTss += seconds / 3600 * Math.Pow(powerPctFtp / 100, 2) * 100;
+                }
+                else
+                {
+                    validPower = false;
+                }
             }
 
             if (!validDurations || !double.IsFinite(totalSeconds))
@@ -76,6 +96,14 @@ public static partial class PlanUploadNormalizer
             {
                 workout["duration_minutes"] = normalizedMinutes;
                 onDurationChanged?.Invoke(previousMinutes, normalizedMinutes);
+            }
+
+            if (validPower && double.IsFinite(totalTss))
+            {
+                var normalizedTss = Math.Round(totalTss);
+                workout["tss"] = normalizedTss;
+                workout["description"] = TssMentionRegex().Replace(coachingDescription,
+                    $"TSS: {normalizedTss.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
             }
         }
 
@@ -102,4 +130,7 @@ public static partial class PlanUploadNormalizer
 
     [GeneratedRegex(@"^\s*\d+\s*x\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RepeatLineRegex();
+
+    [GeneratedRegex(@"TSS:\s*\d+")]
+    private static partial Regex TssMentionRegex();
 }

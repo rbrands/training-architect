@@ -6,6 +6,83 @@ namespace TrainingArchitect.Tests;
 public class PlanUploadNormalizerTests
 {
     [Theory]
+    [InlineData(600, 50, 3000, 80, 58)]
+    [InlineData(1800, 50, 1800, 50, 25)]
+    [InlineData(1800, 0, 1800, 100, 50)]
+    [InlineData(1800, 120, 1800, 50, 84)]
+    public void Normalize_GeneratedRide_RecomputesMismatchedTssFromSteps(
+        int firstSeconds, double firstPower, int secondSeconds, double secondPower, int expectedTss)
+    {
+        var planJson = $$"""
+            {"workouts":[{"activity_type":"Ride","library_workout_id":null,"tss":999,"duration_minutes":70,
+            "steps":[{"duration_seconds":{{firstSeconds}},"power_pct_ftp":{{firstPower}}},
+                     {"duration_seconds":{{secondSeconds}},"power_pct_ftp":{{secondPower}}}]}]}
+            """;
+
+        var normalized = PlanUploadNormalizer.Normalize(planJson);
+        using var document = JsonDocument.Parse(normalized);
+        var workout = document.RootElement.GetProperty("workouts")[0];
+
+        Assert.Equal(expectedTss, workout.GetProperty("tss").GetDouble());
+        Assert.Equal(Math.Round((firstSeconds + secondSeconds) / 60d),
+            workout.GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(normalized, PlanUploadNormalizer.Normalize(normalized));
+    }
+
+    [Theory]
+    [InlineData("Easy ride. TSS: 999. Fueling: 30 g/h.", "Easy ride. TSS: 25. Fueling: 30 g/h.")]
+    [InlineData("TSS:\t999; TSS:123", "TSS: 25; TSS: 25")]
+    [InlineData("Easy ride. Fueling: 30 g/h.", "Easy ride. Fueling: 30 g/h.")]
+    public void Normalize_GeneratedRide_UpdatesOnlyExistingTssMentions(string description, string expected)
+    {
+        var planJson = JsonSerializer.Serialize(new
+        {
+            workouts = new[]
+            {
+                new { activity_type = "Ride", tss = 999, description,
+                    steps = new[] { new { duration_seconds = 3600, power_pct_ftp = 50 } } }
+            }
+        });
+
+        using var document = JsonDocument.Parse(PlanUploadNormalizer.Normalize(planJson));
+
+        Assert.Equal(expected, document.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
+    }
+
+    [Theory]
+    [InlineData("WeightTraining", "")]
+    [InlineData("weighttraining", """, "steps":[{"duration_seconds":3600,"power_pct_ftp":100}]""")]
+    [InlineData("WeightTraining", """, "library_workout_id":7""")]
+    public void Normalize_StrengthWorkout_ForcesZeroTssAndPreservesDuration(string activityType, string properties)
+    {
+        var planJson = $$"""
+            {"workouts":[{"activity_type":"{{activityType}}","tss":99,"duration_minutes":45{{properties}}}]}
+            """;
+
+        using var document = JsonDocument.Parse(PlanUploadNormalizer.Normalize(planJson));
+        var workout = document.RootElement.GetProperty("workouts")[0];
+
+        Assert.Equal(0, workout.GetProperty("tss").GetInt32());
+        Assert.Equal(45, workout.GetProperty("duration_minutes").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("""[{"duration_seconds":3600}]""")]
+    [InlineData("""[{"duration_seconds":3600,"power_pct_ftp":"50"}]""")]
+    [InlineData("""[{"duration_seconds":3600,"power_pct_ftp":-50}]""")]
+    [InlineData("""[{"duration_seconds":-60,"power_pct_ftp":50}]""")]
+    [InlineData("""[{"duration_seconds":3600,"power_pct_ftp":50},{}]""")]
+    public void Normalize_InvalidSteps_PreservesStatedTssForValidation(string steps)
+    {
+        using var document = JsonDocument.Parse(PlanUploadNormalizer.Normalize(
+            $$"""{"workouts":[{"tss":99,"description":"Ride. TSS: 99.","steps":{{steps}}}]}"""));
+        var workout = document.RootElement.GetProperty("workouts")[0];
+
+        Assert.Equal(99, workout.GetProperty("tss").GetInt32());
+        Assert.Equal("Ride. TSS: 99.", workout.GetProperty("description").GetString());
+    }
+
+    [Theory]
     [InlineData(4680, 70, 78)]
     [InlineData(4679, 70, 78)]
     [InlineData(4621, 70, 77)]
@@ -170,6 +247,7 @@ public class PlanUploadNormalizerTests
               "workouts": [{
                 "date": "2026-08-18",
                 "library_workout_id": 54,
+                "tss": 42,
                 "description": "Library VO2 workout. TSS: 42.",
                 "steps": [{ "duration_seconds": 30, "power_pct_ftp": 120 }]
               }]
@@ -181,6 +259,7 @@ public class PlanUploadNormalizerTests
         var workout = document.RootElement.GetProperty("workouts")[0];
 
         Assert.Equal(54, workout.GetProperty("library_workout_id").GetInt32());
+        Assert.Equal(42, workout.GetProperty("tss").GetInt32());
         Assert.False(workout.TryGetProperty("steps", out _));
         Assert.Equal("Library VO2 workout. TSS: 42.", workout.GetProperty("description").GetString());
     }
