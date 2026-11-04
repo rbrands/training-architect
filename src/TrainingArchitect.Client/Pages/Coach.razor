@@ -425,6 +425,11 @@
         var isActiveMode = _planMode == mode;
         var isNextTraining = mode == PlanningMode.NextTraining;
         var recommendationDate = isNextTraining ? NextTrainingRecommendationDate : null;
+        var strengthPhaseScope = isNextTraining ? PlanningScope.CurrentWeek : ResolvePlanningScope();
+        var automaticStrengthPhase = StrengthPhaseSelectionResolver.ResolveAutomaticPhase(
+            EffectiveWeekDataJson,
+            strengthPhaseScope,
+            mode);
     <SfCard CssClass="coach-plan-card">
         <CardContent>
             <div class="coach-plan-layout">
@@ -472,6 +477,28 @@
                                     Disabled="@(!CanUseCoachActions || IsActionBusy)" />
                         <small class="d-block text-muted mt-1">Already planned workouts for the current and next week are ignored when creating the plan. Race events are still considered; existing workouts are not deleted from intervals.icu.</small>
                     </div>
+
+                    <label class="coach-strength-selector">
+                        <span>Strength training</span>
+                        <select value="@_strengthPhaseSelection"
+                                disabled="@(!CanUseCoachActions || IsActionBusy)"
+                                @onchange="OnStrengthPhaseSelectionChangedAsync">
+                            <option value="@StrengthPhaseSelection.Automatic">
+                                @(automaticStrengthPhase is null
+                                    ? "Automatic"
+                                    : $"Automatic (→ {FormatStrengthPhaseLabel(automaticStrengthPhase)})")
+                            </option>
+                            <option value="@StrengthPhaseSelection.Adaptation">Adaptation</option>
+                            <option value="@StrengthPhaseSelection.Transition">Transition</option>
+                            <option value="@StrengthPhaseSelection.Maximum">Maximum</option>
+                            <option value="@StrengthPhaseSelection.Maintenance">Maintenance</option>
+                            <option value="@StrengthPhaseSelection.None">No strength training</option>
+                        </select>
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(_strengthPhaseUpdateError))
+                    {
+                        <small class="coach-strength-selector-error" role="alert">@_strengthPhaseUpdateError</small>
+                    }
 
                     @if (isActiveMode && _planTotalTokens is not null)
                     {
@@ -603,7 +630,8 @@
     @if (_isPlanExpanded &&
          (!string.IsNullOrWhiteSpace(_planErrorMessage) ||
           !string.IsNullOrWhiteSpace(_planReadableText) ||
-          !string.IsNullOrWhiteSpace(_planUploadJson)))
+          !string.IsNullOrWhiteSpace(_planUploadJson) ||
+          !string.IsNullOrWhiteSpace(_planRequestJson)))
     {
         <section class="coach-section">
             <h2 class="coach-section-title">@(_planMode == PlanningMode.NextTraining ? "Next Best Training Result" : "Plan Result")</h2>
@@ -654,6 +682,20 @@
                                     @onclick="() => SelectPlanTab(2)">
                                 JSON
                             </button>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(_planRequestJson))
+                            {
+                                <button type="button"
+                                        id="coach-plan-tab-3"
+                                        class="coach-custom-tab @(IsPlanTabSelected(3) ? "is-active" : string.Empty)"
+                                        role="tab"
+                                        aria-selected="@IsPlanTabSelected(3)"
+                                        aria-controls="coach-plan-panel-3"
+                                        tabindex="@(IsPlanTabSelected(3) ? 0 : -1)"
+                                        @onclick="() => SelectPlanTab(3)">
+                                    Request JSON
+                                </button>
                             }
                         </div>
 
@@ -836,6 +878,35 @@
                                 <p class="coach-overview-empty">No JSON available.</p>
                             }
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_planRequestJson))
+                        {
+                            <div id="coach-plan-panel-3"
+                                 class="coach-custom-tab-panel"
+                                 role="tabpanel"
+                                 aria-labelledby="coach-plan-tab-3"
+                                 hidden="@(!IsPlanTabSelected(3))">
+                                <div class="coach-assess-result-actions">
+                                    <button type="button"
+                                            class="coach-assess-copy"
+                                            title="Copy request JSON"
+                                            aria-label="Copy request JSON"
+                                            @onclick="CopyPlanRequestJsonAsync">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(_planRequestCopyFeedback))
+                                    {
+                                        <span class="coach-assess-copy-feedback">@_planRequestCopyFeedback</span>
+                                    }
+                                </div>
+                                <p class="coach-overview-empty">
+                                    Exact JSON body sent to <code>/api/coach/plan</code>. Credential headers are not shown.
+                                </p>
+                                <div class="coach-json-viewer">
+                                    @RenderFormattedJson(_planRequestJson)
+                                </div>
+                            </div>
+                        }
                     </div>
 
                     @if (!string.IsNullOrWhiteSpace(_planResponseId)
@@ -1127,6 +1198,8 @@
     private string _planSchedulingPreference = string.Empty;
     private CoachLanguage _language = CoachLanguage.English;
     private AthleteProfileGoal _profileGoal = AthleteProfileGoal.RoadRace;
+    private StrengthPhaseSelection _strengthPhaseSelection = StrengthPhaseSelection.Automatic;
+    private string? _strengthPhaseUpdateError;
     private bool _remember;
     private readonly Dictionary<AssessCardType, AssessCardState> _assessCardStates = new()
     {
@@ -1149,6 +1222,8 @@
     private long? _planTotalTokens;
     private string? _planReadableText;
     private string? _planUploadJson;
+    private string? _planRequestJson;
+    private string? _planRequestCopyFeedback;
     private string? _planErrorMessage;
     private string? _planResponseId;
     private string? _planCopyFeedback;
@@ -1533,14 +1608,23 @@
     private MetricsSnapshot.StrengthSnapshot? BuildStrengthSnapshot()
     {
         var strength = GetNestedProperty(GetObjectProperty(GetOverviewRoot(), "week_summary"), "strength");
+        var selection = Session.StrengthPhaseSelection ?? _strengthPhaseSelection;
+        var isManual = selection != StrengthPhaseSelection.Automatic;
         if (strength is null || strength.Value.ValueKind != JsonValueKind.Object)
         {
-            return null;
+            return isManual
+                ? CreateStrengthSnapshot(null, true, 0, 0, [], 0, null, null, false)
+                : null;
         }
 
-        var currentPhase = GetStringProperty(strength.Value, "current_phase");
+        var currentPhase = GetStringProperty(strength.Value, "phase_current_week")
+            ?? GetStringProperty(strength.Value, "current_phase");
+        var phaseCurrentWeek = NormalizeStrengthPhase(GetStringProperty(strength.Value, "phase_current_week"));
         var sessionsThisWeek = GetIntProperty(strength.Value, "sessions_this_week") ?? 0;
         var phaseSessionCount = GetIntProperty(strength.Value, "phase_session_count") ?? 0;
+        var phaseTargetMin = GetIntProperty(strength.Value, "phase_min_sessions");
+        var phaseTargetMax = GetIntProperty(strength.Value, "phase_max_sessions");
+        var phaseNextWeek = NormalizeStrengthPhase(GetStringProperty(strength.Value, "phase_next_week"));
         var untaggedCount = GetIntProperty(strength.Value, "untagged_sessions_last_16_weeks") ?? 0;
         var sessionsPerWeek = GetAnyProperty(strength, "sessions_per_week_last_4") is { ValueKind: JsonValueKind.Array } weeks
             ? weeks.EnumerateArray()
@@ -1548,46 +1632,110 @@
                 .Select(week => week.GetInt32())
                 .ToArray()
             : [];
-        if (sessionsPerWeek.Sum() <= 0 && phaseSessionCount <= 0 && untaggedCount <= 0)
+        if (!isManual && sessionsPerWeek.Sum() <= 0 && phaseSessionCount <= 0 && untaggedCount <= 0)
         {
             return null;
         }
 
-        var phase = currentPhase?.Trim().ToLowerInvariant() switch
+        var dataPhase = NormalizeStrengthPhase(currentPhase);
+        var phase = isManual
+            ? SelectionToStrengthPhase(selection)
+            : dataPhase;
+        var phaseOverdue = GetAnyProperty(strength, "phase_overdue")?.ValueKind switch
         {
-            "adaptation" => "adaptation",
-            "transition" => "transition",
-            "maximum" => "maximum",
-            "maintenance" => "maintenance",
-            _ => null
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => (bool?)null
         };
-        (string PhaseLabel, int? PhaseTargetMin, int? PhaseTargetMax) phaseSummary = phase switch
+        var hasCompletedAdaptationRun = dataPhase is "transition" or "maximum" or "maintenance"
+            || dataPhase == "adaptation" && phaseSessionCount >= 6;
+
+        return CreateStrengthSnapshot(
+            phase,
+            isManual,
+            phaseSessionCount,
+            sessionsThisWeek,
+            sessionsPerWeek,
+            untaggedCount,
+            GetIntProperty(strength.Value, "days_since_last_strength"),
+            GetIntProperty(strength.Value, "inferred_sessions_last_16_weeks"),
+            hasCompletedAdaptationRun,
+            phaseOverdue,
+            dataPhase,
+            phaseTargetMin,
+            phaseTargetMax,
+            phaseCurrentWeek,
+            phaseNextWeek);
+    }
+
+    private static MetricsSnapshot.StrengthSnapshot CreateStrengthSnapshot(
+        string? phase,
+        bool isManual,
+        int phaseSessionCount,
+        int sessionsThisWeek,
+        IReadOnlyList<int> sessionsPerWeek,
+        int untaggedCount,
+        int? daysSinceLast,
+        int? inferredSessions,
+        bool hasCompletedAdaptationRun,
+        bool? phaseOverdue = null,
+        string? dataPhase = null,
+        int? phaseTargetMin = null,
+        int? phaseTargetMax = null,
+        string? phaseCurrentWeek = null,
+        string? phaseNextWeek = null)
+    {
+        var phaseLabel = phase switch
         {
-            "adaptation" => ("Adaptation", 4, 6),
-            "transition" => ("Transition", 2, 3),
-            "maximum" => ("Maximum", 8, 12),
-            "maintenance" => ("Maintenance", (int?)null, null),
-            _ => ("Unknown", (int?)null, null)
+            "adaptation" => "Adaptation",
+            "transition" => "Transition",
+            "maximum" => "Maximum",
+            "maintenance" => "Maintenance",
+            "none" => "Not planned",
+            _ => "Unknown"
         };
+
+        var suggestedPhase = isManual && !string.Equals(phase, dataPhase, StringComparison.Ordinal)
+            ? dataPhase
+            : null;
 
         return new MetricsSnapshot.StrengthSnapshot(
             phase,
-            phaseSummary.PhaseLabel,
+            phaseLabel,
             phaseSessionCount,
-            phaseSummary.PhaseTargetMin,
-            phaseSummary.PhaseTargetMax,
+            phaseTargetMin,
+            phaseTargetMax,
             sessionsThisWeek,
-            GetIntProperty(strength.Value, "days_since_last_strength"),
+            daysSinceLast,
             sessionsPerWeek,
             untaggedCount,
-            GetIntProperty(strength.Value, "inferred_sessions_last_16_weeks"),
-            GetAnyProperty(strength, "phase_overdue")?.ValueKind switch
-            {
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                _ => (bool?)null
-            });
+            inferredSessions,
+            phaseOverdue,
+            isManual,
+            suggestedPhase,
+            hasCompletedAdaptationRun,
+            phaseCurrentWeek,
+            phaseNextWeek);
     }
+
+    private static string? NormalizeStrengthPhase(string? phase) => phase?.Trim().ToLowerInvariant() switch
+    {
+        "adaptation" => "adaptation",
+        "transition" => "transition",
+        "maximum" => "maximum",
+        "maintenance" => "maintenance",
+        _ => null
+    };
+
+    private static string? SelectionToStrengthPhase(StrengthPhaseSelection selection) => selection switch
+    {
+        StrengthPhaseSelection.Adaptation => "adaptation",
+        StrengthPhaseSelection.Transition => "transition",
+        StrengthPhaseSelection.Maximum => "maximum",
+        StrengthPhaseSelection.Maintenance => "maintenance",
+        StrengthPhaseSelection.None => "none",
+        _ => null
+    };
 
     private IReadOnlyList<MetricsSnapshot.TrainingLoadWeekSnapshot> BuildTrainingLoadHistory()
     {
@@ -2385,10 +2533,47 @@
         if (!CanSubmit)
             return;
 
-        await Session.ConnectAsync(_athleteId.Trim(), _apiKey.Trim(), _language, _profileGoal, _remember);
+        await Session.ConnectAsync(
+            _athleteId.Trim(),
+            _apiKey.Trim(),
+            _language,
+            _profileGoal,
+            _remember,
+            strengthPhaseSelection: _strengthPhaseSelection);
         InvalidateAssessResults();
         await RefreshRememberedHintAsync();
     }
+
+    private async Task OnStrengthPhaseSelectionChangedAsync(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        if (args.Value is not string value
+            || !Enum.TryParse<StrengthPhaseSelection>(value, out var selection)
+            || !Enum.IsDefined(selection))
+        {
+            _strengthPhaseUpdateError = "Select a valid strength training option.";
+            return;
+        }
+
+        try
+        {
+            await Session.SetStrengthPhaseSelectionAsync(selection);
+            _strengthPhaseSelection = selection;
+            _strengthPhaseUpdateError = null;
+        }
+        catch (Exception ex)
+        {
+            _strengthPhaseUpdateError = $"Strength training selection could not be saved: {ex.Message}";
+        }
+    }
+
+    private static string FormatStrengthPhaseLabel(string phase) => phase switch
+    {
+        "adaptation" => "Adaptation",
+        "transition" => "Transition",
+        "maximum" => "Maximum",
+        "maintenance" => "Maintenance",
+        _ => "Automatic"
+    };
 
     private async Task DisconnectAsync()
     {
@@ -2502,6 +2687,7 @@
     private bool HasPlanResult =>
         !string.IsNullOrWhiteSpace(_planReadableText) ||
         !string.IsNullOrWhiteSpace(_planUploadJson) ||
+        !string.IsNullOrWhiteSpace(_planRequestJson) ||
         !string.IsNullOrWhiteSpace(_planErrorMessage);
 
     private bool HasCreatedPlanResult =>
@@ -2517,10 +2703,25 @@
 
     private int NormalizePlanTabIndex(int index)
     {
-        var normalizedIndex = Math.Clamp(index, 0, 2);
-        return normalizedIndex == 0 && string.IsNullOrWhiteSpace(_planReadableText)
-            ? 1
-            : normalizedIndex;
+        var normalizedIndex = Math.Clamp(index, 0, 3);
+        if (normalizedIndex == 0 && string.IsNullOrWhiteSpace(_planReadableText))
+        {
+            return !string.IsNullOrWhiteSpace(_planUploadJson)
+                ? 1
+                : !string.IsNullOrWhiteSpace(_planRequestJson) ? 3 : 0;
+        }
+
+        if (normalizedIndex is 1 or 2 && string.IsNullOrWhiteSpace(_planUploadJson))
+        {
+            return !string.IsNullOrWhiteSpace(_planRequestJson) ? 3 : 0;
+        }
+
+        if (normalizedIndex == 3 && string.IsNullOrWhiteSpace(_planRequestJson))
+        {
+            return !string.IsNullOrWhiteSpace(_planUploadJson) ? 2 : 0;
+        }
+
+        return normalizedIndex;
     }
 
     private bool IsDataViewTabSelected(int index) => _selectedDataViewTabIndex == index;
@@ -2934,6 +3135,8 @@
         _planErrorMessage = null;
         _planReadableText = null;
         _planUploadJson = null;
+        _planRequestJson = null;
+        _planRequestCopyFeedback = null;
         _planResponseId = null;
         _planTotalTokens = null;
         _planCopyFeedback = null;
@@ -2952,6 +3155,7 @@
             {
                 Content = JsonContent.Create(request)
             };
+            _planRequestJson = await httpRequest.Content.ReadAsStringAsync();
 
             AppendCredentialHeaders(httpRequest);
             httpRequest.SetBrowserResponseStreamingEnabled(true);
@@ -3147,6 +3351,8 @@
         _planUploadFeedback = null;
         _planErrorMessage = null;
         _planReadableText = null;
+        _planRequestJson = null;
+        _planRequestCopyFeedback = null;
         _planCopyFeedback = null;
         _planProgressSteps.Clear();
         _planWarnings.Clear();
@@ -3286,15 +3492,34 @@
 
         var schedulingPreference = _planSchedulingPreference.Trim();
         var planningScope = ResolvePlanningScope();
+        var requestScope = _planMode == PlanningMode.NextTraining ? PlanningScope.CurrentWeek : planningScope;
+        var targetDate = _planMode == PlanningMode.NextTraining
+            ? RecommendationDateResolver.Resolve(weekDataJson) ?? TrainingPlanOverrideApplier.ReadCurrentDate(weekDataJson)
+            : null;
+        var targetWeekStart = targetDate is { } recommendationDate
+            ? recommendationDate.AddDays(-(((int)recommendationDate.DayOfWeek + 6) % 7))
+            : TrainingPlanOverrideApplier.ReadCurrentWeekStart(weekDataJson)?
+                .AddDays(requestScope == PlanningScope.NextWeek ? 7 : 0);
+        var weeklyTssTarget = targetWeekStart is { } weekStart
+            ? TrainingPlanOverrideApplier.Read(weekDataJson, weekStart).WeeklyTss
+            : null;
+        if (weeklyTssTarget is <= 0)
+            weeklyTssTarget = null;
 
         return new PlanRequest(
             weekDataJson ?? "{}",
             GetDisciplineType(),
             GetResponseLanguage(),
-            _planMode == PlanningMode.NextTraining ? PlanningScope.CurrentWeek : planningScope,
-            new PlanConstraints(null, Array.Empty<DayConstraint>()),
+            requestScope,
+            new PlanConstraints(weeklyTssTarget, Array.Empty<DayConstraint>()),
             _planMode == PlanningMode.NextTraining ? null : schedulingPreference,
-            _planMode);
+            _planMode,
+            StrengthPhaseSelectionResolver.Resolve(
+                _strengthPhaseSelection,
+                weekDataJson,
+                _planMode == PlanningMode.NextTraining ? PlanningScope.CurrentWeek : planningScope,
+                _planMode),
+            _strengthPhaseSelection != StrengthPhaseSelection.Automatic);
     }
 
     private static PlanningScope ResolvePlanningScope()
@@ -3461,6 +3686,24 @@
         }
     }
 
+    private async Task CopyPlanRequestJsonAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_planRequestJson))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("trainingArchitect.copyText", _planRequestJson);
+            _planRequestCopyFeedback = "Copied";
+        }
+        catch
+        {
+            _planRequestCopyFeedback = "Copy failed";
+        }
+    }
+
     private AssessRequest BuildAssessRequest(AssessCardType cardType)
     {
         var weekDataJson = EffectiveWeekDataJson;
@@ -3543,6 +3786,8 @@
         _planUploaded = false;
         _planReadableText = null;
         _planUploadJson = null;
+        _planRequestJson = null;
+        _planRequestCopyFeedback = null;
         _planResponseId = null;
         _planTotalTokens = null;
         _planErrorMessage = null;
@@ -3684,6 +3929,7 @@
                 _apiKey = loaded.Credential.ApiKey;
                 _language = loaded.Credential.Language;
                 _profileGoal = loaded.Credential.ProfileGoal;
+                _strengthPhaseSelection = loaded.Credential.StrengthPhaseSelection;
                 _remember = loaded.Durability == CredentialDurability.Persistent;
             }
         }
@@ -3789,6 +4035,7 @@
         _isPlanExpanded = CoachPageState.IsPlanExpanded;
         _planReadableText = CoachPageState.PlanReadableText;
         _planUploadJson = CoachPageState.PlanUploadJson;
+        _planRequestJson = CoachPageState.PlanRequestJson;
         _planErrorMessage = CoachPageState.PlanErrorMessage;
         _selectedPlanTabIndex = NormalizePlanTabIndex(CoachPageState.SelectedPlanTabIndex);
         _planTotalTokens = CoachPageState.PlanTotalTokens;
@@ -3827,6 +4074,7 @@
         CoachPageState.IsPlanExpanded = _isPlanExpanded;
         CoachPageState.PlanReadableText = _planReadableText;
         CoachPageState.PlanUploadJson = _planUploadJson;
+        CoachPageState.PlanRequestJson = _planRequestJson;
         CoachPageState.PlanErrorMessage = _planErrorMessage;
         CoachPageState.SelectedPlanTabIndex = NormalizePlanTabIndex(_selectedPlanTabIndex);
         CoachPageState.PlanTotalTokens = _planTotalTokens;

@@ -34,6 +34,12 @@ public sealed class TssPlanValidator(
             return structuralResult;
         }
 
+        var strengthPhaseFinding = ValidateRequestedStrengthPhase(uploadJson, request.StrengthPhase);
+        if (strengthPhaseFinding is not null)
+        {
+            return strengthPhaseFinding;
+        }
+
         if (request.Mode == PlanningMode.NextTraining)
         {
             if (!HasValidNextTrainingWorkoutCombination(uploadJson))
@@ -247,6 +253,51 @@ public sealed class TssPlanValidator(
         return PlanValidationResult.FromFinding(
             "plan.duplicate_date",
             $"More than one ride or more than one strength session is scheduled on {dateList}. Schedule at most one ride and one strength session per day; one ride plus one strength session is valid.");
+    }
+
+    private static PlanValidationResult? ValidateRequestedStrengthPhase(string uploadJson, string strengthPhase)
+    {
+        var canonicalPhase = strengthPhase.Trim().ToLowerInvariant();
+        using var document = JsonDocument.Parse(uploadJson);
+        var strengthEntries = document.RootElement.GetProperty("workouts").EnumerateArray()
+            .Where(workout => workout.ValueKind == JsonValueKind.Object
+                && ActivityTypeCategories.IsStrength(ReadActivityType(workout)))
+            .ToArray();
+
+        if (canonicalPhase == "none" && strengthEntries.Length > 0)
+        {
+            return PlanValidationResult.FromFinding(
+                "plan.strength_not_requested",
+                "The requested strength phase is none. Remove all WeightTraining entries and do not mention strength in the plan.");
+        }
+
+        if (canonicalPhase is not ("adaptation" or "transition" or "maximum" or "maintenance")
+            || strengthEntries.Length == 0)
+        {
+            return null;
+        }
+
+        var expectedTag = $"strength-{canonicalPhase}";
+        foreach (var workout in strengthEntries)
+        {
+            var strengthTags = workout.TryGetProperty("tags", out var tags)
+                && tags.ValueKind == JsonValueKind.Array
+                    ? tags.EnumerateArray()
+                        .Where(tag => tag.ValueKind == JsonValueKind.String)
+                        .Select(tag => tag.GetString()!)
+                        .Where(tag => StrengthTagRegex.IsMatch(tag))
+                        .ToArray()
+                    : [];
+
+            if (strengthTags.Length != 1 || !string.Equals(strengthTags[0], expectedTag, StringComparison.Ordinal))
+            {
+                return PlanValidationResult.FromFinding(
+                    "plan.strength_phase_mismatch",
+                    $"Every WeightTraining entry must carry exactly the requested tag `{expectedTag}`.");
+            }
+        }
+
+        return null;
     }
 
     private static PlanValidationResult? ValidateStrengthEntries(string uploadJson)

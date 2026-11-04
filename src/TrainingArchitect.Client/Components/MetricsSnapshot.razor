@@ -92,8 +92,20 @@
                                 {
                                     <span class="coach-strength-phase-abbreviation">@GetStrengthPhaseAbbreviation(Strength.Phase)</span>
                                 }
+                                @if (Strength.IsManual)
+                                {
+                                    <span class="coach-strength-manual-label">(manually selected)</span>
+                                }
                             </div>
-                            @if (Strength.Phase is "maintenance")
+                            @if (Strength.DataSuggestedPhase is { } suggestedPhase)
+                            {
+                                <span class="coach-strength-data-suggestion">Data suggests: @FormatStrengthPhase(suggestedPhase)</span>
+                            }
+                            @if (Strength.IsManual)
+                            {
+                                <span class="coach-strength-progress-label">@Strength.SessionsThisWeek completed this week</span>
+                            }
+                            else if (Strength.Phase is "maintenance")
                             {
                                 <span class="coach-strength-progress-label">ongoing</span>
                             }
@@ -122,18 +134,38 @@
                                     </span>
                                 </div>
                             }
-                            <span class="coach-strength-this-week">
-                                This week @Strength.SessionsThisWeek · @FormatLastStrengthSession(Strength.DaysSinceLast)
-                            </span>
-                            @if (Strength.SessionsPerWeekLast4.Count > 0)
+                            @if (Strength.IsManual
+                                && Strength.Phase is "maintenance"
+                                && !Strength.HasCompletedAdaptationRun)
                             {
-                                <span class="coach-strength-history">
-                                    @string.Join(" · ", Strength.SessionsPerWeekLast4) sessions/week
+                                <span class="coach-strength-maintenance-hint">
+                                    Maintenance without prior adaptation starts at 85 % 1RM — consider Adaptation first.
                                 </span>
                             }
-                            @if (Strength.Phase is null)
+                            @if (!Strength.IsManual)
                             {
-                                <span class="coach-strength-tracking-hint">Tag sessions or let the coach plan strength to track the phase</span>
+                                <span class="coach-strength-this-week">
+                                    @if (Strength.PhaseCurrentWeek is { } currentPhase
+                                        && Strength.PhaseNextWeek is { } nextWeekPhase
+                                        && !string.Equals(currentPhase, nextWeekPhase, StringComparison.Ordinal))
+                                    {
+                                        <text>Switches to @FormatStrengthPhase(nextWeekPhase) next week</text>
+                                    }
+                                    else
+                                    {
+                                        <text>@Strength.SessionsThisWeek sessions</text>
+                                    }
+                                </span>
+                                @if (Strength.SessionsPerWeekLast4.Count > 0)
+                                {
+                                    <span class="coach-strength-history">
+                                        @string.Join(" · ", Strength.SessionsPerWeekLast4) sessions/week
+                                    </span>
+                                }
+                                @if (Strength.Phase is null)
+                                {
+                                    <span class="coach-strength-tracking-hint">Tag sessions or let the coach plan strength to track the phase</span>
+                                }
                             }
                         </div>
                     }
@@ -684,6 +716,15 @@
         _ => string.Empty
     };
 
+    private static string FormatStrengthPhase(string phase) => phase switch
+    {
+        "adaptation" => "Adaptation",
+        "transition" => "Transition",
+        "maximum" => "Maximum",
+        "maintenance" => "Maintenance",
+        _ => phase
+    };
+
     private static string FormatLastStrengthSession(int? daysSinceLast) => daysSinceLast switch
     {
         0 => "last session today",
@@ -1082,7 +1123,12 @@
         IReadOnlyList<int> SessionsPerWeekLast4,
         int UntaggedCount,
         int? InferredSessionsLast16Weeks = null,
-        bool? PhaseOverdue = null);
+        bool? PhaseOverdue = null,
+        bool IsManual = false,
+        string? DataSuggestedPhase = null,
+        bool HasCompletedAdaptationRun = false,
+        string? PhaseCurrentWeek = null,
+        string? PhaseNextWeek = null);
 
     public sealed class TrainingReadinessSnapshot(
         string status,

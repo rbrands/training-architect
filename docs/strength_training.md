@@ -199,6 +199,32 @@ Fatigue inference: the existing rule in `prompts/discipline_fitness.md` ("assume
 - `validate_week_plan`: `WeightTraining` entries require `tags` with exactly one `strength-*` tag, `duration_minutes` 30–75, no `steps`.
 - Reject two `WeightTraining` entries on the same day and `WeightTraining` on a `training_allowed: false` day (existing rule applies).
 
+### 4.5 Strength phase selection in training-architect
+
+The Plan Week and Next Best Training tiles share a saved strength selection:
+Automatic, Adaptation, Transition, Maximum, Maintenance, or No strength
+training. Automatic uses `week_summary.strength.phase_next_week` for a next-week
+plan and `phase_current_week` for a current-week plan or next-training
+recommendation. If the matching field is absent, the tile displays Automatic
+without a suggested phase and the generated request resolves to `none`.
+
+The selection is stored with the athlete credential in the same local/session
+storage location and with the same durability as the credential. A manual
+selection overrides the data-suggested phase for the request. Any resolved
+non-`none` phase means strength is in use for the plan, including when recent
+strength history is absent; the default history-based opt-in rule must not
+override this selector. Weekly prompts should include the recommended
+frequency when readiness and planning constraints allow it. The plan validator
+requires every `WeightTraining` entry to use that exact canonical phase tag and
+rejects strength entries when the requested phase is `none`.
+
+The Strength card shows the phase selected for this week. Manual selections are
+identified as such and may show the data-suggested phase in muted text. A manual
+Maintenance selection without evidence of a completed adaptation run includes
+the 85 % 1RM starting-load hint. Selecting No strength training keeps the card
+visible when strength history exists, labels the phase Not planned, and retains
+the completed session count.
+
 ---
 
 ## 5. training-architect (frontend, decision D3)

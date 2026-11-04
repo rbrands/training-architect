@@ -90,6 +90,25 @@ public sealed class PlanOrchestrator(
             previousResponseId = response.ResponseId;
             totalTokens += response.TotalTokens ?? 0;
             var (readableText, uploadJson) = PlanResponseParser.Split(response.Content);
+            if (!string.IsNullOrWhiteSpace(uploadJson))
+            {
+                try
+                {
+                    var normalizedJson = PlanUploadNormalizer.Normalize(uploadJson,
+                        (previous, normalized) => logger.LogDebug(
+                            "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
+                            previous, normalized));
+                    lastResponse = response with
+                    {
+                        Content = response.Content.Replace(uploadJson, normalizedJson, StringComparison.Ordinal)
+                    };
+                    uploadJson = normalizedJson;
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    logger.LogDebug(ex, "Plan JSON could not be normalized; passing it to validation.");
+                }
+            }
 
             yield return new PlanProgressEvent(PlanProgressStage.Generated, "Plan received.", round);
             var isProseOnlyRecommendation = request.Mode == PlanningMode.NextTraining
@@ -133,11 +152,13 @@ public sealed class PlanOrchestrator(
                 string.Join(", ", findings.Select(finding => finding.Code)));
 
             // The follow-up turn continues the conversation, so only the findings need to be sent.
-            prompt = PromptBuilder.BuildPlanCorrectionPrompt(findings);
+            prompt = PromptBuilder.BuildPlanCorrectionPrompt(findings, request.StrengthPhase);
             if (request.Mode == PlanningMode.NextTraining)
             {
-                prompt += "\nKeep the next-training contract: at most 100 words of prose, one main workout "
-                    + "optionally plus one same-day strength session, "
+                prompt += "\nKeep the next-training contract: at most 100 words of prose, "
+                    + (request.StrengthPhase == "none"
+                        ? "one main workout and no strength session, "
+                        : "one main workout and, when strength is due and placement/readiness allow it, one same-day strength session; do not omit an eligible due session, ")
                     + "or prose only if rest is recommended or essential workout data is missing. "
                     + "Keep the original recommendation date; do not fill the weekly TSS target or upload.";
             }

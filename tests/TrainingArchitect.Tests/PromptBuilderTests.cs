@@ -75,11 +75,33 @@ public sealed class PromptBuilderTests
         var prompt = PromptLoader.Load(name).Replace("\r\n", "\n");
         var normalized = System.Text.RegularExpressions.Regex.Replace(prompt, @"\s+", " ");
 
-        Assert.Contains("today/tomorrow", normalized);
         Assert.Contains("never reduces the weekly strength frequency", normalized);
-        Assert.Contains("adaptation/transition/maximum twice per week", normalized);
-        Assert.Contains("maintenance once per week", normalized);
-        Assert.Contains("at least two days between", normalized);
+        if (name is "assess_activity" or "plan_next_training")
+        {
+            Assert.Contains("today/tomorrow", normalized);
+        }
+        else
+        {
+            Assert.Contains("scheduled today", normalized);
+            Assert.Contains("scheduled tomorrow", normalized);
+            Assert.Contains("re-check in the morning", normalized);
+        }
+        if (name is "plan_week" or "plan_next_training")
+        {
+            Assert.Contains("recommended number from `week_summary.strength`", normalized);
+            Assert.Contains(
+                name == "plan_week"
+                    ? "Never schedule more than the recommended number"
+                    : "never exceed that number",
+                normalized);
+            Assert.Contains("state that reason", normalized);
+        }
+        else
+        {
+            Assert.Contains("adaptation/transition/maximum twice per week", normalized);
+            Assert.Contains("maintenance once per week", normalized);
+            Assert.Contains("at least two days between", normalized);
+        }
         Assert.DoesNotMatch(@"(?i)(once|1) (per week |session )?(on|when).*yellow", normalized);
         Assert.DoesNotMatch(@"(?i)(none|0) (on|when).*red", normalized);
     }
@@ -161,6 +183,8 @@ public sealed class PromptBuilderTests
         var prompt = PromptBuilder.BuildPlanPrompt(request);
 
         Assert.Contains("Plan target: next week", prompt);
+        Assert.Contains("Strength phase for this plan: none", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
         Assert.Contains("VO2max on Tuesday", prompt);
         Assert.DoesNotContain("exactly one workout", prompt);
     }
@@ -175,11 +199,14 @@ public sealed class PromptBuilderTests
         var prompt = PromptBuilder.BuildPlanPrompt(request);
 
         Assert.Contains(athleteData, prompt);
+        Assert.Contains("Strength phase for this plan: none", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
+        Assert.DoesNotContain("{{strength_prescription}}", prompt);
         Assert.Contains("Use only the attached athlete data", prompt);
         Assert.Contains("The only tool you may call", prompt);
         Assert.Contains("even if the attached data is incomplete or\noutdated", prompt.Replace("\r\n", "\n"));
         Assert.DoesNotContain("Fetch the current data from intervals.icu", prompt);
-        Assert.Contains("one main workout with an optional same-day strength", prompt);
+        Assert.Contains("one main workout and optionally one same-day", prompt);
         Assert.Contains("the last strength session was at least two days", prompt);
         Assert.Contains("yellow readiness rules out `strength-maximum`", prompt);
         Assert.Contains("red readiness rules out all strength", prompt);
@@ -213,6 +240,49 @@ public sealed class PromptBuilderTests
         Assert.Contains("instead of asking", prompt);
         Assert.Contains("training_allowed: false", prompt);
         Assert.Contains("max_training_time_hours", prompt);
+    }
+
+    [Fact]
+    public void BuildPlanPrompt_UsesRequestedStrengthPhase()
+    {
+        var request = new PlanRequest(
+            "{}",
+            "fitness",
+            "en",
+            PlanningScope.NextWeek,
+            new PlanConstraints(null, []),
+            StrengthPhase: "maintenance",
+            StrengthPhaseIsManual: true);
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("Strength phase for this plan: maintenance", prompt);
+        Assert.Contains("explicitly requested strength training for this plan", prompt);
+        Assert.Contains("overrides the default history-based strength opt-in rule", prompt);
+        Assert.Contains("3-5 sets of 15-20 reps at 40-60% 1RM", prompt);
+        Assert.Contains("maintenance: 2 sets, first 12 reps at 60% 1RM", prompt);
+        Assert.DoesNotContain("{{strength_prescription}}", prompt);
+        Assert.Contains("`strength-maintenance` tag", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
+        Assert.DoesNotContain("{{strength_phase_selection_context}}", prompt);
+    }
+
+    [Fact]
+    public void BuildPlanPrompt_AutomaticStrengthPhase_OptsIntoStrengthWithoutHistory()
+    {
+        var request = new PlanRequest(
+            "{}",
+            "fitness",
+            "en",
+            PlanningScope.NextWeek,
+            new PlanConstraints(null, []),
+            StrengthPhase: "adaptation");
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("The selected strength phase for this plan is `adaptation`", prompt);
+        Assert.Contains("Treat this non-none selection as strength being in use", prompt);
+        Assert.DoesNotContain("{{strength_phase_selection_context}}", prompt);
     }
 
     [Theory]

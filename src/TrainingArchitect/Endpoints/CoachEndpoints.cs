@@ -490,10 +490,12 @@ public static class CoachEndpoints
             }
 
             // Pasted plans and next-training recommendations require a formal schema check before upload.
-            var planJson = request.WeekPlanJson;
+            var planJson = PlanUploadNormalizer.Normalize(request.WeekPlanJson,
+                (previous, normalized) => logger.LogDebug(
+                    "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
+                    previous, normalized));
             if (request.Validate)
             {
-                planJson = PlanUploadNormalizer.Normalize(planJson);
                 var validation = await athleteDataService.ValidateWeekPlanAsync(
                     athleteIdHeader,
                     apiKeyHeader,

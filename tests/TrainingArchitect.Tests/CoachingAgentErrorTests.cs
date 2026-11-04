@@ -127,6 +127,19 @@ public sealed class CoachingAgentErrorTests
         Assert.Equal("Verpflegung absichern.\nNext line ", result);
     }
 
+    [Fact]
+    public void RemoveCitationMarkers_StripsLeakedLiteralFileCitations()
+    {
+        var method = typeof(FoundryCoachingAgent).GetMethod("RemoveCitationMarkers", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var text = "Ruhetag. 【0†fileciteturn0file1\n"
+            + "Zonen. 【0†fileciteturn0file3turn0file0 Die FTP-Angabe 【3†source】 passt.\n"
+            + "Einheit 5 von 4–6. fileciteturn0file5turn0file14";
+
+        var result = Assert.IsType<string>(method.Invoke(null, [text]));
+
+        Assert.Equal("Ruhetag.\nZonen. Die FTP-Angabe passt.\nEinheit 5 von 4–6.", result);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

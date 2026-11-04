@@ -309,6 +309,18 @@
     font-weight: 800;
 }
 
+.coach-strength-manual-label,
+.coach-strength-data-suggestion,
+.coach-strength-maintenance-hint {
+    color: #6f6d68;
+    font-size: 0.78rem;
+    font-weight: 400;
+}
+
+.coach-strength-maintenance-hint {
+    line-height: 1.4;
+}
+
 .coach-strength-progress {
     display: flex;
     flex-direction: column;

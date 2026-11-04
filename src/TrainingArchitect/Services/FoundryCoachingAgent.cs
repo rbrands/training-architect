@@ -243,9 +243,16 @@ public sealed class FoundryCoachingAgent(
         return null;
     }
 
-    // Models may emit raw citation markers (U+E200 … U+E201) that are not rendered as annotations.
+    // Models may emit raw citation markers that are not rendered as annotations,
+    // either as private-use delimiters (U+E200 … U+E201) or as leaked literal
+    // tokens like "【0†fileciteturn0file1】" (sometimes without the closing bracket).
     private static readonly Regex CitationMarkerPattern = new(
-        @"[ \t]*\uE200[^\uE201]*\uE201|[\uE200-\uE202]",
+        @"[ \t]*\uE200[^\uE201]*\uE201"
+        + @"|[ \t]*【[^】\s]*】?"
+        + @"|[ \t]*】"
+        + @"|[ \t]*\bfilecite(?:turn\d+file\d+)*"
+        + @"|[ \t]*\bturn\d+file\d+\b"
+        + @"|[\uE200-\uE202]",
         RegexOptions.Compiled);
 
     private static string RemoveCitationMarkers(string text) =>

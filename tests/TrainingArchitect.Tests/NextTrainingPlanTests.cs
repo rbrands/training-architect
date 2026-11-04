@@ -22,7 +22,9 @@ public sealed class NextTrainingPlanTests
         """;
     private static readonly PlanRequest Request = new(
         "{}", "fitness", "en", PlanningScope.CurrentWeek,
-        new PlanConstraints(500, []), Mode: PlanningMode.NextTraining);
+        new PlanConstraints(500, []),
+        Mode: PlanningMode.NextTraining,
+        StrengthPhase: "adaptation");
 
     [Fact]
     public async Task ValidateAsync_SingleSession_DoesNotTryToFillWeeklyTarget()
@@ -347,12 +349,52 @@ public sealed class NextTrainingPlanTests
         Assert.Equal("plan.strength_entry_invalid", Assert.Single(result.Findings).Code);
     }
 
+    [Fact]
+    public async Task ValidateAsync_RejectsStrengthEntryWithDifferentRequestedPhase()
+    {
+        const string planJson = """
+            {"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining",
+            "duration_minutes":45,"tags":["strength-adaptation"]}]}
+            """;
+        var validator = new TssPlanValidator(
+            new RecordingAthleteDataService(),
+            NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(
+            planJson,
+            Request with { StrengthPhase = "maximum" },
+            null,
+            null);
+
+        Assert.Equal("plan.strength_phase_mismatch", Assert.Single(result.Findings).Code);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_RejectsStrengthWhenNoneWasRequested()
+    {
+        const string planJson = """
+            {"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining",
+            "duration_minutes":45,"tags":["strength-adaptation"]}]}
+            """;
+        var validator = new TssPlanValidator(
+            new RecordingAthleteDataService(),
+            NullLogger<TssPlanValidator>.Instance);
+
+        var result = await validator.ValidateAsync(
+            planJson,
+            Request with { StrengthPhase = "none" },
+            null,
+            null);
+
+        Assert.Equal("plan.strength_not_requested", Assert.Single(result.Findings).Code);
+    }
+
     [Theory]
-    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["vo2max-high"]}]}""")]
-    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"],"steps":[{"duration_seconds":60}]}]}""")]
-    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":20,"tags":["strength-adaptation"]}]}""")]
-    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":90,"tags":["strength-adaptation"]}]}""")]
-    public async Task ValidateAsync_NextTraining_RejectsInvalidStrengthEntry(string planJson)
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["vo2max-high"]}]}""", "plan.strength_phase_mismatch")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":45,"tags":["strength-adaptation"],"steps":[{"duration_seconds":60}]}]}""", "plan.strength_entry_invalid")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":20,"tags":["strength-adaptation"]}]}""", "plan.strength_entry_invalid")]
+    [InlineData("""{"workouts":[{"date":"2026-10-19","activity_type":"WeightTraining","duration_minutes":90,"tags":["strength-adaptation"]}]}""", "plan.strength_entry_invalid")]
+    public async Task ValidateAsync_NextTraining_RejectsInvalidStrengthEntry(string planJson, string findingCode)
     {
         var service = new RecordingAthleteDataService();
         var validator = new TssPlanValidator(service, NullLogger<TssPlanValidator>.Instance);
@@ -360,8 +402,11 @@ public sealed class NextTrainingPlanTests
         var result = await validator.ValidateAsync(planJson, Request, null, null);
 
         Assert.False(result.IsValid);
-        Assert.Equal("plan.strength_entry_invalid", Assert.Single(result.Findings).Code);
-        Assert.Contains("2026-10-19", result.Findings[0].Message);
+        Assert.Equal(findingCode, Assert.Single(result.Findings).Code);
+        if (findingCode == "plan.strength_entry_invalid")
+        {
+            Assert.Contains("2026-10-19", result.Findings[0].Message);
+        }
         Assert.Empty(service.Calls);
     }
 
@@ -493,6 +538,28 @@ public sealed class NextTrainingPlanTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_NormalizesDurationBeforeValidationAndUpload(bool validate)
+    {
+        var service = new RecordingAthleteDataService();
+        const string planJson = """
+            {"workouts":[{"activity_type":"Ride","duration_minutes":70,
+            "steps":[{"duration_seconds":600},{"duration_seconds":4080}]}]}
+            """;
+
+        var result = await InvokeUploadAsync(service, planJson, validate);
+
+        Assert.Equal(200, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        using var uploaded = JsonDocument.Parse(service.UploadedJson!);
+        Assert.Equal(78, uploaded.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetDouble());
+        if (validate)
+            Assert.Equal(service.ValidatedJson, service.UploadedJson);
+        else
+            Assert.Null(service.ValidatedJson);
+    }
+
+    [Theory]
     [InlineData("{broken")]
     [InlineData("[]")]
     [InlineData("null")]
@@ -506,13 +573,13 @@ public sealed class NextTrainingPlanTests
         Assert.Empty(service.Calls);
     }
 
-    private static async Task<IResult> InvokeUploadAsync(IAthleteDataService service, string planJson)
+    private static async Task<IResult> InvokeUploadAsync(IAthleteDataService service, string planJson, bool validate = true)
     {
         var context = new DefaultHttpContext();
         context.Request.Headers[IntervalsHeaders.AthleteId] = "test-athlete";
         context.Request.Headers[IntervalsHeaders.ApiKey] = "test-key";
         var requestType = typeof(CoachEndpoints).GetNestedType("PlanUploadRequest", BindingFlags.NonPublic)!;
-        var request = Activator.CreateInstance(requestType, planJson, true)!;
+        var request = Activator.CreateInstance(requestType, planJson, validate)!;
         var method = typeof(CoachEndpoints).GetMethod("UploadPlanAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
         return await (Task<IResult>)method.Invoke(null,

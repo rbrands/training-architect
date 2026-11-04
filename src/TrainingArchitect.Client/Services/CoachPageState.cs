@@ -29,6 +29,7 @@ public sealed class CoachPageState
     public bool IsPlanExpanded { get; set; }
     public string? PlanReadableText { get; set; }
     public string? PlanUploadJson { get; set; }
+    public string? PlanRequestJson { get; set; }
     public string? PlanErrorMessage { get; set; }
     public long? PlanTotalTokens { get; set; }
     public string? PlanResponseId { get; set; }

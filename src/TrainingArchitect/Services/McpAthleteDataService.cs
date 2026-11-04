@@ -177,7 +177,7 @@ public sealed class McpAthleteDataService(
                 $"MCP tool '{McpToolNames.CheckAthleteData}' returned an unexpected payload.");
     }
 
-    private static Dictionary<string, object?> BuildUploadArguments(string weekPlanJson)
+    private Dictionary<string, object?> BuildUploadArguments(string weekPlanJson)
     {
         try
         {
@@ -197,13 +197,13 @@ public sealed class McpAthleteDataService(
 
                 return new Dictionary<string, object?>
                 {
-                    ["plan_json"] = PlanUploadNormalizer.Normalize(planJson)
+                    ["plan_json"] = PlanUploadNormalizer.Normalize(planJson, LogDurationChanged)
                 };
             }
 
             return new Dictionary<string, object?>
             {
-                ["plan_json"] = PlanUploadNormalizer.Normalize(json.RootElement.GetRawText())
+                ["plan_json"] = PlanUploadNormalizer.Normalize(json.RootElement.GetRawText(), LogDurationChanged)
             };
         }
         catch (JsonException ex)
@@ -211,6 +211,11 @@ public sealed class McpAthleteDataService(
             throw new McpToolExecutionException("Week plan JSON is invalid.", ex);
         }
     }
+
+    private void LogDurationChanged(double? previousMinutes, double durationMinutes) =>
+        logger.LogDebug(
+            "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
+            previousMinutes, durationMinutes);
 
     /// <summary>
     /// Executes a single MCP tool call with an explicit per-call timeout and bounded retries

@@ -13,13 +13,17 @@ First infer the current weekly training context (current week / last 7 days):
 - Fueling issues or under-fueled key sessions, if available.
 - Strength: current phase, sessions this week versus the phase frequency rule,
   and days since the last strength session from `week_summary.strength`.
-  Strength is in use when `week_summary.strength` shows any WeightTraining
-  session in the last 16 weeks: the sum of `sessions_per_week_last_4` is
-  greater than 0, `phase_session_count` is greater than 0, or
-  `untagged_sessions_last_16_weeks` is greater than 0. An explicit athlete
-  request for strength also makes it in use. Otherwise, do not plan or mention
-  strength. When strength is in use and `current_phase` is null, use adaptation
-  as a working assumption and say so.
+- Strength phase for this plan: {{strength_phase}}. Use exactly the
+  `strength-{{strength_phase}}` tag for every `WeightTraining` entry. If the
+  phase is `none`, schedule no strength sessions and do not mention strength in
+  the plan.
+{{strength_phase_selection_context}}
+When the selected phase is not `none`, this selection means strength is in use
+for this plan, even if there are no recent strength sessions. Do not apply a
+history-based opt-in rule as a veto. Include the recommended number of sessions
+when the phase frequency and planning constraints allow it.
+
+{{strength_prescription}}
 
 Use this short assessment to justify session selection, dose, and recovery placement in the target-week plan.
 
@@ -77,11 +81,20 @@ Planning requirements:
   sessions per `decision-process.md`, Strength (phase from
   `week_summary.strength`, frequency and placement rules), then fill
   support/recovery sessions. Strength sessions count for plan-to-JSON parity.
-- Weekly strength frequency (D2): adaptation/transition/maximum twice per week;
-  maintenance once per week, with at least two days between sessions. Readiness
-  applies only to today/tomorrow and never reduces the weekly strength frequency.
-  Adjust or defer the immediate session if needed; do not project today's
-  yellow/red readiness onto the entire target week.
+- Strength frequency: follow `decision-process.md` and the recommended number
+  from `week_summary.strength`. When the phase is not `none` and the athlete is
+  eligible under those rules, include the recommended number of strength
+  sessions; do not silently omit strength. For a current-week plan, count
+  completed strength sessions in the target week toward that number. For a
+  next-week plan, do not subtract sessions completed in the current week.
+  Schedule fewer only when a specific readiness, recovery, availability,
+  placement, or other decision-process constraint requires it, and state that
+  reason. Never schedule more than the recommended number. Readiness by itself
+  never reduces the weekly strength frequency; any reduction must have a stated
+  reason. For a current-week plan, apply today's readiness only to sessions
+  scheduled today; do not use it to rule out sessions scheduled tomorrow. For
+  any session scheduled tomorrow, include one sentence advising a readiness
+  re-check in the morning.
 - Avoid duplicating key sessions already completed or already planned.
 - Align weekly ride TSS and ride duration to their respective supplied targets,
   and keep the week realistic for fatigue and availability.
@@ -108,7 +121,9 @@ Workout library lookup (REQUIRED because `list_library_workouts` is configured):
   omit `steps` for a selected library workout as required by the system output
   contract; the stored library workout is authoritative during upload.
 4. If there is no matching workout for a session, generate it normally without
-  `library_workout_id`. Do not broaden or repeat the search. Never skip the
+  `library_workout_id`, using the strength prescription above for strength
+  sessions. A missing strength library hit is not a reason to omit a required
+  strength session. Do not broaden or repeat the search. Never skip the
   library call merely because a generated structure is easy to create.
 
 
@@ -137,9 +152,10 @@ Workout construction quality gate (CRITICAL):
 - For rides, build `steps` explicitly as warmup -> main set -> cooldown with concrete durations for every interval and recovery segment.
 - `WeightTraining` entries have `activity_type: "WeightTraining"`, no `steps`,
   no `library_workout_id`, exactly one `strength-<phase>` tag, and a duration
-  from the strength table in `workout-library.md`. Their description follows
-  its template: phase, session number of target, exercises, sets × reps @ % 1RM,
-  rest, and progression note.
+  following the strength prescription above. Their description follows its
+  template: phase, session number of target, exercises, sets × reps @ % 1RM,
+  rest, and progression note. If no exact strength library match is returned,
+  use the embedded prescription rather than omitting a due session.
 - TSS and step-consistency rules apply to ride entries only.
 - Do not use compressed repetition notation inside `steps` (no implicit loops). Repetitions must be fully expanded as explicit step entries.
 - If the description states a structure such as `N x M min` with `R min rec`, the main set in `steps` must contain exactly `N` work intervals of `M` minutes and the corresponding recovery intervals in the steps.

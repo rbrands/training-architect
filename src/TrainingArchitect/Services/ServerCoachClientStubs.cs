@@ -46,6 +46,8 @@ public sealed class ServerAthleteSession : IAthleteSession
 
     public AthleteProfileGoal? ProfileGoal => null;
 
+    public StrengthPhaseSelection? StrengthPhaseSelection => null;
+
     public DateTimeOffset? LastSynced => null;
 
     public string? ErrorMessage => null;
@@ -64,7 +66,19 @@ public sealed class ServerAthleteSession : IAthleteSession
 
     public event Action? Changed;
 
-    public Task ConnectAsync(string athleteId, string apiKey, CoachLanguage language, AthleteProfileGoal profileGoal, bool remember, CancellationToken ct = default)
+    public Task ConnectAsync(
+        string athleteId,
+        string apiKey,
+        CoachLanguage language,
+        AthleteProfileGoal profileGoal,
+        bool remember,
+        CancellationToken ct = default,
+        StrengthPhaseSelection strengthPhaseSelection = TrainingArchitect.Core.Models.StrengthPhaseSelection.Automatic)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task SetStrengthPhaseSelectionAsync(StrengthPhaseSelection selection, CancellationToken ct = default)
     {
         return Task.CompletedTask;
     }

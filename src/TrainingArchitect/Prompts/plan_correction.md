@@ -5,6 +5,19 @@ problems and return the corrected plan.
 
 How to fix each problem, depending on its kind:
 
+- Requested strength phase for this plan: {{strength_phase}}. Include strength
+  at the recommended frequency when it is due and the planning constraints
+  allow it; do not silently omit an eligible strength session. Return at most
+  one same-day strength session and one main workout.
+  If the original plan omitted a strength session that is due and allowed,
+  add it now. Do not use missing strength history as a reason to omit it.
+  If there is no exact strength library match, use this prescription:
+  {{strength_prescription}}
+  - If it is `none`, remove every `WeightTraining` entry and do not mention
+    strength in the plan.
+  - Otherwise, every `WeightTraining` entry must carry exactly the canonical
+    `strength-{{strength_phase}}` tag. Do not use a different phase tag.
+
 - TSS mismatch on a ride entry with steps (stated vs. computed TSS differ): This means the
   workout structure is fine but the "tss" value in its description is wrong. Recompute TSS
   from the workout's actual steps using the TSS formula from your instructions, and correct

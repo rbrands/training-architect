@@ -9,11 +9,12 @@ public static partial class PlanUploadNormalizer
 {
     /// <summary>
     /// Keeps workout steps as structured JSON and removes any duplicated interval structure
-    /// from the coaching description.
+    /// from the coaching description. Derives generated non-strength workout durations from their steps.
     /// </summary>
     /// <param name="planJson">The generated weekly plan JSON.</param>
+    /// <param name="onDurationChanged">Optional callback for logging the old and normalized duration in minutes.</param>
     /// <returns>The normalized weekly plan JSON.</returns>
-    public static string Normalize(string planJson)
+    public static string Normalize(string planJson, Action<double?, double>? onDurationChanged = null)
     {
         var root = JsonNode.Parse(planJson) as JsonObject
             ?? throw new JsonException("Week plan JSON must be a JSON object.");
@@ -38,6 +39,44 @@ public static partial class PlanUploadNormalizer
 
             var coachingDescription = GetCoachingDescription(workout["description"]);
             workout["description"] = coachingDescription;
+
+            if (workout["activity_type"] is JsonValue activityType
+                && activityType.TryGetValue<string>(out var type)
+                && string.Equals(type, "WeightTraining", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var totalSeconds = 0d;
+            var validDurations = true;
+            foreach (var step in steps)
+            {
+                if (step is not JsonObject stepObject
+                    || stepObject["duration_seconds"] is not JsonValue duration
+                    || !duration.TryGetValue<double>(out var seconds)
+                    || !double.IsFinite(seconds)
+                    || seconds <= 0)
+                {
+                    validDurations = false;
+                    break;
+                }
+
+                totalSeconds += seconds;
+            }
+
+            if (!validDurations || !double.IsFinite(totalSeconds))
+            {
+                continue;
+            }
+
+            var normalizedMinutes = Math.Round(totalSeconds / 60);
+            double? previousMinutes = workout["duration_minutes"] is JsonValue previousDuration
+                && previousDuration.TryGetValue<double>(out var minutes) ? minutes : null;
+            if (previousMinutes != normalizedMinutes)
+            {
+                workout["duration_minutes"] = normalizedMinutes;
+                onDurationChanged?.Invoke(previousMinutes, normalizedMinutes);
+            }
         }
 
         return root.ToJsonString();

@@ -5,6 +5,68 @@ namespace TrainingArchitect.Tests;
 
 public class PlanUploadNormalizerTests
 {
+    [Theory]
+    [InlineData(4680, 70, 78)]
+    [InlineData(4679, 70, 78)]
+    [InlineData(4621, 70, 77)]
+    [InlineData(4680, 78, 78)]
+    public void Normalize_GeneratedWorkout_DerivesDurationFromStepsAndReportsOnlyChanges(
+        int totalSeconds, int initialMinutes, int expectedMinutes)
+    {
+        var planJson = $$"""
+            {"workouts":[{"activity_type":"Ride","duration_minutes":{{initialMinutes}},
+            "steps":[{"duration_seconds":600},{"duration_seconds":{{totalSeconds - 600}}}]}]}
+            """;
+        var changes = new List<(double? Previous, double Normalized)>();
+
+        var normalized = PlanUploadNormalizer.Normalize(planJson,
+            (previous, duration) => changes.Add((previous, duration)));
+        using var document = JsonDocument.Parse(normalized);
+
+        Assert.Equal(expectedMinutes,
+            document.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetDouble());
+        if (initialMinutes == expectedMinutes)
+            Assert.Empty(changes);
+        else
+            Assert.Equal(((double?)initialMinutes, (double)expectedMinutes), Assert.Single(changes));
+        changes.Clear();
+        Assert.Equal(normalized, PlanUploadNormalizer.Normalize(normalized,
+            (previous, duration) => changes.Add((previous, duration))));
+        Assert.Empty(changes);
+    }
+
+    [Theory]
+    [InlineData("\"activity_type\":\"WeightTraining\",")]
+    [InlineData("\"library_workout_id\":7,")]
+    public void Normalize_StrengthOrLibraryWorkout_PreservesDuration(string properties)
+    {
+        var planJson = $$"""
+            {"workouts":[{ {{properties}} "duration_minutes":70,
+            "steps":[{"duration_seconds":4680}]}]}
+            """;
+        var changes = new List<double>();
+
+        var normalized = PlanUploadNormalizer.Normalize(planJson, (_, duration) => changes.Add(duration));
+        using var document = JsonDocument.Parse(normalized);
+
+        Assert.Equal(70, document.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetInt32());
+        Assert.Empty(changes);
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("""[{"duration_seconds":600},{}]""")]
+    [InlineData("""[{"duration_seconds":600},{"duration_seconds":-60}]""")]
+    [InlineData("""[{"duration_seconds":"4680"}]""")]
+    public void Normalize_MissingOrInvalidStepDurations_PreservesDurationForValidation(string steps)
+    {
+        var normalized = PlanUploadNormalizer.Normalize(
+            $$"""{"workouts":[{"duration_minutes":70,"steps":{{steps}}}]}""");
+        using var document = JsonDocument.Parse(normalized);
+
+        Assert.Equal(70, document.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetInt32());
+    }
+
     [Fact]
     public void Normalize_WhenWorkoutContainsExplicitSteps_PreservesStepsAsStructuredJson()
     {

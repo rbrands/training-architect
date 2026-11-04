@@ -23,13 +23,17 @@ Take the following into account:
 - Wellness: sleep, HRV, resting heart rate - only if available
 - Strength: current phase, sessions this week versus the phase frequency rule,
   and days since the last session from `week_summary.strength`. Strength is in
-  use when `week_summary.strength` shows any WeightTraining session in the last
-  16 weeks: the sum of `sessions_per_week_last_4` is greater than 0,
-  `phase_session_count` is greater than 0, or
-  `untagged_sessions_last_16_weeks` is greater than 0. An explicit athlete
-  request for strength also makes it in use. Otherwise, do not plan or mention
-  strength. When strength is in use and `current_phase` is null, use adaptation
-  as a working assumption and say so.
+  Strength phase for this plan: {{strength_phase}}. Use exactly the
+  `strength-{{strength_phase}}` tag for every `WeightTraining` entry. If the
+  phase is `none`, schedule no strength sessions and do not mention strength in
+  the plan.
+{{strength_phase_selection_context}}
+When the selected phase is not `none`, treat strength as in use even if there
+are no recent strength sessions. Do not apply a history-based opt-in rule as a
+veto. Include a due session when today's readiness and placement constraints
+allow it.
+
+{{strength_prescription}}
 
 **Plan context**
 - Current phase (Base/Build/Peak/Transition); if no phase is provided, apply Base.
@@ -40,18 +44,23 @@ Take the following into account:
   recommendation date, if any) - does it still fit? See the rule below.
 - When strength is in use (D7) and due today (`sessions_this_week` is below the
   phase's weekly frequency, the last strength session was at least two days
-  ago, and placement rules allow it), you may recommend a ride plus one
-  `WeightTraining` entry on the same date, or the strength entry alone when no
-  ride is advisable. Do not place strength on a VO2max, long-ride, or race day.
+  ago, and placement rules allow it), include one `WeightTraining` entry: with
+  a ride on the same date, or alone when no ride is advisable. Do not omit a
+  due strength session without a specific reason from the readiness,
+  availability, or placement rules. No recorded prior strength session is not
+  a spacing conflict. Do not place strength on a VO2max, long-ride, or race day.
   During maximum strength, also do not place it the day before a planned VO2max
   or long ride in `planned_workouts`.
 - Readiness applies fully: yellow readiness rules out `strength-maximum` today;
   red readiness rules out all strength today.
   These restrictions apply only to today/tomorrow (the recommendation date),
-  with tomorrow's readiness re-checked in the morning. Readiness never reduces
-  the weekly strength frequency (D2): adaptation/transition/maximum twice per
-  week; maintenance once per week, with at least two days between sessions.
-  Adjust or defer the immediate session if needed, not the weekly frequency.
+  with tomorrow's readiness re-checked in the morning. Follow strength frequency
+  from `decision-process.md` and the recommended number from
+  `week_summary.strength`; never exceed that number. When the phase is not
+  `none` and a session is due today, recommend it unless a specific readiness,
+  availability, or placement constraint prevents it, and state that reason.
+  Readiness by itself never reduces the weekly strength frequency; any
+  reduction must have a stated reason.
 - The combined ride and strength duration, plus workouts already completed
   that day, must not exceed `max_training_time_hours`.
 - Upcoming races (RACE_A/B/C) and day constraints (Sick/Travel)
@@ -127,8 +136,8 @@ Evaluate the plan, week target, and constraints of {{recommendation_date}}.
 
 **Recommendation and output**
 Use the plan/workout generation output format and upload JSON markers defined in
-the system prompt, but for one main workout with an optional same-day strength
-entry:
+the system prompt, but return one main workout and optionally one same-day
+strength entry only when `{{strength_phase}}` is not `none`:
 - At most 100 words of prose: date, session type, duration, target zone, TSS and
   carbs/h for a ride; if strength is included, give it one sentence with the
   phase and informational TSS. Add one short reason and an easier alternative
@@ -218,9 +227,10 @@ Workout construction quality gate (CRITICAL):
   durations for every interval and recovery segment.
 - `WeightTraining` entries have `activity_type: "WeightTraining"`, no `steps`,
   no `library_workout_id`, exactly one `strength-<phase>` tag, and a duration
-  from the strength table in `workout-library.md`. Their description follows
-  its template: phase, session number of target, exercises, sets × reps @ % 1RM,
-  rest, and progression note.
+  following the strength prescription above. Their description follows its
+  template: phase, session number of target, exercises, sets × reps @ % 1RM,
+  rest, and progression note. If no exact strength library match is returned,
+  use the embedded prescription rather than omitting a due session.
 - TSS and step-consistency rules apply to ride entries only.
 - Do not use compressed repetition notation inside `steps` (no implicit loops).
   Repetitions must be fully expanded as explicit step entries.

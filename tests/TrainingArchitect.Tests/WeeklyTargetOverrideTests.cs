@@ -313,7 +313,7 @@ public class WeeklyTargetOverrideTests
     }
 
     [Fact]
-    public async Task CoachRequests_UseSameOverridesWithoutMutatingRawDataOrConstraints()
+    public async Task CoachRequests_UseSameOverridesAndWeeklyTargetsWithoutMutatingRawData()
     {
         var (session, _) = await CreateSessionAsync();
         var coach = CreateCoach(session);
@@ -329,7 +329,10 @@ public class WeeklyTargetOverrideTests
         Assert.Equal(plan.WeekDataJson, assessment.WeekDataJson);
         Assert.Equal(525, WeeklyLoadTargetResolver.Resolve(plan.WeekDataJson, PlanningScope.CurrentWeek));
         Assert.Equal(560, WeeklyLoadTargetResolver.Resolve(plan.WeekDataJson, PlanningScope.NextWeek));
-        Assert.Null(plan.Constraints.WeeklyTssTarget);
+        var targetWeek = TrainingPlanOverrideApplier.ReadCurrentWeekStart(plan.WeekDataJson)!.Value
+            .AddDays(plan.Scope == PlanningScope.NextWeek ? 7 : 0);
+        Assert.Equal(TrainingPlanOverrideApplier.Read(plan.WeekDataJson, targetWeek).WeeklyTss,
+            plan.Constraints.WeeklyTssTarget);
         Assert.Equal(Dataset, session.AthleteDataJson);
         Assert.Equal(Dataset, session.AthleteDataRaw);
 
@@ -576,6 +579,10 @@ public class WeeklyTargetOverrideTests
         foreach (var property in new[] { "weekly_load_target", "weekly_time_target_hours", "day_constraints" })
             Assert.True(JsonNode.DeepEquals(originalPlan[entryIndex]![property], plan[entryIndex]![property]));
         Assert.Equal(expectedDate, ((DateOnly)typeof(Coach).GetProperty("NextTrainingRecommendationDate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(coach)!).ToString("yyyy-MM-dd"));
+        var recommendationDate = DateOnly.Parse(expectedDate, System.Globalization.CultureInfo.InvariantCulture);
+        var recommendationWeekStart = recommendationDate.AddDays(-(((int)recommendationDate.DayOfWeek + 6) % 7));
+        Assert.Equal(TrainingPlanOverrideApplier.Read(request.WeekDataJson, recommendationWeekStart).WeeklyTss,
+            request.Constraints.WeeklyTssTarget);
         var prompt = PromptBuilder.BuildPlanPrompt(request);
         Assert.Contains($"for the recommendation date {expectedDate}", prompt);
         Assert.DoesNotContain("{{recommendation_date}}", prompt);

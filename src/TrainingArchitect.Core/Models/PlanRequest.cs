@@ -22,5 +22,7 @@ public record PlanRequest(
     PlanningScope   Scope,
     PlanConstraints Constraints,
     string?         SchedulingPreference = null,
-    PlanningMode    Mode = PlanningMode.Week
+    PlanningMode    Mode = PlanningMode.Week,
+    string          StrengthPhase = "none",
+    bool            StrengthPhaseIsManual = false
 );

@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Models;
+using TrainingArchitect.Core.Services;
 using TrainingArchitect.Services;
 
 namespace TrainingArchitect.Tests;
@@ -14,6 +16,31 @@ public class PlanOrchestratorTests
         "English",
         PlanningScope.NextWeek,
         new PlanConstraints(null, []));
+
+    [Fact]
+    public async Task RunAsync_NormalizesDurationBeforeValidationAndReturnsItWithoutCorrection()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"duration_minutes":70,"steps":[{"duration_seconds":4680}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var validator = new FakeValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator));
+
+        using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
+        Assert.Equal(78, validated.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetDouble());
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        Assert.Equal(validator.UploadJsons[0], PlanResponseParser.Split(completed.Result!.Content).UploadJson);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+    }
 
     [Fact]
     public async Task RunAsync_WhenFirstPlanIsValid_CallsAgentOnceAndCompletes()
@@ -178,16 +205,19 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
-    public async Task RunAsync_NextTraining_CorrectionKeepsOptionalStrengthContract()
+    public async Task RunAsync_NextTraining_CorrectionRequiresDueStrengthWhenAllowed()
     {
         var agent = new FakeCoachingAgent();
         var validator = new FakeValidator(invalidRounds: 1);
 
         await CollectAsync(CreateOrchestrator(agent, validator),
-            Request with { Mode = PlanningMode.NextTraining });
+            Request with { Mode = PlanningMode.NextTraining, StrengthPhase = "adaptation" });
 
         Assert.Equal(2, agent.CallCount);
-        Assert.Contains("one main workout optionally plus one same-day strength session", agent.Prompts[1]);
+        Assert.Contains("one main workout and, when strength is due and placement/readiness allow it, one same-day strength session", agent.Prompts[1]);
+        Assert.Contains("do not omit an eligible due session", agent.Prompts[1]);
+        Assert.Contains("3-5 sets of 15-20 reps at 40-60% 1RM", agent.Prompts[1]);
+        Assert.Contains("every `WeightTraining` entry must carry exactly the canonical", agent.Prompts[1]);
         Assert.Contains("do not fill the weekly TSS target or upload", agent.Prompts[1]);
         Assert.Equal("response-1", agent.PreviousResponseIds[1]);
     }
@@ -285,6 +315,7 @@ public class PlanOrchestratorTests
     {
         private int _round;
         public int CallCount => _round;
+        public List<string> UploadJsons { get; } = [];
 
         public Task<PlanValidationResult> ValidateAsync(
             string uploadJson,
@@ -293,6 +324,7 @@ public class PlanOrchestratorTests
             string? intervalsApiKey,
             CancellationToken ct = default)
         {
+            UploadJsons.Add(uploadJson);
             var isInvalid = _round < invalidRounds;
             _round++;
 
