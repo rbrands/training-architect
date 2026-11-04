@@ -1,4 +1,7 @@
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Models;
 using TrainingArchitect.Core.Services;
@@ -101,13 +104,19 @@ public sealed class PlanOrchestrator(
                             previous, normalized),
                         request);
                     normalizedJson = WeeklyRideTargetAdjuster.Adjust(normalizedJson, request, out adjusted);
+                    var workoutMetricsChanged = WorkoutMetricsChanged(uploadJson, normalizedJson);
                     if (adjusted)
                     {
                         logger.LogInformation("Adjusted endurance rides to reach the weekly target in round {Round}.", round);
                     }
+                    var finalReadableText = workoutMetricsChanged
+                        ? BuildFinalizedPlanText(normalizedJson)
+                        : readableText;
                     lastResponse = response with
                     {
-                        Content = response.Content.Replace(uploadJson, normalizedJson, StringComparison.Ordinal)
+                        Content = workoutMetricsChanged
+                            ? $"{finalReadableText}\nBEGIN_UPLOAD_JSON\n{normalizedJson}\nEND_UPLOAD_JSON"
+                            : response.Content.Replace(uploadJson, normalizedJson, StringComparison.Ordinal)
                     };
                     uploadJson = normalizedJson;
                 }
@@ -219,5 +228,102 @@ public sealed class PlanOrchestrator(
         }
 
         return value.Value > int.MaxValue ? int.MaxValue : (int)value.Value;
+    }
+
+    private static string BuildFinalizedPlanText(string planJson)
+    {
+        using var document = JsonDocument.Parse(planJson);
+        if (!document.RootElement.TryGetProperty("workouts", out var workouts)
+            || workouts.ValueKind != JsonValueKind.Array)
+        {
+            return string.Empty;
+        }
+
+        var text = new StringBuilder("Final workout details:");
+        foreach (var workout in workouts.EnumerateArray())
+        {
+            var name = GetString(workout, "name")
+                ?? GetString(workout, "activity_type")
+                ?? "Workout";
+            text.AppendLine().AppendLine().Append("- ");
+
+            var date = GetString(workout, "date");
+            if (date is not null)
+            {
+                text.Append(date).Append(": ");
+            }
+
+            text.Append(name);
+            var duration = GetNumber(workout, "duration_minutes");
+            if (duration is { } minutes)
+            {
+                text.Append(" — ")
+                    .Append(minutes.ToString("0.##", CultureInfo.InvariantCulture))
+                    .Append(" min");
+            }
+
+            var tss = GetNumber(workout, "tss");
+            if (tss is { } workoutTss)
+            {
+                text.Append(", TSS ")
+                    .Append(workoutTss.ToString("0.##", CultureInfo.InvariantCulture));
+            }
+
+            var description = GetString(workout, "description");
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                text.AppendLine().Append("  ").Append(description);
+            }
+        }
+
+        return text.ToString();
+
+        static string? GetString(JsonElement element, string propertyName) =>
+            element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
+
+        static double? GetNumber(JsonElement element, string propertyName) =>
+            element.TryGetProperty(propertyName, out var value) && value.TryGetDouble(out var number)
+                ? number
+                : null;
+    }
+
+    private static bool WorkoutMetricsChanged(string originalJson, string normalizedJson)
+    {
+        using var originalDocument = JsonDocument.Parse(originalJson);
+        using var normalizedDocument = JsonDocument.Parse(normalizedJson);
+        if (!originalDocument.RootElement.TryGetProperty("workouts", out var originalWorkouts)
+            || !normalizedDocument.RootElement.TryGetProperty("workouts", out var normalizedWorkouts)
+            || originalWorkouts.ValueKind != JsonValueKind.Array
+            || normalizedWorkouts.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var originalEntries = originalWorkouts.EnumerateArray().ToArray();
+        var normalizedEntries = normalizedWorkouts.EnumerateArray().ToArray();
+        if (originalEntries.Length != normalizedEntries.Length)
+        {
+            return true;
+        }
+
+        for (var index = 0; index < originalEntries.Length; index++)
+        {
+            if (GetNumber(originalEntries[index], "duration_minutes")
+                    != GetNumber(normalizedEntries[index], "duration_minutes")
+                || GetNumber(originalEntries[index], "tss")
+                    != GetNumber(normalizedEntries[index], "tss"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+
+        static double? GetNumber(JsonElement element, string propertyName) =>
+            element.TryGetProperty(propertyName, out var value) && value.TryGetDouble(out var number)
+                ? number
+                : null;
     }
 }

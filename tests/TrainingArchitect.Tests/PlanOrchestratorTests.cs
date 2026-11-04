@@ -23,7 +23,7 @@ public class PlanOrchestratorTests
         var agent = new FakeCoachingAgent
         {
             Content = """
-                Aerobic ride.
+                Today: 60-minute aerobic ride with TSS 999.
                 BEGIN_UPLOAD_JSON
                 {"workouts":[{"activity_type":"Ride","duration_minutes":70,"tss":999,
                 "description":"Aerobic ride. TSS: 999.",
@@ -41,7 +41,12 @@ public class PlanOrchestratorTests
         Assert.Equal("Aerobic ride. TSS: 32.",
             validated.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
         var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
-        Assert.Equal(validator.UploadJsons[0], PlanResponseParser.Split(completed.Result!.Content).UploadJson);
+        var (planText, uploadJson) = PlanResponseParser.Split(completed.Result!.Content);
+        Assert.Equal(validator.UploadJsons[0], uploadJson);
+        Assert.Contains("78 min", planText);
+        Assert.Contains("TSS 32", planText);
+        Assert.DoesNotContain("60-minute", planText);
+        Assert.DoesNotContain("TSS 999", planText);
         Assert.Null(completed.Warnings);
         Assert.Equal(1, agent.CallCount);
         Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
