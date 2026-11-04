@@ -86,7 +86,9 @@ public sealed class PlanWorkoutViewModel
         return new PlanWorkoutViewModel
         {
             Id = $"workout-{index}",
-            LibraryWorkoutId = ReadString(workout, "library_workout_id") ?? ReadString(workout, "id"),
+            LibraryWorkoutId = workout.TryGetProperty("library_workout_id", out var libraryId) && libraryId.ValueKind == JsonValueKind.Number
+                ? libraryId.GetRawText()
+                : ReadString(workout, "library_workout_id") ?? ReadString(workout, "id"),
             Date = date,
             Name = ReadString(workout, "name") ?? $"Workout {index + 1}",
             ActivityType = activityType,
