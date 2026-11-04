@@ -77,17 +77,20 @@ public static class PromptBuilder
         var budget = WeeklyRideBudget.Resolve(request);
         return string.Join('\n', template.Split('\n').Select(line =>
             line.Contains("{{remaining_ride_tss}}", StringComparison.Ordinal)
-                ? FillBudgetLine(line, "{{remaining_ride_tss}}", budget.TssTarget, (budget.CompletedTss ?? 0) + budget.AnchoredTss)
+                ? FillBudgetLine(line, "{{remaining_ride_tss}}", "{{remaining_min}}", "{{remaining_max}}",
+                    budget.TssTarget, (budget.CompletedTss ?? 0) + budget.AnchoredTss)
                 : line.Contains("{{remaining_ride_hours}}", StringComparison.Ordinal)
-                    ? FillBudgetLine(line, "{{remaining_ride_hours}}", budget.HoursTarget, budget.CompletedHours + budget.AnchoredHours)
+                    ? FillBudgetLine(line, "{{remaining_ride_hours}}", "{{remaining_hours_min}}", "{{remaining_hours_max}}",
+                        budget.HoursTarget, budget.CompletedHours + budget.AnchoredHours)
                     : line));
 
-        static string FillBudgetLine(string line, string valueToken, double? target, double fixedLoad)
+        static string FillBudgetLine(string line, string valueToken, string minToken, string maxToken,
+            double? target, double fixedLoad)
         {
             return target is not { } value ? string.Empty : line
                 .Replace(valueToken, (value - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture))
-                .Replace("{{remaining_min}}", (value * 0.9 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture))
-                .Replace("{{remaining_max}}", (value * 1.1 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture));
+                .Replace(minToken, (value * 0.9 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture))
+                .Replace(maxToken, (value * 1.1 - fixedLoad).ToString("0.##", CultureInfo.InvariantCulture));
         }
     }
 

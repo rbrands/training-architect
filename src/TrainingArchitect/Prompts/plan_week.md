@@ -3,7 +3,7 @@ Based on the attached intervals.icu data, create a training plan for the target 
 {{planning_scope_instruction}}
 
 Remaining ride TSS budget for the days you plan: {{remaining_ride_tss}} (allowed range {{remaining_min}}–{{remaining_max}}). Choose workouts whose TSS sum lands in this range.
-Remaining ride hours budget for the days you plan: {{remaining_ride_hours}} (allowed range {{remaining_min}}–{{remaining_max}}). Choose workouts whose duration sum lands in this range.
+Remaining ride hours budget for the days you plan: {{remaining_ride_hours}} (allowed range {{remaining_hours_min}}–{{remaining_hours_max}}). Choose workouts whose duration sum lands in this range.
 
 First infer the current weekly training context (current week / last 7 days):
 - Recent training load and intensity distribution.
@@ -29,8 +29,14 @@ when the phase frequency and planning constraints allow it.
 {{strength_prescription}}
 
 Use this short assessment to justify session selection, dose, and recovery placement in the target-week plan.
-In the plan text, give this context in at most 4 sentences (load, form, key decisions), then the
-day-by-day list. Do not repeat a full weekly analysis.
+Plan text (required, in the response language), before the upload JSON:
+1. Context: 2–4 sentences — current load and form, and the key decisions for
+   the week (where the key sessions go, strength phase and days, any deviation
+   from the targets and why).
+2. Day-by-day list built from the final upload JSON: one line per entry with
+   weekday and date, name, duration and the purpose in a few words. Do not
+   repeat the full workout description; it is in the JSON.
+Do not repeat a full weekly analysis.
 
 Derive planning parameters directly from attached data. The week entries live in `week_summary.training_plan`; use the entry whose `week` equals the target week start:
 - Training phase and week type: from `phase` and `week_type` (NORMAL / RECOVERY / RACE) of that entry. Respect `week_note` when present.

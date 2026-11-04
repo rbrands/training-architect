@@ -57,4 +57,6 @@ plan text, followed by the upload JSON between BEGIN_UPLOAD_JSON and END_UPLOAD_
 After the readable plan text, output `BEGIN_UPLOAD_JSON` immediately. Do not insert an
 "Upload JSON" heading, label, or numbered list item before the marker. The marker itself
 starts the upload section; do not introduce or describe it in the prose.
-Do not comment on the corrections — return only the corrected plan.
+Keep the plan text structure: the context sentences (updated if a correction
+changes a key decision) and the day-by-day list matching the corrected JSON.
+Do not comment on the corrections themselves.

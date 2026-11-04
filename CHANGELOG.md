@@ -6,6 +6,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Weekly planning uses separate hours-range placeholders, applying the weekly ride-hours target's 10% tolerance before subtracting completed rides and fixed anchors independently of TSS.
+
 ## [1.13.0] - 2026-11-04
 
 ### Added

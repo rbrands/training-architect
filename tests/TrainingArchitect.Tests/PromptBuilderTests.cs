@@ -221,6 +221,37 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildPlanPrompt_WithTssAndHoursTargets_RendersIndependentRemainingRanges()
+    {
+        const string athleteData = """
+            {
+              "week_starting":"2026-11-02",
+              "week_summary":{
+                "ride_load":100,"ride_time_hours":2,
+                "training_plan":[
+                  {"week":"2026-11-02","weekly_load_target":500,"weekly_time_target_hours":10}
+                ]
+              },
+              "planned_workouts":{"current_week":{"planned_workouts":[
+                {"date":"2026-11-05","activity_type":"Ride","tss":80,"duration_hours":1.5}
+              ]}}
+            }
+            """;
+        var request = new PlanRequest(athleteData, "fitness", "en", PlanningScope.CurrentWeek,
+            new PlanConstraints(null, []));
+
+        var template = PromptLoader.Load("plan_week");
+        Assert.Contains("{{remaining_hours_min}}", template);
+        Assert.Contains("{{remaining_hours_max}}", template);
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("Remaining ride TSS budget for the days you plan: 320 (allowed range 270–370). Choose workouts whose TSS sum lands in this range.", prompt);
+        Assert.Contains("Remaining ride hours budget for the days you plan: 6.5 (allowed range 5.5–7.5). Choose workouts whose duration sum lands in this range.", prompt);
+        Assert.DoesNotContain("{{remaining_", prompt);
+    }
+
+    [Fact]
     public void BuildPlanPrompt_NextTraining_IncludesDataAndOptionalStrengthContract()
     {
         const string athleteData = """{"current_date":"2026-10-18","activities":[{"start_date_local":"2026-10-18T09:00:00"}]}""";
