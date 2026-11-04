@@ -182,14 +182,34 @@ public class WeeklyRideTargetAdjusterTests
     public void Adjust_TopUp_CountsSameDayStrengthAgainstDailyLimit()
     {
         var plan = JsonNode.Parse(Plan(3000))!;
-        plan["workouts"]!.AsArray().Add(JsonNode.Parse("""
-            {"date":"2026-11-04","activity_type":"WeightTraining","duration_minutes":45,"tss":0}
-            """));
         var original = plan.ToJsonString();
+        var request = Request(60, constraints:
+            """[{"date":"2026-11-04","max_training_time_hours":1.5}]""");
+        var data = JsonNode.Parse(request.WeekDataJson)!;
+        data["activities"] = JsonNode.Parse("""
+            [{"date":"2026-11-04","activity_type":"WeightTraining","duration_minutes":30}]
+            """);
+        request = request with { WeekDataJson = data.ToJsonString() };
 
-        Assert.Equal(original, WeeklyRideTargetAdjuster.Adjust(original, Request(60, constraints:
-            """[{"date":"2026-11-04","max_training_time_hours":1.9}]"""), out var adjusted));
+        Assert.Equal(original, WeeklyRideTargetAdjuster.Adjust(original, request, out var adjusted));
         Assert.False(adjusted);
+    }
+
+    [Fact]
+    public void Adjust_Trim_UsesCompletedActivitiesForFinalDailyLimitCheck()
+    {
+        var request = Request(50, constraints:
+            """[{"date":"2026-11-04","max_training_time_hours":1.5}]""");
+        var data = JsonNode.Parse(request.WeekDataJson)!;
+        data["activities"] = JsonNode.Parse("""
+            [{"date":"2026-11-04","activity_type":"WeightTraining","duration_minutes":30}]
+            """);
+        request = request with { WeekDataJson = data.ToJsonString() };
+
+        var result = WeeklyRideTargetAdjuster.Adjust(Plan(3900), request, out var adjusted);
+
+        Assert.True(adjusted);
+        Assert.Equal(60, JsonNode.Parse(result)!["workouts"]![0]!["duration_minutes"]!.GetValue<double>());
     }
 
     [Fact]
