@@ -48,6 +48,42 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_DoesNotNormalizeFixedWorkoutAnchors()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":999,
+                "description":"Aerobic ride. TSS: 999.",
+                "steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var validator = new FakeValidator();
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """
+                {"week_starting":"2026-11-02","planned_workouts":{"current_week":{"planned_workouts":[
+                  {"date":"2026-11-04","type":"Ride","planned_load":45,"duration_hours":1}
+                ]}}}
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
+        var workout = validated.RootElement.GetProperty("workouts")[0];
+        Assert.Equal(60, workout.GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(999, workout.GetProperty("tss").GetDouble());
+        Assert.Equal("Aerobic ride. TSS: 999.", workout.GetProperty("description").GetString());
+        Assert.Equal(4680, workout.GetProperty("steps")[0].GetProperty("duration_seconds").GetDouble());
+        Assert.Null(Assert.Single(events, item => item.Stage == PlanProgressStage.Completed).Warnings);
+    }
+
+    [Fact]
     public async Task RunAsync_AdjustsEnduranceBeforeValidationAndReportsProgressWithoutCorrection()
     {
         var agent = new FakeCoachingAgent

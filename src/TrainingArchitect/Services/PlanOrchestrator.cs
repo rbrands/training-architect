@@ -98,7 +98,8 @@ public sealed class PlanOrchestrator(
                     var normalizedJson = PlanUploadNormalizer.Normalize(uploadJson,
                         (previous, normalized) => logger.LogDebug(
                             "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
-                            previous, normalized));
+                            previous, normalized),
+                        request);
                     normalizedJson = WeeklyRideTargetAdjuster.Adjust(normalizedJson, request, out adjusted);
                     if (adjusted)
                     {

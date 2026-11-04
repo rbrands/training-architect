@@ -73,7 +73,7 @@ public static class WeeklyRideTargetAdjuster
                             .Sum(WeeklyRideBudget.ReadHours) <= maximum))
             {
                 adjusted = true;
-                return PlanUploadNormalizer.Normalize(root!.ToJsonString());
+                return PlanUploadNormalizer.Normalize(root!.ToJsonString(), request: request);
             }
 
             var changed = false;

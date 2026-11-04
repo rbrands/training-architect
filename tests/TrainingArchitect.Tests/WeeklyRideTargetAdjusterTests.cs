@@ -117,6 +117,28 @@ public class WeeklyRideTargetAdjusterTests
         Assert.False(adjusted);
     }
 
+    [Fact]
+    public void Adjust_DoesNotNormalizeAnchorsWhenOtherRidesAreAdjusted()
+    {
+        var data = JsonNode.Parse(Request(120).WeekDataJson)!;
+        data["planned_workouts"] = JsonNode.Parse("""
+            {"current_week":{"planned_workouts":[{"date":"2026-11-05","type":"Ride","planned_load":45,"duration_hours":1}]}}
+            """);
+        var plan = JsonNode.Parse(Plan(3000))!;
+        plan["workouts"]!.AsArray().Add(JsonNode.Parse("""
+            {"date":"2026-11-05","activity_type":"Ride","duration_minutes":60,"tss":45,
+             "description":"Anchored ride. TSS: 45.","steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}
+            """));
+        var anchor = plan["workouts"]![1]!.DeepClone();
+
+        var result = WeeklyRideTargetAdjuster.Adjust(plan.ToJsonString(),
+            Request(120) with { WeekDataJson = data.ToJsonString() }, out var adjusted);
+
+        Assert.True(adjusted);
+        var workouts = JsonNode.Parse(result)!["workouts"]!.AsArray();
+        Assert.True(JsonNode.DeepEquals(anchor, workouts[1]));
+    }
+
     [Theory]
     [InlineData(70)]
     [InlineData(30)]
