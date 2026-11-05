@@ -43,13 +43,145 @@ public class PlanOrchestratorTests
         var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
         var (planText, uploadJson) = PlanResponseParser.Split(completed.Result!.Content);
         Assert.Equal(validator.UploadJsons[0], uploadJson);
-        Assert.Contains("78 min", planText);
-        Assert.Contains("TSS 32", planText);
-        Assert.DoesNotContain("60-minute", planText);
-        Assert.DoesNotContain("TSS 999", planText);
+        Assert.Equal("""
+            Today: 60-minute aerobic ride with TSS 999.
+
+            Adjusted to the final values:
+            - Ride · 78 min (was 70) · TSS 32 (was 999)
+            """.Replace("\r\n", "\n"), planText.Replace("\r\n", "\n"));
         Assert.Null(completed.Warnings);
         Assert.Equal(1, agent.CallCount);
         Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+    }
+
+    [Fact]
+    public async Task RunAsync_TopUp_AppendsOneLinePerChangedWorkoutAndKeepsCoachText()
+    {
+        const string readableText = "Key sessions stay in place.\n\nTwo easy rides support recovery.";
+        var agent = new FakeCoachingAgent
+        {
+            Content = readableText + """
+
+                BEGIN_UPLOAD_JSON
+                {"workouts":[
+                  {"date":"2026-11-09","name":"First easy ride","activity_type":"Ride",
+                   "duration_minutes":60,"tss":49,"tags":["aerobic-threshold-moderate"],
+                   "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]},
+                  {"date":"2026-11-10","name":"Second easy ride","activity_type":"Ride",
+                   "duration_minutes":60,"tss":49,"tags":["aerobic-threshold-moderate"],
+                   "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]},
+                  {"date":"2026-11-11","name":"Unchanged threshold ride","activity_type":"Ride",
+                   "duration_minutes":60,"tss":49,"library_workout_id":7,"tags":["threshold-classic"]}
+                ]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """
+                {"week_starting":"2026-11-09","week_summary":{"training_plan":[
+                  {"week":"2026-11-09","day_constraints":[
+                    {"date":"2026-11-09","training_allowed":true,"max_training_time_hours":1.2}
+                  ]}
+                ]}}
+                """,
+            Constraints = new PlanConstraints(180, [])
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new WeeklyTargetValidator()), request);
+
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        var (planText, _) = PlanResponseParser.Split(completed.Result!.Content);
+        Assert.Equal(readableText + """
+
+
+            Adjusted to the final values:
+            - Mon 09 Nov · First easy ride · 70 min (was 60) · TSS 57 (was 49)
+            - Tue 10 Nov · Second easy ride · 70 min (was 60) · TSS 57 (was 49)
+            """.Replace("\r\n", "\n"), planText);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(1, agent.CallCount);
+        Assert.Single(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+    }
+
+    [Theory]
+    [InlineData(47)]
+    [InlineData(48)]
+    [InlineData(49)]
+    [InlineData(50)]
+    [InlineData(51)]
+    public async Task RunAsync_RoundingOnlyTssChange_KeepsReadableTextUntouched(int originalTss)
+    {
+        const string readableText = "Keep this explanation.\n\n- An easy hour, with recovery as the purpose.";
+        var agent = new FakeCoachingAgent
+        {
+            Content = readableText + $$"""
+
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"activity_type":"Ride","duration_minutes":60,"tss":{{originalTss}},
+                 "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new FakeValidator()));
+
+        var (planText, uploadJson) = PlanResponseParser.Split(events[^1].Result!.Content);
+        Assert.Equal(readableText, planText);
+        using var document = JsonDocument.Parse(uploadJson);
+        Assert.Equal(49, document.RootElement.GetProperty("workouts")[0].GetProperty("tss").GetDouble());
+    }
+
+    [Theory]
+    [InlineData(46, " · TSS 49 (was 46)")]
+    [InlineData(52, " · TSS 49 (was 52)")]
+    [InlineData(51, "")]
+    public async Task RunAsync_DurationChange_ReportsOnlySignificantMetricChanges(int originalTss, string tssAdjustment)
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = $$"""
+                The coach's explanation stays.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-11","name":"Easy ride","activity_type":"Ride",
+                 "duration_minutes":55,"tss":{{originalTss}},
+                 "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new FakeValidator()));
+
+        var (planText, _) = PlanResponseParser.Split(events[^1].Result!.Content);
+        Assert.Equal("The coach's explanation stays.\n\nAdjusted to the final values:\n"
+            + "- Wed 11 Nov · Easy ride · 60 min (was 55)" + tssAdjustment, planText);
+    }
+
+    [Theory]
+    [InlineData(49)]
+    [InlineData(999)]
+    public async Task RunAsync_EmptyReadableText_FallsBackToFinalWorkoutList(int originalTss)
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = $$"""
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-11","name":"Easy ride","activity_type":"Ride",
+                 "description":"Keep it easy.","duration_minutes":60,"tss":{{originalTss}},
+                 "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new FakeValidator()));
+
+        var (planText, _) = PlanResponseParser.Split(events[^1].Result!.Content);
+        Assert.StartsWith("Final workout details:", planText);
+        Assert.Contains("2026-11-11: Easy ride", planText);
+        Assert.Contains("60 min, TSS 49", planText);
+        Assert.Contains("Keep it easy.", planText);
+        Assert.DoesNotContain("Adjusted to the final values", planText);
     }
 
     [Fact]

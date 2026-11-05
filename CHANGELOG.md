@@ -6,10 +6,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
-- Weekly planning uses separate hours-range placeholders, applying the weekly ride-hours target's 10% tolerance before subtracting completed rides and fixed anchors independently of TSS.
 
-## [1.13.0] - 2026-11-04
+## [1.13.0] - 2026-11-05
 
 ### Added
 - Added a question-mark link beside the Strength training selector that opens the strength training article.
@@ -20,6 +18,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Wide blog tables remain horizontally scrollable on mobile instead of compressing cells and breaking words into unreadable fragments.
+- Plan finalization preserves the coach's readable explanation and appends only changed workout durations or TSS values (ignoring TSS differences of up to two points). A generated workout list is used only when the coach provides no readable text.
+- Weekly planning uses separate hours-range placeholders, applying the weekly ride-hours target's 10% tolerance before subtracting completed rides and fixed anchors independently of TSS.
 
 ## [1.12.0] - 2026-10-31
 

@@ -123,17 +123,16 @@ public sealed class PlanOrchestrator(
                     {
                         logger.LogInformation("Weekly TSS top-up skipped in round {Round}: {Reason}", round, topUpSkipReason);
                     }
-                    var workoutMetricsChanged = WorkoutMetricsChanged(uploadJson, normalizedJson);
                     if (adjusted)
                     {
                         logger.LogInformation("Adjusted endurance rides to reach the weekly target in round {Round}.", round);
                     }
-                    var finalReadableText = workoutMetricsChanged
+                    var finalReadableText = string.IsNullOrWhiteSpace(readableText)
                         ? BuildFinalizedPlanText(normalizedJson)
-                        : readableText;
+                        : readableText + BuildMetricAdjustments(uploadJson, normalizedJson);
                     lastResponse = response with
                     {
-                        Content = workoutMetricsChanged
+                        Content = finalReadableText != readableText
                             ? $"{finalReadableText}\nBEGIN_UPLOAD_JSON\n{normalizedJson}\nEND_UPLOAD_JSON"
                             : response.Content.Replace(uploadJson, normalizedJson, StringComparison.Ordinal)
                     };
@@ -335,19 +334,9 @@ public sealed class PlanOrchestrator(
         }
 
         return text.ToString();
-
-        static string? GetString(JsonElement element, string propertyName) =>
-            element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
-                ? value.GetString()
-                : null;
-
-        static double? GetNumber(JsonElement element, string propertyName) =>
-            element.TryGetProperty(propertyName, out var value) && value.TryGetDouble(out var number)
-                ? number
-                : null;
     }
 
-    private static bool WorkoutMetricsChanged(string originalJson, string normalizedJson)
+    private static string BuildMetricAdjustments(string originalJson, string normalizedJson)
     {
         using var originalDocument = JsonDocument.Parse(originalJson);
         using var normalizedDocument = JsonDocument.Parse(normalizedJson);
@@ -356,32 +345,71 @@ public sealed class PlanOrchestrator(
             || originalWorkouts.ValueKind != JsonValueKind.Array
             || normalizedWorkouts.ValueKind != JsonValueKind.Array)
         {
-            return false;
+            return string.Empty;
         }
 
         var originalEntries = originalWorkouts.EnumerateArray().ToArray();
         var normalizedEntries = normalizedWorkouts.EnumerateArray().ToArray();
-        if (originalEntries.Length != normalizedEntries.Length)
-        {
-            return true;
-        }
-
+        var text = new StringBuilder();
+        // Normalization and top-up preserve workout order and count.
         for (var index = 0; index < originalEntries.Length; index++)
         {
-            if (GetNumber(originalEntries[index], "duration_minutes")
-                    != GetNumber(normalizedEntries[index], "duration_minutes")
-                || GetNumber(originalEntries[index], "tss")
-                    != GetNumber(normalizedEntries[index], "tss"))
+            var original = originalEntries[index];
+            var final = normalizedEntries[index];
+            var previousMinutes = GetNumber(original, "duration_minutes");
+            var minutes = GetNumber(final, "duration_minutes");
+            var previousTss = GetNumber(original, "tss");
+            var tss = GetNumber(final, "tss");
+            var durationChanged = minutes.HasValue && minutes != previousMinutes;
+            var tssChanged = tss.HasValue
+                && (!previousTss.HasValue || Math.Abs(tss.Value - previousTss.Value) > 2);
+            if (!durationChanged && !tssChanged)
             {
-                return true;
+                continue;
+            }
+
+            if (text.Length == 0)
+            {
+                text.Append("\n\nAdjusted to the final values:");
+            }
+            text.Append('\n').Append("- ");
+            var date = GetString(final, "date");
+            if (DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var workoutDate))
+            {
+                text.Append(workoutDate.ToString("ddd dd MMM", CultureInfo.InvariantCulture)).Append(" · ");
+            }
+            else if (!string.IsNullOrWhiteSpace(date))
+            {
+                text.Append(date).Append(" · ");
+            }
+            text.Append(GetString(final, "name") ?? GetString(final, "activity_type") ?? "Workout");
+            if (durationChanged)
+            {
+                text.Append(" · ").Append(FormatNumber(minutes)).Append(" min (was ")
+                    .Append(FormatNumber(previousMinutes)).Append(')');
+            }
+            if (tssChanged)
+            {
+                text.Append(" · TSS ").Append(FormatNumber(tss)).Append(" (was ")
+                    .Append(FormatNumber(previousTss)).Append(')');
             }
         }
 
-        return false;
+        return text.ToString();
 
-        static double? GetNumber(JsonElement element, string propertyName) =>
-            element.TryGetProperty(propertyName, out var value) && value.TryGetDouble(out var number)
+        static string FormatNumber(double? value) =>
+            value?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not supplied";
+    }
+
+    private static string? GetString(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static double? GetNumber(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.Number
+            && value.TryGetDouble(out var number)
                 ? number
                 : null;
-    }
 }
