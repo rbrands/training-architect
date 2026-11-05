@@ -43,6 +43,7 @@ public interface IAthleteSession
     string? LevelLabel { get; }
     CoachLanguage? Language { get; }
     AthleteProfileGoal? ProfileGoal { get; }
+    StrengthPhaseSelection? StrengthPhaseSelection { get; }
     DateTimeOffset? LastSynced { get; }
     string? ErrorMessage { get; }
 
@@ -66,7 +67,9 @@ public interface IAthleteSession
         CoachLanguage language,
         AthleteProfileGoal profileGoal,
         bool remember,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        StrengthPhaseSelection strengthPhaseSelection = TrainingArchitect.Core.Models.StrengthPhaseSelection.Automatic);
+    Task SetStrengthPhaseSelectionAsync(StrengthPhaseSelection selection, CancellationToken ct = default);
     Task RefreshAsync(CancellationToken ct = default);
     Task DisconnectAsync(bool forget = true);   // Was void in the draft, async because localStorage must be cleared
 
@@ -110,6 +113,7 @@ public sealed class AthleteSession(
 {
     // Kept only internally for refresh, never exposed externally.
     private string? _apiKey;
+    private CredentialDurability _credentialDurability = CredentialDurability.Session;
 
     public CoachConnectionState State { get; private set; } = CoachConnectionState.Disconnected;
     public bool IsRefreshing { get; private set; }
@@ -118,6 +122,7 @@ public sealed class AthleteSession(
     public string? LevelLabel { get; private set; }
     public CoachLanguage? Language { get; private set; }
     public AthleteProfileGoal? ProfileGoal { get; private set; }
+    public StrengthPhaseSelection? StrengthPhaseSelection { get; private set; }
     public DateTimeOffset? LastSynced { get; private set; }
     public string? ErrorMessage { get; private set; }
     public string? AthleteDataJson { get; private set; }
@@ -135,7 +140,8 @@ public sealed class AthleteSession(
         CoachLanguage language,
         AthleteProfileGoal profileGoal,
         bool remember,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        StrengthPhaseSelection strengthPhaseSelection = TrainingArchitect.Core.Models.StrengthPhaseSelection.Automatic)
     {
         if (State == CoachConnectionState.Connecting)
             return; // a connect request is already in progress
@@ -151,7 +157,9 @@ public sealed class AthleteSession(
             AthleteId = athleteId;
             Language = language;
             ProfileGoal = profileGoal;
+            StrengthPhaseSelection = strengthPhaseSelection;
             _apiKey = apiKey;
+            _credentialDurability = remember ? CredentialDurability.Persistent : CredentialDurability.Session;
             Level = string.IsNullOrWhiteSpace(result.Level) ? null : result.Level;
             LevelLabel = string.IsNullOrWhiteSpace(result.LevelLabel) ? null : result.LevelLabel;
             AthleteDataMethodName = result.MethodName;
@@ -165,32 +173,17 @@ public sealed class AthleteSession(
 
             // Persist only after a successful connect so only validated
             // credentials are remembered.
-            if (remember)
-            {
-                await credentialStore.SaveAsync(
-                    new StoredCredential
-                    {
-                        AthleteId = athleteId,
-                        ApiKey = apiKey,
-                        Language = language,
-                        ProfileGoal = profileGoal
-                    },
-                    CredentialDurability.Persistent,
-                    ct);
-            }
-            else
-            {
-                await credentialStore.SaveAsync(
-                    new StoredCredential
-                    {
-                        AthleteId = athleteId,
-                        ApiKey = apiKey,
-                        Language = language,
-                        ProfileGoal = profileGoal
-                    },
-                    CredentialDurability.Session,
-                    ct);
-            }
+            await credentialStore.SaveAsync(
+                new StoredCredential
+                {
+                    AthleteId = athleteId,
+                    ApiKey = apiKey,
+                    Language = language,
+                    ProfileGoal = profileGoal,
+                    StrengthPhaseSelection = strengthPhaseSelection
+                },
+                _credentialDurability,
+                ct);
         }
         catch (OperationCanceledException)
         {
@@ -265,6 +258,51 @@ public sealed class AthleteSession(
         Notify();
     }
 
+    public async Task SetStrengthPhaseSelectionAsync(
+        StrengthPhaseSelection selection,
+        CancellationToken ct = default)
+    {
+        if (!Enum.IsDefined(selection))
+        {
+            throw new ArgumentOutOfRangeException(nameof(selection), selection, null);
+        }
+
+        if (State != CoachConnectionState.Connected
+            || AthleteId is null
+            || _apiKey is null
+            || Language is null
+            || ProfileGoal is null)
+        {
+            throw new InvalidOperationException("Strength training preferences can only be changed while connected.");
+        }
+
+        var previousSelection = StrengthPhaseSelection;
+        StrengthPhaseSelection = selection;
+
+        try
+        {
+            await credentialStore.SaveAsync(
+                new StoredCredential
+                {
+                    AthleteId = AthleteId,
+                    ApiKey = _apiKey,
+                    Language = Language.Value,
+                    ProfileGoal = ProfileGoal.Value,
+                    StrengthPhaseSelection = selection
+                },
+                _credentialDurability,
+                ct);
+        }
+        catch
+        {
+            StrengthPhaseSelection = previousSelection;
+            Notify();
+            throw;
+        }
+
+        Notify();
+    }
+
     public bool TryGetActiveCredentials(out string athleteId, out string apiKey)
     {
         if (State == CoachConnectionState.Connected
@@ -294,6 +332,7 @@ public sealed class AthleteSession(
         AthleteId = null;
         Language = null;
         ProfileGoal = null;
+        StrengthPhaseSelection = null;
         AthleteDataJson = null;
         AthleteDataRaw = null;
         AthleteDataParsed = null;

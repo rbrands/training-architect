@@ -1,3 +1,5 @@
+using TrainingArchitect.Core.Models;
+
 namespace TrainingArchitect.Client.Services;
 
 public sealed record StoredCredential
@@ -6,6 +8,7 @@ public sealed record StoredCredential
     public string ApiKey { get; init; } = string.Empty;
     public CoachLanguage Language { get; init; } = CoachLanguage.English;
     public AthleteProfileGoal ProfileGoal { get; init; } = AthleteProfileGoal.RoadRace;
+    public StrengthPhaseSelection StrengthPhaseSelection { get; init; } = StrengthPhaseSelection.Automatic;
 }
 
 public enum CredentialDurability

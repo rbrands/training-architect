@@ -1,4 +1,4 @@
-﻿namespace TrainingArchitect.Core.Models;
+namespace TrainingArchitect.Core.Models;
 
 /// <summary>Broad category of a planned workout.</summary>
 public enum WorkoutType
@@ -8,7 +8,60 @@ public enum WorkoutType
     Threshold,
     VO2Max,
     Race,
+    Strength,
     Rest
+}
+
+/// <summary>Training phase for a planned strength session.</summary>
+public enum StrengthPhase
+{
+    Adaptation,
+    Transition,
+    Maximum,
+    Maintenance
+}
+
+/// <summary>Parses canonical strength phase tags.</summary>
+public static class StrengthPhaseParser
+{
+    /// <summary>
+    /// Finds the strength phase represented by a canonical <c>strength-&lt;phase&gt;</c> tag.
+    /// </summary>
+    /// <param name="tags">Workout tags to inspect.</param>
+    /// <param name="phase">The parsed phase, or the default value when no unique phase is found.</param>
+    /// <returns><see langword="true"/> when exactly one canonical strength phase is present.</returns>
+    public static bool TryParse(IEnumerable<string> tags, out StrengthPhase phase)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+        StrengthPhase? parsedPhase = null;
+        foreach (var tag in tags)
+        {
+            var candidate = tag switch
+            {
+                "strength-adaptation" => StrengthPhase.Adaptation,
+                "strength-transition" => StrengthPhase.Transition,
+                "strength-maximum" => StrengthPhase.Maximum,
+                "strength-maintenance" => StrengthPhase.Maintenance,
+                _ => (StrengthPhase?)null
+            };
+
+            if (candidate is null)
+            {
+                continue;
+            }
+
+            if (parsedPhase is not null && parsedPhase != candidate)
+            {
+                phase = default;
+                return false;
+            }
+
+            parsedPhase = candidate;
+        }
+
+        phase = parsedPhase ?? default;
+        return parsedPhase is not null;
+    }
 }
 
 /// <summary>A single workout within a training plan week.</summary>
@@ -22,6 +75,9 @@ public class PlannedWorkout
 
     /// <summary>Coaching notes and execution guidance for the athlete.</summary>
     public string Description { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the strength training phase when this is a strength workout.</summary>
+    public StrengthPhase? StrengthPhase { get; set; }
 
     public WorkoutType Type { get; set; }
 

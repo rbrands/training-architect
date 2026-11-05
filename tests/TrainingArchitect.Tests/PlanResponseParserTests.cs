@@ -40,6 +40,23 @@ public class PlanResponseParserTests
         Assert.Equal("""{"workouts":[]}""", uploadJson);
     }
 
+    [Fact]
+    public void Split_PreservesMultipleNextTrainingWorkoutsForUpload()
+    {
+        const string response = """
+            Session plus strength.
+
+            BEGIN_UPLOAD_JSON
+            {"workouts":[{"date":"2026-11-02","activity_type":"Ride"},{"date":"2026-11-02","activity_type":"WeightTraining"}]}
+            END_UPLOAD_JSON
+            """;
+
+        var (_, uploadJson) = PlanResponseParser.Split(response);
+        using var document = System.Text.Json.JsonDocument.Parse(uploadJson);
+
+        Assert.Equal(2, document.RootElement.GetProperty("workouts").GetArrayLength());
+    }
+
     [Theory]
     [InlineData("## Upload JSON")]
     [InlineData("## Upload-JSON")]

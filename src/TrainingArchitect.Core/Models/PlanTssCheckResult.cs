@@ -22,6 +22,10 @@ public sealed record PlanTssWorkoutCheck
     /// <summary>Gets a value indicating whether stated and computed TSS differ.</summary>
     [JsonPropertyName("mismatch")]
     public bool Mismatch { get; init; }
+
+    /// <summary>Gets whether this workout contributes to the Ride TSS check.</summary>
+    [JsonPropertyName("counted")]
+    public bool? Counted { get; init; }
 }
 
 /// <summary>
@@ -29,11 +33,11 @@ public sealed record PlanTssWorkoutCheck
 /// </summary>
 public sealed record PlanTssWeekCheck
 {
-    /// <summary>Gets the total weekly TSS of the plan.</summary>
+    /// <summary>Gets the total weekly Ride TSS of the plan.</summary>
     [JsonPropertyName("total_tss")]
     public double TotalTss { get; init; }
 
-    /// <summary>Gets the weekly TSS target the plan was checked against.</summary>
+    /// <summary>Gets the weekly Ride TSS target the plan was checked against.</summary>
     [JsonPropertyName("load_target")]
     public double LoadTarget { get; init; }
 
@@ -44,6 +48,22 @@ public sealed record PlanTssWeekCheck
     /// <summary>Gets a value indicating whether the deviation is within tolerance.</summary>
     [JsonPropertyName("within_tolerance")]
     public bool WithinTolerance { get; init; }
+
+    /// <summary>Gets the planned TSS from ride entries.</summary>
+    [JsonPropertyName("planned_ride_tss")]
+    public double? PlannedRideTss { get; init; }
+
+    /// <summary>Gets the planned TSS from non-ride entries.</summary>
+    [JsonPropertyName("planned_other_tss")]
+    public double? PlannedOtherTss { get; init; }
+
+    /// <summary>Gets the planned duration in hours from ride entries.</summary>
+    [JsonPropertyName("planned_ride_hours")]
+    public double? PlannedRideHours { get; init; }
+
+    /// <summary>Gets the planned duration in hours from non-ride entries.</summary>
+    [JsonPropertyName("planned_other_hours")]
+    public double? PlannedOtherHours { get; init; }
 }
 
 /// <summary>

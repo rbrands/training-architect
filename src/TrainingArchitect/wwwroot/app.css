@@ -163,12 +163,6 @@ article img {
     .article-content table {
         font-size: 0.875rem;
     }
-
-    .article-content th,
-    .article-content td {
-        white-space: normal;
-        word-break: break-word;
-    }
 }
 
 /* Admin tab readability: keep text dark in all states, not only on hover. */

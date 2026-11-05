@@ -313,7 +313,7 @@ public class WeeklyTargetOverrideTests
     }
 
     [Fact]
-    public async Task CoachRequests_UseSameOverridesWithoutMutatingRawDataOrConstraints()
+    public async Task CoachRequests_UseSameOverridesAndWeeklyTargetsWithoutMutatingRawData()
     {
         var (session, _) = await CreateSessionAsync();
         var coach = CreateCoach(session);
@@ -329,7 +329,10 @@ public class WeeklyTargetOverrideTests
         Assert.Equal(plan.WeekDataJson, assessment.WeekDataJson);
         Assert.Equal(525, WeeklyLoadTargetResolver.Resolve(plan.WeekDataJson, PlanningScope.CurrentWeek));
         Assert.Equal(560, WeeklyLoadTargetResolver.Resolve(plan.WeekDataJson, PlanningScope.NextWeek));
-        Assert.Null(plan.Constraints.WeeklyTssTarget);
+        var targetWeek = TrainingPlanOverrideApplier.ReadCurrentWeekStart(plan.WeekDataJson)!.Value
+            .AddDays(plan.Scope == PlanningScope.NextWeek ? 7 : 0);
+        Assert.Equal(TrainingPlanOverrideApplier.Read(plan.WeekDataJson, targetWeek).WeeklyTss,
+            plan.Constraints.WeeklyTssTarget);
         Assert.Equal(Dataset, session.AthleteDataJson);
         Assert.Equal(Dataset, session.AthleteDataRaw);
 
@@ -576,6 +579,10 @@ public class WeeklyTargetOverrideTests
         foreach (var property in new[] { "weekly_load_target", "weekly_time_target_hours", "day_constraints" })
             Assert.True(JsonNode.DeepEquals(originalPlan[entryIndex]![property], plan[entryIndex]![property]));
         Assert.Equal(expectedDate, ((DateOnly)typeof(Coach).GetProperty("NextTrainingRecommendationDate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(coach)!).ToString("yyyy-MM-dd"));
+        var recommendationDate = DateOnly.Parse(expectedDate, System.Globalization.CultureInfo.InvariantCulture);
+        var recommendationWeekStart = recommendationDate.AddDays(-(((int)recommendationDate.DayOfWeek + 6) % 7));
+        Assert.Equal(TrainingPlanOverrideApplier.Read(request.WeekDataJson, recommendationWeekStart).WeeklyTss,
+            request.Constraints.WeeklyTssTarget);
         var prompt = PromptBuilder.BuildPlanPrompt(request);
         Assert.Contains($"for the recommendation date {expectedDate}", prompt);
         Assert.DoesNotContain("{{recommendation_date}}", prompt);
@@ -584,6 +591,67 @@ public class WeeklyTargetOverrideTests
 
     private static List<WeekTargetOverride> GetTargets(WeekTargetsEditor editor) =>
         (List<WeekTargetOverride>)typeof(WeekTargetsEditor).GetField("_targets", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(editor)!;
+
+    [Theory]
+    [InlineData(PlanningMode.Week)]
+    [InlineData(PlanningMode.NextTraining)]
+    public async Task Page_IgnorePlannedWorkoutsOnlyChangesSelectedPlanningRequest(PlanningMode selectedMode)
+    {
+        var (session, client) = await CreateSessionAsync();
+        var source = JsonNode.Parse(Dataset)!;
+        source["planned_workouts"] = JsonNode.Parse("""
+            {
+              "current_week": {"planned_workouts": [{"id": 1}], "race_events": [{"priority": "RACE_A"}]},
+              "next_week": {"planned_workouts": [{"id": 2}], "race_events": []}
+            }
+            """);
+        client.Json = source.ToJsonString();
+        await session.RefreshAsync();
+        var coach = CreateCoach(session);
+        const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        var selections = (Dictionary<PlanningMode, bool>)typeof(Coach).GetField("_ignorePlannedWorkouts", privateInstance)!.GetValue(coach)!;
+        Assert.All(selections.Values, value => Assert.False(value));
+        selections[selectedMode] = true;
+        GetPageOverrides(coach)[CurrentWeek] = new(CurrentWeek, TrainingPhase.Build, false, 10, 525);
+        var effective = (string)typeof(Coach).GetProperty("EffectiveWeekDataJson", privateInstance)!.GetValue(coach)!;
+        var expected = JsonNode.Parse(effective)!;
+        foreach (var week in new[] { "current_week", "next_week" })
+            expected["planned_workouts"]![week]!["planned_workouts"] = new JsonArray();
+
+        foreach (var mode in new[] { PlanningMode.Week, PlanningMode.NextTraining })
+        {
+            typeof(Coach).GetField("_planMode", privateInstance)!.SetValue(coach, mode);
+            var request = (PlanRequest)typeof(Coach).GetMethod("BuildPlanRequest", privateInstance)!.Invoke(coach, null)!;
+            Assert.Equal(mode, request.Mode);
+            Assert.True(JsonNode.DeepEquals(mode == selectedMode ? expected : JsonNode.Parse(effective),
+                JsonNode.Parse(request.WeekDataJson)));
+        }
+
+        Assert.Equal(effective, typeof(Coach).GetProperty("EffectiveWeekDataJson", privateInstance)!.GetValue(coach));
+        var buildAssess = typeof(Coach).GetMethod("BuildAssessRequest", privateInstance)!;
+        var cardType = Enum.Parse(buildAssess.GetParameters()[0].ParameterType, "Week");
+        var assessment = (AssessRequest)buildAssess.Invoke(coach, [cardType])!;
+        Assert.Equal(effective, assessment.WeekDataJson);
+        Assert.Equal(client.Json, session.AthleteDataJson);
+        Assert.Equal(client.Json, session.AthleteDataRaw);
+
+        selections[selectedMode] = false;
+        typeof(Coach).GetField("_planMode", privateInstance)!.SetValue(coach, selectedMode);
+        var restored = (PlanRequest)typeof(Coach).GetMethod("BuildPlanRequest", privateInstance)!.Invoke(coach, null)!;
+        Assert.Equal(effective, restored.WeekDataJson);
+
+        selections[selectedMode] = true;
+        await session.RefreshAsync();
+        SynchronizeOverrides(coach);
+        Assert.True(selections[selectedMode]);
+        await session.ConnectAsync("__OTHER_ATHLETE_ID__", "__API_KEY__", CoachLanguage.English, AthleteProfileGoal.Fitness, false);
+        SynchronizeOverrides(coach);
+        Assert.All(selections.Values, value => Assert.False(value));
+        selections[selectedMode] = true;
+        await session.DisconnectAsync();
+        SynchronizeOverrides(coach);
+        Assert.All(selections.Values, value => Assert.False(value));
+    }
 
     private static Dictionary<DateOnly, WeekTargetOverride> GetEditorOverrides(WeekTargetsEditor editor) =>
         (Dictionary<DateOnly, WeekTargetOverride>)typeof(WeekTargetsEditor).GetProperty(nameof(WeekTargetsEditor.Overrides))!.GetValue(editor)!;

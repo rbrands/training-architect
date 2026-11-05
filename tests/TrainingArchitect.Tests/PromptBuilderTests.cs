@@ -5,6 +5,160 @@ namespace TrainingArchitect.Tests;
 
 public sealed class PromptBuilderTests
 {
+    [Theory]
+    [InlineData(PlanningMode.Week, "en")]
+    [InlineData(PlanningMode.Week, "de")]
+    [InlineData(PlanningMode.NextTraining, "en")]
+    [InlineData(PlanningMode.NextTraining, "de")]
+    public void BuildPlanPrompt_StrengthPrescription_PrecedesLocalizedExerciseExamples(PlanningMode mode, string language)
+    {
+        var request = new PlanRequest("{}", "fitness", language, PlanningScope.CurrentWeek,
+            new PlanConstraints(null, []), Mode: mode, StrengthPhase: "adaptation");
+
+        AssertStrengthDescriptionContract(PromptBuilder.BuildPlanPrompt(request));
+    }
+
+    [Fact]
+    public void BuildPlanCorrectionPrompt_UsesSameStrengthDescriptionContract()
+    {
+        AssertStrengthDescriptionContract(PromptBuilder.BuildPlanCorrectionPrompt(
+            [new PlanValidationFinding("plan.strength_entry_invalid", "Fix strength.")], "adaptation"));
+    }
+
+    private static void AssertStrengthDescriptionContract(string prompt)
+    {
+        Assert.Contains("Write the description entirely in the response language", prompt);
+        Assert.Contains("Localize both \"Exercise example:\" and \"or equivalent exercises from your own program\"", prompt);
+        Assert.Contains("Exercise example: squat or leg press, lunge, leg curl, and core – or equivalent exercises from your own program", prompt);
+        Assert.Contains("never put them before the prescription", prompt);
+        var prescription = prompt.IndexOf("the phase-specific prescription (sets x reps @ % 1RM, rest)", StringComparison.Ordinal);
+        var example = prompt.IndexOf("\"Exercise example: squat", StringComparison.Ordinal);
+        Assert.True(prescription >= 0 && example > prescription);
+    }
+
+    [Theory]
+    [InlineData("\"adaptation\"", "activity", "6")]
+    [InlineData("\"transition\"", "planned", "null")]
+    [InlineData("\"maximum\"", "planned_week", "8")]
+    [InlineData("\"adaptation\"", "inferred", "null")]
+    [InlineData("null", "none", "null")]
+    public void BuildAssessPrompt_Strength_UsesActivityPhaseAndSource(string phase, string source, string rpe)
+    {
+        var athleteData = $$$"""
+            {
+              "current_date":"2026-11-02",
+              "activities":[
+                {"date":"2026-11-01","type":"Ride","ctl_delta":-0.2,"atl_delta":-1.4},
+                {"date":"2026-11-02","type":"WeightTraining","tags":[],"duration_hours":0.75,
+                 "strength_phase":{{{phase}}},"strength_phase_source":"{{{source}}}","rpe":{{{rpe}}}}
+              ],
+              "week_summary":{"strength":{
+                "current_phase":"maintenance","phase_session_count":4,"phase_target_sessions":"4-6",
+                "sessions_this_week":1,"days_since_last_strength":0
+              }},
+              "planned_workouts":{"current_week":{"planned_workouts":[
+                {"date":"2026-11-03","activity_type":"Ride","name":"Hard ride"}
+              ]}}
+            }
+            """;
+
+        var prompt = PromptBuilder.BuildAssessPrompt(
+            new AssessRequest(athleteData, "fitness", "en", AssessmentType.Activity));
+        var strengthSection = prompt[..prompt.IndexOf("## Other activities", StringComparison.Ordinal)];
+
+        Assert.Contains(athleteData, prompt);
+        Assert.DoesNotContain("{{athlete_data}}", prompt);
+        Assert.Contains("at most 80 words", strengthSection);
+        Assert.Contains("instead of the five questions below", strengthSection);
+        Assert.Contains("`strength_phase` and `strength_phase_source`", strengthSection);
+        Assert.Contains("latest entry in `activities[]`, not the summary's `current_phase`", strengthSection);
+        Assert.Contains("`phase_session_count` and", strengthSection);
+        Assert.Contains("`phase_target_sessions`; do not increment the exported count", strengthSection);
+        Assert.Contains("Source `activity`, `planned`, or `planned_week`", strengthSection);
+        Assert.Contains("\"<Phase>, session n of <target>\"", strengthSection);
+        Assert.Contains("\"<Phase>, session n of <target> (inferred, no tag)\"", strengthSection);
+        Assert.Contains("Source `none`: \"phase unknown, not counted\"", strengthSection);
+        Assert.Contains("Do not mention tagging otherwise; the data quality check handles the reminder", strengthSection);
+        Assert.DoesNotContain("strength-<current_phase>", strengthSection);
+        Assert.DoesNotContain("working assumption", strengthSection);
+        Assert.Contains("only if `rpe` is present and non-null", strengthSection);
+        Assert.Contains("Never ask for missing RPE", strengthSection);
+        Assert.Contains("check `planned_workouts`", strengthSection);
+        Assert.Contains("a hard ride or race tomorrow", strengthSection);
+        Assert.Contains("twice per week; maintenance once per week", strengthSection);
+        Assert.Contains("today/tomorrow and never reduces the weekly strength frequency", strengthSection);
+        Assert.DoesNotContain("once on yellow readiness", strengthSection);
+        Assert.DoesNotContain("none on red", strengthSection);
+        Assert.Contains("at least two", strengthSection);
+        Assert.Contains("Do not discuss fueling, pacing, decoupling, W'", strengthSection);
+        Assert.Contains("or CTL/ATL/form for strength sessions", strengthSection);
+        Assert.Contains("Stop here for WeightTraining", strengthSection);
+    }
+
+    [Theory]
+    [InlineData("assess_activity")]
+    [InlineData("assess_week")]
+    [InlineData("assess_metrics")]
+    [InlineData("plan_week")]
+    [InlineData("plan_next_training")]
+    public void StrengthPrompts_KeepWeeklyFrequencyIndependentOfDailyReadiness(string name)
+    {
+        var prompt = PromptLoader.Load(name).Replace("\r\n", "\n");
+        var normalized = System.Text.RegularExpressions.Regex.Replace(prompt, @"\s+", " ");
+
+        Assert.Contains("never reduces the weekly strength frequency", normalized);
+        if (name is "assess_activity" or "plan_next_training")
+        {
+            Assert.Contains("today/tomorrow", normalized);
+        }
+        else
+        {
+            Assert.Contains("scheduled today", normalized);
+            Assert.Contains("scheduled tomorrow", normalized);
+            Assert.Contains("re-check in the morning", normalized);
+        }
+        if (name is "plan_week" or "plan_next_training")
+        {
+            Assert.Contains("recommended number from `week_summary.strength`", normalized);
+            Assert.Contains(
+                name == "plan_week"
+                    ? "Never schedule more than the recommended number"
+                    : "never exceed that number",
+                normalized);
+            Assert.Contains("state that reason", normalized);
+        }
+        else
+        {
+            Assert.Contains("adaptation/transition/maximum twice per week", normalized);
+            Assert.Contains("maintenance once per week", normalized);
+            Assert.Contains("at least two days between", normalized);
+        }
+        Assert.DoesNotMatch(@"(?i)(once|1) (per week |session )?(on|when).*yellow", normalized);
+        Assert.DoesNotMatch(@"(?i)(none|0) (on|when).*red", normalized);
+    }
+
+    [Fact]
+    public void BuildAssessPrompt_Ride_PreservesQuestionsAndExplainsLoadDeltaTrajectory()
+    {
+        const string athleteData = """
+            {"activities":[{"date":"2026-11-02","type":"Ride","ctl_delta":-0.2,"atl_delta":-1.4}]}
+            """;
+
+        var prompt = PromptBuilder.BuildAssessPrompt(
+            new AssessRequest(athleteData, "roadrace", "en", AssessmentType.Activity));
+        var rideSection = prompt[prompt.IndexOf("## Other activities", StringComparison.Ordinal)..];
+
+        Assert.Contains(athleteData, prompt);
+        Assert.Contains("1. What was the training quality", rideSection);
+        Assert.Contains("2. How was load management", rideSection);
+        Assert.Contains("`dfa_a1_summary`", rideSection);
+        Assert.Contains("3. What does the fueling tell us", rideSection);
+        Assert.Contains("4. What is the CTL, ATL, and form trajectory since the previous exported activity?", rideSection);
+        Assert.Contains("include rest-day decay", rideSection);
+        Assert.Contains("never describe them as the effect of this session", rideSection);
+        Assert.Contains("5. What do I take away", rideSection);
+    }
+
     [Fact]
     public void BuildAssessPrompt_Metrics_UsesMetricsPrompt()
     {
@@ -17,6 +171,41 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildAssessPrompt_Metrics_ExplainsVo2MaxEstimateQualityAndQualifiesDisciplineGap()
+    {
+        const string athleteData = """
+            {"metrics":{"vo2max_classification":{
+              "ml_per_kg_min":46.6,"category":"excellent",
+              "estimate_representative":false,"p5min_pct_ftp":99.25,"power_profile_period_days":42
+            }}}
+            """;
+
+        var prompt = PromptBuilder.BuildAssessPrompt(
+            new AssessRequest(athleteData, "zwift", "en", AssessmentType.Metrics));
+        var normalized = System.Text.RegularExpressions.Regex.Replace(prompt, @"\s+", " ");
+
+        Assert.Contains(athleteData, prompt);
+        Assert.Contains("`metrics.vo2max_classification.estimate_representative`", normalized);
+        Assert.Contains("When `estimate_representative` is `false`", normalized);
+        Assert.Contains("best five-minute power does not reflect a maximal effort", normalized);
+        Assert.Contains("VO2max and category are not representative and are likely understated", normalized);
+        Assert.Contains("Do not stop at \"not representative\"", normalized);
+        Assert.Contains("maximal five-minute test or a hard VO2max session", normalized);
+        Assert.Contains("When `estimate_representative` is `\"likely_understated\"`", normalized);
+        Assert.Contains("VO2max and category may be understated", normalized);
+        Assert.Contains("`p5min_pct_ftp`", normalized);
+        Assert.Contains("`power_profile_period_days`", normalized);
+        Assert.Contains("Omit missing context; never invent it", normalized);
+        Assert.Contains("observation window is not the age of the estimate", normalized);
+        Assert.Contains("When the status is `true`, do not add a quality warning", normalized);
+        Assert.Contains("When it is null or missing, representativeness is unknown", normalized);
+        Assert.Contains("Never infer a VO2max decline or improvement from a single estimate", normalized);
+        Assert.Contains("qualify any inferred 3-5-minute power gap", normalized);
+        Assert.Contains("missing maximal efforts rather than a confirmed physiological weakness", normalized);
+        Assert.Contains("prescribe extra VO2max training solely from that gap", normalized);
+    }
+
+    [Fact]
     public void BuildPlanPrompt_DefaultMode_PreservesWeeklyPlanning()
     {
         var request = new PlanRequest("{}", "fitness", "en", PlanningScope.NextWeek,
@@ -25,12 +214,45 @@ public sealed class PromptBuilderTests
         var prompt = PromptBuilder.BuildPlanPrompt(request);
 
         Assert.Contains("Plan target: next week", prompt);
+        Assert.Contains("Strength phase for this plan: none", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
         Assert.Contains("VO2max on Tuesday", prompt);
         Assert.DoesNotContain("exactly one workout", prompt);
     }
 
     [Fact]
-    public void BuildPlanPrompt_NextTraining_IncludesDataAndSingleSessionContract()
+    public void BuildPlanPrompt_WithTssAndHoursTargets_RendersIndependentRemainingRanges()
+    {
+        const string athleteData = """
+            {
+              "week_starting":"2026-11-02",
+              "week_summary":{
+                "ride_load":100,"ride_time_hours":2,
+                "training_plan":[
+                  {"week":"2026-11-02","weekly_load_target":500,"weekly_time_target_hours":10}
+                ]
+              },
+              "planned_workouts":{"current_week":{"planned_workouts":[
+                {"date":"2026-11-05","activity_type":"Ride","tss":80,"duration_hours":1.5}
+              ]}}
+            }
+            """;
+        var request = new PlanRequest(athleteData, "fitness", "en", PlanningScope.CurrentWeek,
+            new PlanConstraints(null, []));
+
+        var template = PromptLoader.Load("plan_week");
+        Assert.Contains("{{remaining_hours_min}}", template);
+        Assert.Contains("{{remaining_hours_max}}", template);
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("Remaining ride TSS budget for the days you plan: 320 (allowed range 270–370). Choose workouts whose TSS sum lands in this range.", prompt);
+        Assert.Contains("Remaining ride hours budget for the days you plan: 6.5 (allowed range 5.5–7.5). Choose workouts whose duration sum lands in this range.", prompt);
+        Assert.DoesNotContain("{{remaining_", prompt);
+    }
+
+    [Fact]
+    public void BuildPlanPrompt_NextTraining_IncludesDataAndOptionalStrengthContract()
     {
         const string athleteData = """{"current_date":"2026-10-18","activities":[{"start_date_local":"2026-10-18T09:00:00"}]}""";
         var request = new PlanRequest(athleteData, "fitness", "en", PlanningScope.NextWeek,
@@ -39,11 +261,18 @@ public sealed class PromptBuilderTests
         var prompt = PromptBuilder.BuildPlanPrompt(request);
 
         Assert.Contains(athleteData, prompt);
+        Assert.Contains("Strength phase for this plan: none", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
+        Assert.DoesNotContain("{{strength_prescription}}", prompt);
         Assert.Contains("Use only the attached athlete data", prompt);
         Assert.Contains("The only tool you may call", prompt);
         Assert.Contains("even if the attached data is incomplete or\noutdated", prompt.Replace("\r\n", "\n"));
         Assert.DoesNotContain("Fetch the current data from intervals.icu", prompt);
-        Assert.Contains("exactly one workout", prompt);
+        Assert.Contains("one main workout and optionally one same-day", prompt);
+        Assert.Contains("the last strength session was at least two days", prompt);
+        Assert.Contains("yellow readiness rules out `strength-maximum`", prompt);
+        Assert.Contains("red readiness rules out all strength", prompt);
+        Assert.Contains("easier\n  alternative stays in prose only and is never a second upload entry", prompt.Replace("\r\n", "\n"));
         Assert.Contains("At most 100 words", prompt);
         Assert.Contains("BEGIN_UPLOAD_JSON / END_UPLOAD_JSON", prompt);
         Assert.Contains("prose-only rule", prompt);
@@ -73,6 +302,49 @@ public sealed class PromptBuilderTests
         Assert.Contains("instead of asking", prompt);
         Assert.Contains("training_allowed: false", prompt);
         Assert.Contains("max_training_time_hours", prompt);
+    }
+
+    [Fact]
+    public void BuildPlanPrompt_UsesRequestedStrengthPhase()
+    {
+        var request = new PlanRequest(
+            "{}",
+            "fitness",
+            "en",
+            PlanningScope.NextWeek,
+            new PlanConstraints(null, []),
+            StrengthPhase: "maintenance",
+            StrengthPhaseIsManual: true);
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("Strength phase for this plan: maintenance", prompt);
+        Assert.Contains("explicitly requested strength training for this plan", prompt);
+        Assert.Contains("overrides the default history-based strength opt-in rule", prompt);
+        Assert.Contains("3-5 sets of 15-20 reps at 40-60% 1RM", prompt);
+        Assert.Contains("maintenance: 2 sets, first 12 reps at 60% 1RM", prompt);
+        Assert.DoesNotContain("{{strength_prescription}}", prompt);
+        Assert.Contains("`strength-maintenance` tag", prompt);
+        Assert.DoesNotContain("{{strength_phase}}", prompt);
+        Assert.DoesNotContain("{{strength_phase_selection_context}}", prompt);
+    }
+
+    [Fact]
+    public void BuildPlanPrompt_AutomaticStrengthPhase_OptsIntoStrengthWithoutHistory()
+    {
+        var request = new PlanRequest(
+            "{}",
+            "fitness",
+            "en",
+            PlanningScope.NextWeek,
+            new PlanConstraints(null, []),
+            StrengthPhase: "adaptation");
+
+        var prompt = PromptBuilder.BuildPlanPrompt(request);
+
+        Assert.Contains("The selected strength phase for this plan is `adaptation`", prompt);
+        Assert.Contains("Treat this non-none selection as strength being in use", prompt);
+        Assert.DoesNotContain("{{strength_phase_selection_context}}", prompt);
     }
 
     [Theory]

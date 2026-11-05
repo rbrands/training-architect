@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using TrainingArchitect.Core.Interfaces;
 using TrainingArchitect.Core.Models;
+using TrainingArchitect.Core.Services;
 using TrainingArchitect.Services;
 
 namespace TrainingArchitect.Tests;
@@ -14,6 +16,167 @@ public class PlanOrchestratorTests
         "English",
         PlanningScope.NextWeek,
         new PlanConstraints(null, []));
+
+    [Fact]
+    public async Task RunAsync_NormalizesDurationAndTssBeforeValidationAndReturnsThemWithoutCorrection()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Today: 60-minute aerobic ride with TSS 999.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"activity_type":"Ride","duration_minutes":70,"tss":999,
+                "description":"Aerobic ride. TSS: 999.",
+                "steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var validator = new FakeValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator));
+
+        using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
+        Assert.Equal(78, validated.RootElement.GetProperty("workouts")[0].GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(32, validated.RootElement.GetProperty("workouts")[0].GetProperty("tss").GetDouble());
+        Assert.Equal("Aerobic ride. TSS: 32.",
+            validated.RootElement.GetProperty("workouts")[0].GetProperty("description").GetString());
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        var (planText, uploadJson) = PlanResponseParser.Split(completed.Result!.Content);
+        Assert.Equal(validator.UploadJsons[0], uploadJson);
+        Assert.Contains("78 min", planText);
+        Assert.Contains("TSS 32", planText);
+        Assert.DoesNotContain("60-minute", planText);
+        Assert.DoesNotContain("TSS 999", planText);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotNormalizeFixedWorkoutAnchors()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":999,
+                "description":"Aerobic ride. TSS: 999.",
+                "steps":[{"duration_seconds":4680,"power_pct_ftp":50}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var validator = new FakeValidator();
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """
+                {"week_starting":"2026-11-02","planned_workouts":{"current_week":{"planned_workouts":[
+                  {"date":"2026-11-04","type":"Ride","planned_load":45,"duration_hours":1}
+                ]}}}
+                """
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        using var validated = JsonDocument.Parse(Assert.Single(validator.UploadJsons));
+        var workout = validated.RootElement.GetProperty("workouts")[0];
+        Assert.Equal(60, workout.GetProperty("duration_minutes").GetDouble());
+        Assert.Equal(999, workout.GetProperty("tss").GetDouble());
+        Assert.Equal("Aerobic ride. TSS: 999.", workout.GetProperty("description").GetString());
+        Assert.Equal(4680, workout.GetProperty("steps")[0].GetProperty("duration_seconds").GetDouble());
+        Assert.Null(Assert.Single(events, item => item.Stage == PlanProgressStage.Completed).Warnings);
+    }
+
+    [Fact]
+    public async Task RunAsync_AdjustsEnduranceBeforeValidationAndReportsProgressWithoutCorrection()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Aerobic ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":999,
+                "description":"Endurance. TSS: 999.","tags":["aerobic-threshold-moderate"],
+                "steps":[{"duration_seconds":3600,"power_pct_ftp":70}]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+        var validator = new WeeklyTargetValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        var completed = Assert.Single(events, item => item.Stage == PlanProgressStage.Completed);
+        Assert.Null(completed.Warnings);
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.Single(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        Assert.Equal(Assert.Single(validator.UploadJsons), PlanResponseParser.Split(completed.Result!.Content).UploadJson);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenEnduranceCannotReachTarget_UsesExistingCorrectionRound()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Library threshold ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":49,
+                "library_workout_id":7,"tags":["threshold-classic"]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+
+        var events = await CollectAsync(CreateOrchestrator(agent, new WeeklyTargetValidator()), request);
+
+        Assert.Equal(2, agent.CallCount);
+        Assert.Single(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.DoesNotContain(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        Assert.NotEmpty(events[^1].Warnings!);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenOnlyLibraryAerobicRideIsShort_ConvertsItWithoutCorrectionRound()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Library endurance ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":49,
+                "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+        var validator = new WeeklyTargetValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.Single(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        var uploadJson = PlanResponseParser.Split(events[^1].Result!.Content).UploadJson!;
+        Assert.DoesNotContain("library_workout_id", uploadJson);
+    }
 
     [Fact]
     public async Task RunAsync_WhenFirstPlanIsValid_CallsAgentOnceAndCompletes()
@@ -178,16 +341,19 @@ public class PlanOrchestratorTests
     }
 
     [Fact]
-    public async Task RunAsync_NextTraining_CorrectionKeepsSingleSessionContract()
+    public async Task RunAsync_NextTraining_CorrectionRequiresDueStrengthWhenAllowed()
     {
         var agent = new FakeCoachingAgent();
         var validator = new FakeValidator(invalidRounds: 1);
 
         await CollectAsync(CreateOrchestrator(agent, validator),
-            Request with { Mode = PlanningMode.NextTraining });
+            Request with { Mode = PlanningMode.NextTraining, StrengthPhase = "adaptation" });
 
         Assert.Equal(2, agent.CallCount);
-        Assert.Contains("exactly one workout", agent.Prompts[1]);
+        Assert.Contains("one main workout and, when strength is due and placement/readiness allow it, one same-day strength session", agent.Prompts[1]);
+        Assert.Contains("do not omit an eligible due session", agent.Prompts[1]);
+        Assert.Contains("3-5 sets of 15-20 reps at 40-60% 1RM", agent.Prompts[1]);
+        Assert.Contains("every `WeightTraining` entry must carry exactly the canonical", agent.Prompts[1]);
         Assert.Contains("do not fill the weekly TSS target or upload", agent.Prompts[1]);
         Assert.Equal("response-1", agent.PreviousResponseIds[1]);
     }
@@ -224,6 +390,38 @@ public class PlanOrchestratorTests
         }
     }
 
+    [Theory]
+    [InlineData("prose")]
+    [InlineData("malformed")]
+    [InlineData("throw")]
+    public async Task RunAsync_CorrectionFailsStructurally_FallsBackToBestPreviousPlan(string failure)
+    {
+        var agent = new FakeCoachingAgent
+        {
+            ContentForCall = call => call == 2
+                ? failure switch
+                {
+                    "prose" => "Here is the corrected plan, sorry, no JSON.",
+                    "malformed" => "Plan 2\nBEGIN_UPLOAD_JSON\n{\"workouts\":[{\"date\":\nEND_UPLOAD_JSON",
+                    _ => null
+                }
+                : null,
+            ThrowFromCall = failure == "throw" ? 2 : null
+        };
+        var validator = new FakeValidator(invalidRounds: 1);
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator));
+
+        var completed = events[^1];
+        Assert.Equal(PlanProgressStage.Completed, completed.Stage);
+        Assert.StartsWith("Plan 1", completed.Result!.Content);
+        Assert.Equal(["Weekly load target missed."], completed.Warnings);
+        Assert.Contains(events, item => item.Message.Contains(
+            "Correction failed – showing the original plan; open issue: Weekly load target missed."));
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Failed);
+        Assert.Equal(1, validator.CallCount);
+    }
+
     private static async Task<List<PlanProgressEvent>> CollectAsync(IPlanOrchestrator orchestrator, PlanRequest? request = null)
     {
         var events = new List<PlanProgressEvent>();
@@ -248,6 +446,10 @@ public class PlanOrchestratorTests
 
         public Exception? ExceptionToThrow { get; init; }
 
+        public Func<int, string?>? ContentForCall { get; init; }
+
+        public int? ThrowFromCall { get; init; }
+
         public Task<CoachingAgentResponse> PromptAsync(
             string prompt,
             string discipline,
@@ -265,12 +467,16 @@ public class PlanOrchestratorTests
             {
                 throw new InvalidOperationException("agent unavailable");
             }
+            if (ThrowFromCall is { } throwFrom && CallCount + 1 >= throwFrom)
+            {
+                throw new InvalidOperationException("agent unavailable");
+            }
 
             CallCount++;
             PreviousResponseIds.Add(previousResponseId);
             Prompts.Add(prompt);
 
-            var content = Content ?? $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
+            var content = ContentForCall?.Invoke(CallCount) ?? Content ?? $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
                 + """{"workouts":[{"date":"2026-08-17"}]}"""
                 + "\nEND_UPLOAD_JSON";
 
@@ -281,10 +487,29 @@ public class PlanOrchestratorTests
         }
     }
 
+    private sealed class WeeklyTargetValidator : IPlanValidator
+    {
+        public List<string> UploadJsons { get; } = [];
+
+        public Task<PlanValidationResult> ValidateAsync(string uploadJson, PlanRequest request,
+            string? intervalsAthleteId, string? intervalsApiKey, CancellationToken ct = default)
+        {
+            UploadJsons.Add(uploadJson);
+            using var document = JsonDocument.Parse(uploadJson);
+            var total = document.RootElement.GetProperty("workouts").EnumerateArray()
+                .Sum(workout => workout.GetProperty("tss").GetDouble());
+            var target = request.Constraints.WeeklyTssTarget!.Value;
+            return Task.FromResult(total >= target * 0.9 && total <= target * 1.1
+                ? PlanValidationResult.Valid
+                : PlanValidationResult.FromFinding("plan.tss_deviation", "Weekly target missed."));
+        }
+    }
+
     private sealed class FakeValidator(int invalidRounds = 0) : IPlanValidator
     {
         private int _round;
         public int CallCount => _round;
+        public List<string> UploadJsons { get; } = [];
 
         public Task<PlanValidationResult> ValidateAsync(
             string uploadJson,
@@ -293,6 +518,7 @@ public class PlanOrchestratorTests
             string? intervalsApiKey,
             CancellationToken ct = default)
         {
+            UploadJsons.Add(uploadJson);
             var isInvalid = _round < invalidRounds;
             _round++;
 
