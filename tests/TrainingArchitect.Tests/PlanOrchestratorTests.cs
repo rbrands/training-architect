@@ -126,10 +126,10 @@ public class PlanOrchestratorTests
         var agent = new FakeCoachingAgent
         {
             Content = """
-                Library endurance ride.
+                Library threshold ride.
                 BEGIN_UPLOAD_JSON
                 {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":49,
-                "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
+                "library_workout_id":7,"tags":["threshold-classic"]}]}
                 END_UPLOAD_JSON
                 """
         };
@@ -146,6 +146,36 @@ public class PlanOrchestratorTests
         Assert.Single(events, item => item.Stage == PlanProgressStage.Correcting);
         Assert.DoesNotContain(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
         Assert.NotEmpty(events[^1].Warnings!);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenOnlyLibraryAerobicRideIsShort_ConvertsItWithoutCorrectionRound()
+    {
+        var agent = new FakeCoachingAgent
+        {
+            Content = """
+                Library endurance ride.
+                BEGIN_UPLOAD_JSON
+                {"workouts":[{"date":"2026-11-04","activity_type":"Ride","duration_minutes":60,"tss":49,
+                "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
+                END_UPLOAD_JSON
+                """
+        };
+        var request = Request with
+        {
+            Scope = PlanningScope.CurrentWeek,
+            WeekDataJson = """{"week_starting":"2026-11-02"}""",
+            Constraints = new PlanConstraints(60, [])
+        };
+        var validator = new WeeklyTargetValidator();
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator), request);
+
+        Assert.Equal(1, agent.CallCount);
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Correcting);
+        Assert.Single(events, item => item.Message == "Adjusted endurance rides to reach the weekly target");
+        var uploadJson = PlanResponseParser.Split(events[^1].Result!.Content).UploadJson!;
+        Assert.DoesNotContain("library_workout_id", uploadJson);
     }
 
     [Fact]
@@ -360,6 +390,38 @@ public class PlanOrchestratorTests
         }
     }
 
+    [Theory]
+    [InlineData("prose")]
+    [InlineData("malformed")]
+    [InlineData("throw")]
+    public async Task RunAsync_CorrectionFailsStructurally_FallsBackToBestPreviousPlan(string failure)
+    {
+        var agent = new FakeCoachingAgent
+        {
+            ContentForCall = call => call == 2
+                ? failure switch
+                {
+                    "prose" => "Here is the corrected plan, sorry, no JSON.",
+                    "malformed" => "Plan 2\nBEGIN_UPLOAD_JSON\n{\"workouts\":[{\"date\":\nEND_UPLOAD_JSON",
+                    _ => null
+                }
+                : null,
+            ThrowFromCall = failure == "throw" ? 2 : null
+        };
+        var validator = new FakeValidator(invalidRounds: 1);
+
+        var events = await CollectAsync(CreateOrchestrator(agent, validator));
+
+        var completed = events[^1];
+        Assert.Equal(PlanProgressStage.Completed, completed.Stage);
+        Assert.StartsWith("Plan 1", completed.Result!.Content);
+        Assert.Equal(["Weekly load target missed."], completed.Warnings);
+        Assert.Contains(events, item => item.Message.Contains(
+            "Correction failed – showing the original plan; open issue: Weekly load target missed."));
+        Assert.DoesNotContain(events, item => item.Stage == PlanProgressStage.Failed);
+        Assert.Equal(1, validator.CallCount);
+    }
+
     private static async Task<List<PlanProgressEvent>> CollectAsync(IPlanOrchestrator orchestrator, PlanRequest? request = null)
     {
         var events = new List<PlanProgressEvent>();
@@ -384,6 +446,10 @@ public class PlanOrchestratorTests
 
         public Exception? ExceptionToThrow { get; init; }
 
+        public Func<int, string?>? ContentForCall { get; init; }
+
+        public int? ThrowFromCall { get; init; }
+
         public Task<CoachingAgentResponse> PromptAsync(
             string prompt,
             string discipline,
@@ -401,12 +467,16 @@ public class PlanOrchestratorTests
             {
                 throw new InvalidOperationException("agent unavailable");
             }
+            if (ThrowFromCall is { } throwFrom && CallCount + 1 >= throwFrom)
+            {
+                throw new InvalidOperationException("agent unavailable");
+            }
 
             CallCount++;
             PreviousResponseIds.Add(previousResponseId);
             Prompts.Add(prompt);
 
-            var content = Content ?? $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
+            var content = ContentForCall?.Invoke(CallCount) ?? Content ?? $"Plan {CallCount}\n\nBEGIN_UPLOAD_JSON\n"
                 + """{"workouts":[{"date":"2026-08-17"}]}"""
                 + "\nEND_UPLOAD_JSON";
 

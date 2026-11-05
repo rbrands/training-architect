@@ -34,6 +34,9 @@ public sealed class PlanOrchestrator(
         IReadOnlyList<PlanValidationFinding> findings = [];
         long totalTokens = 0;
         var lastRound = 0;
+        CoachingAgentResponse? bestResponse = null;
+        IReadOnlyList<PlanValidationFinding> bestFindings = [];
+        var bestRound = 0;
 
         for (var round = 0; round <= MaxCorrectionRounds; round++)
         {
@@ -75,6 +78,17 @@ public sealed class PlanOrchestrator(
                 failureMessage = $"{agentException?.Message ?? "The coaching model request failed. Please try again."} Diagnostic ID: {diagnosticId}.";
             }
 
+            if (response is null && bestResponse is not null)
+            {
+                logger.LogWarning("Plan correction round {Round} failed structurally ({Reason}); falling back to the plan from round {BestRound}.",
+                    round, failureMessage ?? "no response", bestRound);
+                foreach (var fallbackEvent in FallbackEvents(bestResponse, bestFindings, totalTokens, round))
+                {
+                    yield return fallbackEvent;
+                }
+                yield break;
+            }
+
             if (response is null)
             {
                 yield return new PlanProgressEvent(
@@ -94,6 +108,7 @@ public sealed class PlanOrchestrator(
             totalTokens += response.TotalTokens ?? 0;
             var (readableText, uploadJson) = PlanResponseParser.Split(response.Content);
             var adjusted = false;
+            var normalizationFailed = false;
             if (!string.IsNullOrWhiteSpace(uploadJson))
             {
                 try
@@ -103,7 +118,11 @@ public sealed class PlanOrchestrator(
                             "Normalized workout duration from {PreviousMinutes} to {DurationMinutes} minutes.",
                             previous, normalized),
                         request);
-                    normalizedJson = WeeklyRideTargetAdjuster.Adjust(normalizedJson, request, out adjusted);
+                    normalizedJson = WeeklyRideTargetAdjuster.Adjust(normalizedJson, request, out adjusted, out var topUpSkipReason);
+                    if (topUpSkipReason is not null)
+                    {
+                        logger.LogInformation("Weekly TSS top-up skipped in round {Round}: {Reason}", round, topUpSkipReason);
+                    }
                     var workoutMetricsChanged = WorkoutMetricsChanged(uploadJson, normalizedJson);
                     if (adjusted)
                     {
@@ -123,6 +142,7 @@ public sealed class PlanOrchestrator(
                 catch (System.Text.Json.JsonException ex)
                 {
                     logger.LogDebug(ex, "Plan JSON could not be normalized; passing it to validation.");
+                    normalizationFailed = true;
                 }
             }
 
@@ -136,6 +156,19 @@ public sealed class PlanOrchestrator(
                 && !string.IsNullOrWhiteSpace(readableText)
                 && string.IsNullOrWhiteSpace(uploadJson)
                 && !response.Content.Contains("BEGIN_UPLOAD_JSON", StringComparison.Ordinal);
+            var structurallyValid = isProseOnlyRecommendation
+                || (!string.IsNullOrWhiteSpace(uploadJson) && !normalizationFailed);
+
+            if (!structurallyValid && round > 0 && bestResponse is not null)
+            {
+                logger.LogWarning("Plan correction round {Round} returned no valid upload JSON; falling back to the plan from round {BestRound}.",
+                    round, bestRound);
+                foreach (var fallbackEvent in FallbackEvents(bestResponse, bestFindings, totalTokens, round))
+                {
+                    yield return fallbackEvent;
+                }
+                yield break;
+            }
 
             yield return new PlanProgressEvent(PlanProgressStage.Validating, "Validating the plan.", round);
 
@@ -154,6 +187,12 @@ public sealed class PlanOrchestrator(
                     : await validator.ValidateAsync(uploadJson, request, intervalsAthleteId, intervalsApiKey, ct);
             }
             findings = validation.Findings;
+            if (structurallyValid)
+            {
+                bestResponse = lastResponse;
+                bestFindings = findings;
+                bestRound = round;
+            }
 
             if (!string.IsNullOrWhiteSpace(validation.Summary))
             {
@@ -201,6 +240,25 @@ public sealed class PlanOrchestrator(
             lastRound,
             new PlanResponse(lastResponse.Content, totalTokens, lastResponse.ResponseId),
             warnings);
+    }
+
+    private static IEnumerable<PlanProgressEvent> FallbackEvents(
+        CoachingAgentResponse bestResponse,
+        IReadOnlyList<PlanValidationFinding> bestFindings,
+        long totalTokens,
+        int round)
+    {
+        var openIssues = bestFindings.Select(finding => finding.Message).ToArray();
+        var message = openIssues.Length == 0
+            ? "Correction failed – showing the original plan."
+            : $"Correction failed – showing the original plan; open issue: {string.Join("; ", openIssues)}";
+        yield return new PlanProgressEvent(PlanProgressStage.Validating, message, round);
+        yield return new PlanProgressEvent(
+            PlanProgressStage.Completed,
+            openIssues.Length == 0 ? "Plan created." : "Plan created with open issues.",
+            round,
+            new PlanResponse(bestResponse.Content, totalTokens, bestResponse.ResponseId),
+            openIssues.Length == 0 ? null : openIssues);
     }
 
     private async Task RecordUsageBestEffortAsync(CoachingAgentResponse response, string action, string athleteId)
