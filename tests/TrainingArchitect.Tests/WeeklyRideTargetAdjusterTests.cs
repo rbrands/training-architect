@@ -91,16 +91,75 @@ public class WeeklyRideTargetAdjusterTests
         Assert.False(adjusted);
     }
 
-    [Fact]
-    public void Adjust_DoesNotChangeLibraryWorkout()
-    {
-        var original = """
-            {"workouts":[{"date":"2026-11-04","activity_type":"Ride","tss":45,"duration_minutes":60,
-            "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
-            """;
+    private const string LibraryAerobicPlan = """
+        {"workouts":[{"date":"2026-11-04","activity_type":"Ride","tss":48,"duration_minutes":60,
+        "library_workout_id":7,"tags":["aerobic-threshold-moderate"]}]}
+        """;
 
-        Assert.Equal(original, WeeklyRideTargetAdjuster.Adjust(original, Request(60), out var adjusted));
+    [Fact]
+    public void Adjust_ConvertsLibraryAerobicRideWhenNoGeneratedRideExists()
+    {
+        var result = WeeklyRideTargetAdjuster.Adjust(LibraryAerobicPlan, Request(60), out var adjusted, out var skipReason);
+        var workout = JsonNode.Parse(result)!["workouts"]![0]!.AsObject();
+
+        Assert.True(adjusted);
+        Assert.Null(skipReason);
+        Assert.False(workout.ContainsKey("library_workout_id"));
+        Assert.NotEmpty(workout["steps"]!.AsArray());
+        Assert.InRange(workout["tss"]!.GetValue<double>(), 54, 66);
+    }
+
+    [Fact]
+    public void Adjust_DoesNotConvertLibraryRideOnAnchorDate()
+    {
+        var data = JsonNode.Parse(Request(60).WeekDataJson)!;
+        data["planned_workouts"] = JsonNode.Parse("""
+            {"current_week":{"planned_workouts":[{"date":"2026-11-04","type":"Ride","planned_load":48,"duration_hours":1}]}}
+            """);
+        var request = Request(60) with { WeekDataJson = data.ToJsonString() };
+
+        var result = WeeklyRideTargetAdjuster.Adjust(LibraryAerobicPlan, request, out var adjusted, out var skipReason);
+
+        Assert.Equal(LibraryAerobicPlan, result);
         Assert.False(adjusted);
+        Assert.Equal("no eligible generated aerobic/recovery ride", skipReason);
+    }
+
+    [Fact]
+    public void Adjust_ReportsSkipReason_ForKeySessionsOnly()
+    {
+        WeeklyRideTargetAdjuster.Adjust(Plan(3000, """["vo2max-low"]"""), Request(60), out var adjusted, out var skipReason);
+
+        Assert.False(adjusted);
+        Assert.Equal("no eligible generated aerobic/recovery ride", skipReason);
+    }
+
+    [Fact]
+    public void Adjust_ReportsSkipReason_ForNextTrainingMode()
+    {
+        WeeklyRideTargetAdjuster.Adjust(Plan(3000), Request(60) with { Mode = PlanningMode.NextTraining },
+            out var adjusted, out var skipReason);
+
+        Assert.False(adjusted);
+        Assert.Equal("not a week plan", skipReason);
+    }
+
+    [Fact]
+    public void Adjust_ReportsSkipReason_ForLargeDeviation()
+    {
+        WeeklyRideTargetAdjuster.Adjust(Plan(3000), Request(200), out var adjusted, out var skipReason);
+
+        Assert.False(adjusted);
+        Assert.Equal("deviation outside the ±25 % top-up range", skipReason);
+    }
+
+    [Fact]
+    public void Adjust_ReportsNoSkipReason_WhenWithinTolerance()
+    {
+        WeeklyRideTargetAdjuster.Adjust(Plan(3000), Request(48), out var adjusted, out var skipReason);
+
+        Assert.False(adjusted);
+        Assert.Null(skipReason);
     }
 
     [Fact]

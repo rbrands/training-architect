@@ -72,6 +72,12 @@ Planning requirements:
   current-week plan, count completed strength sessions in the target week
   toward the recommended number; for a next-week plan, do not subtract
   current-week sessions. Do not silently omit a recommended strength session.
+- Use the recommended number from `week_summary.strength`; fewer only with a
+  stated reason (state that reason in the plan text). Never schedule more than
+  the recommended number. Readiness by itself never reduces the weekly strength
+  frequency. For a current-week plan, apply today's readiness only to sessions
+  scheduled today; for any session scheduled tomorrow, add one sentence advising
+  a readiness re-check in the morning.
 - Avoid duplicating key sessions already completed or already planned.
 - Align weekly ride TSS and ride duration to their supplied targets, and keep
   the week realistic for fatigue and availability.

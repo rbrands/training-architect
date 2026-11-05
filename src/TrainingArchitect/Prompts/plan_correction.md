@@ -18,12 +18,6 @@ How to fix each problem, depending on its kind:
   - Otherwise, every `WeightTraining` entry must carry exactly the canonical
     `strength-{{strength_phase}}` tag. Do not use a different phase tag.
 
-- TSS mismatch on a ride entry with steps (stated vs. computed TSS differ): This means the
-  workout structure is fine but the "tss" value in its description is wrong. Recompute TSS
-  from the workout's actual steps using the TSS formula from your instructions, and correct
-  only the stated value. Do not change the workout's structure just to produce a different
-  number.
-
 - Weekly Ride total outside the load target or duration target: Adjust ride
   sessions only; TSS and duration comparisons use rides only. Do not add, remove,
   or resize a `WeightTraining` entry to fix a deviation. Do not modify any workout
@@ -60,3 +54,7 @@ starts the upload section; do not introduce or describe it in the prose.
 Keep the plan text structure: the context sentences (updated if a correction
 changes a key decision) and the day-by-day list matching the corrected JSON.
 Do not comment on the corrections themselves.
+
+Your response MUST end with the complete upload JSON for ALL workouts of the
+week (not only the corrected ones), enclosed between BEGIN_UPLOAD_JSON and
+END_UPLOAD_JSON. A response without this block is invalid.
