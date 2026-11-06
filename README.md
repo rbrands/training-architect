@@ -413,6 +413,16 @@ cp config.example.ps1 config.ps1
 
 `setup.ps1 -Secrets` also resolves the Application Insights connection string from the Azure App Insights resource named in `config.ps1` and stores it in local user-secrets as `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 
+When updating an existing `config.ps1`, add any new settings from `config.example.ps1` without replacing your existing values. In particular, the MCP transport settings are:
+
+```powershell
+McpAthleteDataTimeoutSeconds = "300"
+McpAthleteDataConnectionTimeoutSeconds = "30"
+McpAthleteDataMaxRetryAttempts = "2"
+```
+
+Place these entries inside the existing `$config` hashtable. Local secrets setup checks that all three are non-empty before changing secrets and stops on a failed secret write instead of reporting success.
+
 Minimum SEO-related config values in `config.ps1`:
 
 - `SiteUrl = "https://www.example.com"`

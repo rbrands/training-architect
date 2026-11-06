@@ -6,6 +6,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-11-06
+
+### Fixed
+- The weekly training load dashboard wraps the Ride/strength load line on smartphone screens instead of overflowing the current-week column.
+- Local secrets setup reports missing MCP timeout and retry configuration before changing secrets and stops on failed secret writes instead of reporting success.
 
 ## [1.13.0] - 2026-11-05
 

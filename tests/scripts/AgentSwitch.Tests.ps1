@@ -26,11 +26,18 @@ function Reset-Fixture {
         Sticky = @('SiteUrl', 'Author'); Writes = 0; Calls = [System.Collections.Generic.List[object]]::new()
         Fail = $false; InvalidJson = $false; WrongSlot = $false; WrongReadback = $false
         DropSticky = $false; MissingAgentSticky = $false; ProductionChanged = $false
+        FailSecret = $null
     }
     $script:config = @{
         SubscriptionId = 'test-subscription'; AppResourceGroupName = 'test-group'; AppName = 'test-app'
         CentralResourceGroupName = '__CENTRAL_RESOURCE_GROUP__'; AppInsightsName = '__APP_INSIGHTS_NAME__'
         FoundryProjectAgentName = 'test-production@1'; FoundryProjectStagingAgentName = 'test-staging@2'
+        TenantId = 'test-tenant'; ClientId = 'test-client'; KeyVaultName = 'test-vault'; CertName = 'test-cert'
+        CosmosEndpointUri = 'https://example.com'; CosmosDatabaseId = 'test-db'; CosmosContainerName = 'test-container'
+        StorageBlobEndpoint = 'https://example.com'; SyncfusionLicenseKey = '__TEST_LICENSE__'
+        SiteUrl = 'https://example.com'; Author = '__TEST_AUTHOR__'; McpAthleteDataEndpoint = 'https://example.com'
+        McpAthleteDataTimeoutSeconds = '300'; McpAthleteDataConnectionTimeoutSeconds = '30'
+        McpAthleteDataMaxRetryAttempts = '2'; FoundryProjectEndpoint = 'https://example.com'
     }
     Save-Config
 }
@@ -89,6 +96,10 @@ function dotnet {
         return "//BEGIN`n$(@{ FoundryProjectAgentName = $state.Local } | ConvertTo-Json)`n//END"
     }
     Assert-True ($arguments[1] -eq 'set') 'Unexpected secrets operation.'
+    if ($state.FailSecret -eq $arguments[2]) {
+        $global:LASTEXITCODE = 1
+        return 'SENSITIVE_CLI_OUTPUT'
+    }
     if ($arguments[2] -eq 'FoundryProjectAgentName') {
         $state.Writes++
         if (-not $state.WrongReadback) { $state.Local = $arguments[3] }
@@ -197,6 +208,23 @@ try {
         Assert-True ($state.Local -ceq $expected) 'General secrets setup changed the local preference incorrectly.'
         $passed++
     }
+
+    foreach ($key in @('McpAthleteDataTimeoutSeconds', 'McpAthleteDataConnectionTimeoutSeconds', 'McpAthleteDataMaxRetryAttempts')) {
+        foreach ($invalid in @($null, '', ' ')) {
+            Reset-Fixture
+            $config[$key] = $invalid
+            Save-Config
+            Invoke-Setup @{ Secrets = $true } "*Missing configuration values*$key*"
+            Assert-True ($state.Calls.Count -eq 0) 'Missing MCP setting reached a CLI.'
+            $passed++
+        }
+    }
+
+    Reset-Fixture
+    $state.FailSecret = 'Mcp:AthleteData:TimeoutSeconds'
+    Invoke-Setup @{ Secrets = $true } '*Failed to set local secret*Mcp:AthleteData:TimeoutSeconds*output is suppressed*'
+    Assert-True (@($state.Calls | Where-Object { $_.Arguments -contains 'FoundryProjectEndpoint' }).Count -eq 0) 'Setup continued after a failed write.'
+    $passed++
 
     Reset-Fixture
     Remove-Item (Join-Path $fixture 'config.ps1')

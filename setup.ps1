@@ -276,6 +276,33 @@ function Get-AppInsightsConnectionString {
 # 1. dotnet user-secrets
 # ---------------------------------------------------------------------------
 if ($Secrets -or $All) {
+    $requiredMcpKeys = @(
+        'McpAthleteDataTimeoutSeconds',
+        'McpAthleteDataConnectionTimeoutSeconds',
+        'McpAthleteDataMaxRetryAttempts'
+    )
+    $missingMcpKeys = @($requiredMcpKeys | Where-Object {
+        [string]::IsNullOrWhiteSpace([string]$config[$_])
+    })
+    if ($missingMcpKeys.Count -gt 0) {
+        throw "Missing configuration values in config.ps1: $($missingMcpKeys -join ', '). Copy these settings from config.example.ps1 before running setup again. No local secrets were changed."
+    }
+
+    function Set-SetupLocalSecret {
+        param([string]$Key, [string]$Value)
+
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Missing value for local secret '$Key'. Check config.ps1."
+        }
+        try {
+            Invoke-AgentCommand dotnet @('user-secrets', 'set', $Key, $Value, '-p', $project) | Out-Null
+        }
+        catch {
+            throw "Failed to set local secret '$Key'. $($_.Exception.Message)"
+        }
+        Write-Host "Successfully saved $Key to the secret store."
+    }
+
     Write-Host "Setting dotnet user-secrets..." -ForegroundColor Yellow
     $localAgent = Get-LocalAgent
     if ([string]::IsNullOrWhiteSpace($localAgent) -or $localAgent.Contains('__')) {
@@ -285,23 +312,23 @@ if ($Secrets -or $All) {
         Write-Host "Preserving local agent: $localAgent. Use -AgentTarget Local -Agent Production|Staging to switch."
     }
 
-    dotnet user-secrets set "AzureAd:TenantId"                                        $config.TenantId             -p $project
-    dotnet user-secrets set "AzureAd:ClientId"                                        $config.ClientId             -p $project
-    dotnet user-secrets set "AzureAd:ClientCertificates:0:KeyVaultUrl"                "https://$($config.KeyVaultName).vault.azure.net" -p $project
-    dotnet user-secrets set "AzureAd:ClientCertificates:0:KeyVaultCertificateName"    $config.CertName             -p $project
-    dotnet user-secrets set "CosmosDb:EndpointUri"                                    $config.CosmosEndpointUri    -p $project
-    dotnet user-secrets set "CosmosDb:DatabaseId"                                     $config.CosmosDatabaseId     -p $project
-    dotnet user-secrets set "CosmosDb:ContainerName"                                  $config.CosmosContainerName  -p $project
-    dotnet user-secrets set "Storage:BlobEndpoint"                                    $config.StorageBlobEndpoint  -p $project
-    dotnet user-secrets set "KeyVault:Url"                                            "https://$($config.KeyVaultName).vault.azure.net" -p $project
-    dotnet user-secrets set "Syncfusion:LicenseKey"                                   $config.SyncfusionLicenseKey -p $project
-    dotnet user-secrets set "SiteUrl"                                                  $config.SiteUrl              -p $project
-    dotnet user-secrets set "Author"                                                   $config.Author               -p $project
-    dotnet user-secrets set "Mcp:AthleteData:Endpoint"                                $config.McpAthleteDataEndpoint -p $project
-    dotnet user-secrets set "Mcp:AthleteData:TimeoutSeconds"                          $config.McpAthleteDataTimeoutSeconds -p $project
-    dotnet user-secrets set "Mcp:AthleteData:ConnectionTimeoutSeconds"                $config.McpAthleteDataConnectionTimeoutSeconds -p $project
-    dotnet user-secrets set "Mcp:AthleteData:MaxRetryAttempts"                        $config.McpAthleteDataMaxRetryAttempts -p $project
-    dotnet user-secrets set "FoundryProjectEndpoint"                                   $config.FoundryProjectEndpoint -p $project
+    Set-SetupLocalSecret "AzureAd:TenantId" $config.TenantId
+    Set-SetupLocalSecret "AzureAd:ClientId" $config.ClientId
+    Set-SetupLocalSecret "AzureAd:ClientCertificates:0:KeyVaultUrl" "https://$($config.KeyVaultName).vault.azure.net"
+    Set-SetupLocalSecret "AzureAd:ClientCertificates:0:KeyVaultCertificateName" $config.CertName
+    Set-SetupLocalSecret "CosmosDb:EndpointUri" $config.CosmosEndpointUri
+    Set-SetupLocalSecret "CosmosDb:DatabaseId" $config.CosmosDatabaseId
+    Set-SetupLocalSecret "CosmosDb:ContainerName" $config.CosmosContainerName
+    Set-SetupLocalSecret "Storage:BlobEndpoint" $config.StorageBlobEndpoint
+    Set-SetupLocalSecret "KeyVault:Url" "https://$($config.KeyVaultName).vault.azure.net"
+    Set-SetupLocalSecret "Syncfusion:LicenseKey" $config.SyncfusionLicenseKey
+    Set-SetupLocalSecret "SiteUrl" $config.SiteUrl
+    Set-SetupLocalSecret "Author" $config.Author
+    Set-SetupLocalSecret "Mcp:AthleteData:Endpoint" $config.McpAthleteDataEndpoint
+    Set-SetupLocalSecret "Mcp:AthleteData:TimeoutSeconds" $config.McpAthleteDataTimeoutSeconds
+    Set-SetupLocalSecret "Mcp:AthleteData:ConnectionTimeoutSeconds" $config.McpAthleteDataConnectionTimeoutSeconds
+    Set-SetupLocalSecret "Mcp:AthleteData:MaxRetryAttempts" $config.McpAthleteDataMaxRetryAttempts
+    Set-SetupLocalSecret "FoundryProjectEndpoint" $config.FoundryProjectEndpoint
 
     $appInsightsConnectionString = Get-AppInsightsConnectionString `
         -SubscriptionId $config.SubscriptionId `
@@ -309,7 +336,7 @@ if ($Secrets -or $All) {
         -AppInsightsName $config.AppInsightsName
 
     if (-not [string]::IsNullOrWhiteSpace($appInsightsConnectionString)) {
-        dotnet user-secrets set "APPLICATIONINSIGHTS_CONNECTION_STRING"                    $appInsightsConnectionString -p $project
+        Set-SetupLocalSecret "APPLICATIONINSIGHTS_CONNECTION_STRING" $appInsightsConnectionString
     }
     Write-Host "dotnet user-secrets set." -ForegroundColor Green
 }
